@@ -1,6 +1,6 @@
 # F.007 — Object → Skill → Steps Lookup Table
 
-**Tier 0** · Owner: **P3** · Reviewer: P2 · Status: Not started
+**Tier 0** · Owner: **P3** · Reviewer: P2 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 The mapping from a recognised object to something teachable. **§7.5 calls this

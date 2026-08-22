@@ -86,7 +86,7 @@ Note: F.021 and F.022 were Tier 3 by the guide's own default (§16.1) and are
 | F.004 | Companion capture | 0 | P4 | P1 | Not started | F.001 |
 | F.005 | Slot system | 0 | P1 | P3 | Implemented, awaiting review | F.001, F.004 |
 | F.006 | My World pipeline | 0 | P2 | P4 | Not started | — |
-| F.007 | Object → skill → steps lookup | 0 | P3 | P2 | Not started | F.006 (shape only) |
+| F.007 | Object → skill → steps lookup | 0 | P3 | P2 | Implemented, self-verified — needs fresh-context review | F.006 (shape only) |
 | **F.008** | **Game 1, one level** ← **GATE** | **0** | **P2** | **P4** | Not started | F.005, F.006, F.007 |
 | F.009 | Interaction state machine | 1 | P1 | P3 | Implemented, awaiting review | F.003, F.008 |
 | F.010 | Support ladder & logging | 1 | P1 | P3 | Implemented, awaiting review | F.001, F.008 |
