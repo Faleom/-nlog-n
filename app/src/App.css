@@ -1,0 +1,27 @@
+/* Minimal shell styling. Real UI standards live in
+   plan/engineering/UI-STANDARDS.md — 88x88pt targets, no hover states,
+   portrait lock on phone, cap-the-grid-not-the-target responsive rule. */
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+  font-family: system-ui, sans-serif;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+button {
+  min-width: 88px;
+  min-height: 88px;
+  font-size: 1rem;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
