@@ -13,15 +13,20 @@
     "smoke:f003": "tsx scripts/smoke-f003.ts",
     "smoke:f004": "tsx scripts/smoke-f004.ts",
     "smoke:f005": "tsx scripts/smoke-f005.ts",
-    "smoke": "npm run smoke:f001 && npm run smoke:f002 && npm run smoke:f003 && npm run smoke:f004 && npm run smoke:f005 && npm run smoke:f009 && npm run smoke:f010 && npm run smoke:f011 && npm run smoke:f013 && npm run smoke:f016 && npm run smoke:f018 && npm run smoke:f019 && npm run smoke:f022",
+    "smoke:f007": "tsx scripts/smoke-f007.ts",
     "smoke:f009": "tsx scripts/smoke-f009.ts",
     "smoke:f010": "tsx scripts/smoke-f010.ts",
     "smoke:f011": "tsx scripts/smoke-f011.ts",
     "smoke:f013": "tsx scripts/smoke-f013.ts",
+    "smoke:f014": "tsx scripts/smoke-f014.ts",
+    "smoke:f015": "tsx scripts/smoke-f015.ts",
     "smoke:f016": "tsx scripts/smoke-f016.ts",
     "smoke:f018": "tsx scripts/smoke-f018.ts",
     "smoke:f019": "tsx scripts/smoke-f019.ts",
-    "smoke:f022": "tsx scripts/smoke-f022.ts"
+    "smoke:f020": "tsx scripts/smoke-f020.ts",
+    "smoke:f022": "tsx scripts/smoke-f022.ts",
+    "smoke": "npm run smoke:f001 && npm run smoke:f002 && npm run smoke:f003 && npm run smoke:f004 && npm run smoke:f005 && npm run smoke:f007 && npm run smoke:f009 && npm run smoke:f010 && npm run smoke:f011 && npm run smoke:f013 && npm run smoke:f014 && npm run smoke:f015 && npm run smoke:f016 && npm run smoke:f018 && npm run smoke:f019 && npm run smoke:f020 && npm run smoke:f022",
+    "verify:f015": "tsx scripts/verify-f015-live.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

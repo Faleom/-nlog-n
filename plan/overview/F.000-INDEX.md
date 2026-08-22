@@ -86,20 +86,20 @@ Note: F.021 and F.022 were Tier 3 by the guide's own default (§16.1) and are
 | F.004 | Companion capture | 0 | P4 | P1 | Implemented, awaiting review | F.001 |
 | F.005 | Slot system | 0 | P1 | P3 | Implemented, awaiting review | F.001, F.004 |
 | F.006 | My World pipeline | 0 | P2 | P4 | Not started | — |
-| F.007 | Object → skill → steps lookup | 0 | P3 | P2 | Not started | F.006 (shape only) |
+| F.007 | Object → skill → steps lookup | 0 | P3 | P2 | Implemented, self-verified — needs fresh-context review | F.006 (shape only) |
 | **F.008** | **Game 1, one level** ← **GATE** | **0** | **P2** | **P4** | Not started | F.005, F.006, F.007 |
 | F.009 | Interaction state machine | 1 | P1 | P3 | Implemented, awaiting review | F.003, F.008 |
 | F.010 | Support ladder & logging | 1 | P1 | P3 | Implemented, awaiting review | F.001, F.008 |
 | F.011 | Fading logic | 1 | P1 | P3 | Implemented, awaiting review | F.010 |
 | F.012 | Game 1 levels 1–4 | 1 | P2 | P4 | Not started | F.008, F.009 |
 | F.013 | Session cap, fade, handoff | 1 | P1 | P3 | Implemented, awaiting review | F.008, F.010 |
-| F.014 | Branch 2: milestones + prompts | 1 | P3 | P2 | Not started | F.001, F.002 |
-| F.015 | Branch 2: card + guardrail | 1 | P3 | P2 | Not started | F.014, F.008 |
+| F.014 | Branch 2: milestones + prompts | 1 | P3 | P2 | Implemented, awaiting review | F.001, F.002 |
+| F.015 | Branch 2: card + guardrail | 1 | P3 | P2 | Implemented, awaiting review | F.014, F.008 |
 | F.016 | Context profile: quick prefs | 2 | P4 | P1 | Implemented, awaiting review | F.001, F.005 |
 | F.017 | Companion mechanic in Game 1 | 2 | P2 | P4 | Not started | F.004, F.008, F.016 |
 | F.018 | Avoid list | 2 | P4 | P1 | Implemented, awaiting review | F.005 |
 | F.019 | Caregiver dashboard | 2 | P4 | P1 | Implemented, awaiting review | F.010, F.011, F.013 |
-| F.020 | Branch handoff & no-screening | 2 | P3 | P2 | Not started | F.010, F.015 |
+| F.020 | Branch handoff & no-screening | 2 | P3 | P2 | Implemented, awaiting review | F.010, F.015 |
 | **F.021** | **Game 3 Mode A: Shadow Match** | **2 — required** | **P2** | **P4** | Not started | F.008, F.009 |
 | **F.022** | **Game 2: Sequencing + routines** | **2 — required** | **P1** | **P3** | Implemented, awaiting review | F.008, F.009, F.016 |
 | F.023 | Game 3 Modes B & C | 3 — stretch | P2 | P4 | Not started | F.021 |

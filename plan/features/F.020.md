@@ -1,6 +1,6 @@
 # F.020 — Branch Handoff & The No-Screening Rule
 
-**Tier 2** · Owner: **P3** · Reviewer: P2 · Status: Not started
+**Tier 2** · Owner: **P3** · Reviewer: P2 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 §10 calls this the most failure-prone part of the design. Two directions, two

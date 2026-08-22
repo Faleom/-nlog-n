@@ -1,6 +1,6 @@
 # F.014 — Branch 2: Milestones & Guided Prompts
 
-**Tier 1** · Owner: **P3** · Reviewer: P2 · Status: Not started
+**Tier 1** · Owner: **P3** · Reviewer: P2 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Milestone information as **narrative, not a checklist**, one open question, then
