@@ -1,6 +1,6 @@
 # F.005 — Slot System
 
-**Tier 0** · Owner: **P1** · Reviewer: P3 · Status: Not started
+**Tier 0** · Owner: **P1** · Reviewer: P3 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Every string the app says is a template with typed blanks, filled from the

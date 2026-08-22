@@ -17,7 +17,7 @@ import { createFixtureRedaction } from './fixtures/fixtureRedaction';
 import { createFixtureVision } from './fixtures/fixtureVision';
 import { createFixtureTextGen } from './fixtures/fixtureTextGen';
 import { createFixtureSpeechOut } from './fixtures/fixtureSpeechOut';
-import { createInMemoryStorage } from './fixtures/inMemoryStorage';
+import { createIndexedDbStorage } from './storage/indexedDbStorage';
 import type { AdapterRegistry } from './ports';
 
 // -----------------------------------------------------------------------
@@ -35,5 +35,5 @@ export const adapters: AdapterRegistry = {
   vision: createFixtureVision(), // TODO(F.006): swap for ClaudeVision
   textGen: createFixtureTextGen(), // TODO(F.015): swap for HaikuCard
   speechOut: createFixtureSpeechOut(), // TODO(F.010): swap for WebSpeechOut
-  storage: createInMemoryStorage(), // TODO(F.001): swap for IndexedDbStorage
+  storage: createIndexedDbStorage(), // F.001 — done. Real, on-device, persists across restarts.
 };

@@ -1,6 +1,6 @@
 # F.001 — Device Store & Profile Model
 
-**Tier 0** · Owner: **P1** · Reviewer: P3 · Status: Not started
+**Tier 0** · Owner: **P1** · Reviewer: P3 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Everything the app remembers, on the device. No account, no login, no cloud sync

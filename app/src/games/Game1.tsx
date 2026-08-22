@@ -1,31 +1,31 @@
 // Game 1 — Find It In Your World. WALKING SKELETON, not the real thing.
 //
-// This exists to prove the wiring end to end: fixture crops -> a target
-// prompt -> caregiver "They brought it" -> child confirmation grid -> tap.
-// F.008 replaces this with the real loop (real crops from F.006, real
-// state machine from F.009, real support ladder from F.010).
+// Proves the wiring end to end: a real profile (F.001) -> real slot
+// rendering through the avoid-filter hook (F.005) -> fixture crops -> a
+// target prompt -> caregiver "They brought it" -> child confirmation grid
+// -> tap. F.008 (owned by P2) replaces this with the real loop: real
+// crops from F.006, real state machine from F.009, real support ladder
+// from F.010.
 //
 // Deliberately thin: no support tiers, no prompt hierarchy, no session
-// logging yet. Just proves the shape holds together.
+// logging yet — those are F.009/F.010, which need F.008 to exist first.
 
 import { useState } from 'react';
 import { adapters } from '../adapters/registry';
-import { fillSlots, slotValuesFromContext } from '../engine/slots';
-import type { ChildContextProfile, TaggedCrop } from '../types';
+import { renderLine, slotValuesFromProfile } from '../engine/slots';
+import type { ChildProfile, TaggedCrop } from '../types';
 
 type Phase = 'searching' | 'confirming' | 'celebrating';
 
 interface Game1Props {
-  context: ChildContextProfile;
+  profile: ChildProfile;
 }
 
-export function Game1({ context }: Game1Props) {
-  const [crops] = useState<TaggedCrop[]>(() => []);
+export function Game1({ profile }: Game1Props) {
+  const [crops, setCrops] = useState<TaggedCrop[]>([]);
   const [target, setTarget] = useState<TaggedCrop | null>(null);
   const [phase, setPhase] = useState<Phase>('searching');
   const [loaded, setLoaded] = useState(false);
-
-  const slots = slotValuesFromContext(context);
 
   async function loadRoom() {
     // Placeholder: in the real F.008 this comes from a captured + processed
@@ -35,14 +35,16 @@ export function Game1({ context }: Game1Props) {
       await adapters.capture.capturePhoto(),
     );
     const picked = objects[Math.floor(Math.random() * objects.length)];
+    setCrops(objects);
     setTarget(picked);
     setLoaded(true);
-    void adapters.speechOut.say(
-      fillSlots('{companion} wants something {fav_colour}!', {
-        ...slots,
-        fav_colour: picked.colour,
-      }),
+
+    const line = renderLine(
+      '{companion} wants something {fav_colour}!',
+      slotValuesFromProfile(profile, { fav_colour: picked.colour }),
+      profile.context,
     );
+    void adapters.speechOut.say(line);
   }
 
   function handleTheyBroughtIt() {
@@ -52,7 +54,12 @@ export function Game1({ context }: Game1Props) {
   function handleTap(crop: TaggedCrop) {
     if (crop.id === target?.id) {
       setPhase('celebrating');
-      void adapters.speechOut.say(fillSlots('Your {object.name}!', { 'object.name': crop.name }));
+      const line = renderLine(
+        'Your {object.name}!',
+        slotValuesFromProfile(profile, { 'object.name': crop.name }),
+        profile.context,
+      );
+      void adapters.speechOut.say(line);
     }
     // Wrong-tap handling (silence + fade, per §7.7) belongs to F.009 — not
     // implemented in this skeleton.
@@ -82,13 +89,13 @@ export function Game1({ context }: Game1Props) {
         <>
           <p>Show me — which one did you bring?</p>
           <div style={{ display: 'flex', gap: 12 }}>
-            {[target, ...crops].filter(Boolean).map((crop) => (
+            {crops.map((crop) => (
               <button
-                key={crop!.id}
+                key={crop.id}
                 style={{ minWidth: 88, minHeight: 88 }}
-                onClick={() => handleTap(crop!)}
+                onClick={() => handleTap(crop)}
               >
-                {crop!.name}
+                {crop.name}
               </button>
             ))}
           </div>

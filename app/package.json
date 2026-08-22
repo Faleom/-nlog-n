@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "smoke:f001": "tsx scripts/smoke-f001.ts",
+    "smoke:f005": "tsx scripts/smoke-f005.ts",
+    "smoke": "npm run smoke:f001 && npm run smoke:f005"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
@@ -21,7 +24,9 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "fake-indexeddb": "^6.2.5",
     "oxlint": "^1.75.0",
+    "tsx": "^4.23.12",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
     "vite-plugin-pwa": "^1.3.0"
