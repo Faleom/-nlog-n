@@ -49,9 +49,29 @@ export default async function handler(req: ProxyReq, res: ProxyRes) {
 
   try {
     if (body.kind === 'vision') {
-      // TODO(F.006): real prompt asking for objects present, tagged
+      // F.006 — real prompt asking for objects present, tagged
       // {name, colour, category, function, bbox}. claude-sonnet-5 — this
       // is the one call that reads a photo (TECH-DECISIONS.md).
+      //
+      // This text is intentionally hardcoded server-side, not taken from
+      // the request body — see src/adapters/vision/claudeVision.ts's
+      // VISION_PROMPT constant for the full "why", and keep the two
+      // byte-for-byte identical if either changes. api/ cannot import from
+      // src/ (separate deploy target — see ARCHITECTURE-RULES.md "Hosting
+      // is swappable too"), so this is a deliberate, necessary duplicate.
+      const VISION_PROMPT = `List the distinct physical household objects visible in this photo.
+
+Return ONLY a JSON array (no prose, no markdown fences) where each entry has exactly this shape:
+{"name": string, "colour": string, "category": string, "function": string, "bbox": {"x": number, "y": number, "width": number, "height": number}}
+
+- "name": a short, concrete noun a young child would use for it (e.g. "cup", "ball", "shoe").
+- "colour": its single most obvious colour, as one plain word.
+- "category": a broad kind (e.g. "drinkware", "toy", "clothing", "furniture").
+- "function": a short phrase completing "you ___ it" (e.g. "drink from", "play with", "wear").
+- "bbox": a tight pixel bounding box in THIS image's own coordinates (top-left origin, x/y/width/height in pixels of this exact image, not normalised 0-1).
+
+Only include objects a preschooler could recognise and go find in a room. Never include a person, a body part, or anything that looks like a person, even blurred or partial. If you see nothing usable, return [].`;
+
       const message = await client.messages.create({
         model: 'claude-sonnet-5',
         max_tokens: 1024,
@@ -71,7 +91,7 @@ export default async function handler(req: ProxyReq, res: ProxyRes) {
                   data: body.imageBase64,
                 },
               },
-              { type: 'text', text: 'List the household objects visible in this photo.' },
+              { type: 'text', text: VISION_PROMPT },
             ],
           },
         ],

@@ -1,6 +1,6 @@
 # F.006 — My World Pipeline: Camera → Face Blur → Recognise → Crops → Discard
 
-**Tier 0** · Owner: **P2** · Reviewer: P4 · Status: Not started
+**Tier 0** · Owner: **P2** · Reviewer: P4 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Parent points the device at the room and shoots. Faces blurred **on device**
