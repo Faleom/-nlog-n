@@ -1,6 +1,6 @@
 # F.019 — Caregiver Dashboard (Minimal)
 
-**Tier 2** · Owner: **P4** · Reviewer: P1 · Status: Not started
+**Tier 2** · Owner: **P4** · Reviewer: P1 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Session recap, focus-stretch trend, generalization list. Minimal — the Tier 2
