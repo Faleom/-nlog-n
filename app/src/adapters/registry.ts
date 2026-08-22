@@ -15,7 +15,7 @@ import { createFixtureCapture } from './fixtures/fixtureCapture';
 import { createFixtureFaceDetect } from './fixtures/fixtureFaceDetect';
 import { createFixtureRedaction } from './fixtures/fixtureRedaction';
 import { createFixtureVision } from './fixtures/fixtureVision';
-import { createFixtureTextGen } from './fixtures/fixtureTextGen';
+import { createHaikuCard } from './textgen/haikuCard';
 import { createFixtureSpeechOut } from './fixtures/fixtureSpeechOut';
 import { createIndexedDbStorage } from './storage/indexedDbStorage';
 import type { AdapterRegistry } from './ports';
@@ -33,7 +33,7 @@ export const adapters: AdapterRegistry = {
   faceDetect: createFixtureFaceDetect(), // TODO(F.006): swap for BlazeFaceLocal — NEVER a network adapter
   redaction: createFixtureRedaction(), // TODO(F.006): swap for CanvasMosaic
   vision: createFixtureVision(), // TODO(F.006): swap for ClaudeVision
-  textGen: createFixtureTextGen(), // TODO(F.015): swap for HaikuCard
+  textGen: createHaikuCard(), // F.015 — done. Real Haiku call behind the §9.4 guardrail; see adapters/textgen/haikuCard.ts and rawTextCard.ts (the guardrail-failure fallback).
   speechOut: createFixtureSpeechOut(), // TODO(F.010): swap for WebSpeechOut
   storage: createIndexedDbStorage(), // F.001 — done. Real, on-device, persists across restarts.
 };

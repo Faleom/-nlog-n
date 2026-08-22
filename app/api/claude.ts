@@ -13,6 +13,7 @@
 // plan/engineering/TECH-DECISIONS.md — don't relitigate them here.
 
 import Anthropic from '@anthropic-ai/sdk';
+import { buildObservationSystemPrompt, buildObservationUserPrompt } from '../src/engine/branch2Card';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -81,19 +82,35 @@ export default async function handler(req: ProxyReq, res: ProxyRes) {
     }
 
     if (body.kind === 'card') {
-      // TODO(F.015): real prompt + the §9.4 post-generation guardrail check.
-      // claude-haiku-4-5 for the text-only call (TECH-DECISIONS.md).
+      // F.015: claude-haiku-4-5 (TECH-DECISIONS.md), constrained to
+      // generating ONLY the observation paragraph -- the fixed header and
+      // the three fixed questions are never model output (see
+      // src/engine/branch2Card.ts). The §9.4 guardrail itself runs
+      // CLIENT-SIDE, in src/adapters/textgen/haikuCard.ts, per the
+      // TextGenPort doc comment in src/adapters/ports.ts -- this endpoint's
+      // only job is the model call.
       const message = await client.messages.create({
         model: 'claude-haiku-4-5',
-        max_tokens: 512,
+        max_tokens: 500,
+        system: buildObservationSystemPrompt(),
         messages: [
           {
             role: 'user',
-            content: `Parent noticed: ${body.whatNoticed}. First noticed at: ${body.whenNoticed}. Looks like: ${body.whatItLooksLike}. Child age in months: ${body.childAgeMonths}.`,
+            content: buildObservationUserPrompt({
+              whatNoticed: body.whatNoticed,
+              whenNoticed: body.whenNoticed,
+              whatItLooksLike: body.whatItLooksLike,
+              childAgeMonths: body.childAgeMonths,
+            }),
           },
         ],
       });
-      res.status(200).json({ content: message.content });
+      const observation = message.content
+        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+        .map((block) => block.text)
+        .join('')
+        .trim();
+      res.status(200).json({ observation });
       return;
     }
 

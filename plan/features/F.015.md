@@ -1,6 +1,6 @@
 # F.015 — Branch 2: Card, Guardrail, Save & Handoff Back
 
-**Tier 1** · Owner: **P3** · Reviewer: P2 · Status: Not started
+**Tier 1** · Owner: **P3** · Reviewer: P2 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Turns the three answers into a question card for a health worker, behind a hard

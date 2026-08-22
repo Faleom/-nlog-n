@@ -32,7 +32,7 @@
   },
   "overrides": [
     {
-      "files": ["src/adapters/**", "api/**"],
+      "files": ["src/adapters/**", "api/**", "scripts/**"],
       "rules": {
         "no-restricted-imports": "off"
       }
