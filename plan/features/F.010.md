@@ -1,6 +1,6 @@
 # F.010 — Support Ladder & Caregiver Logging
 
-**Tier 1** · Owner: **P1** · Reviewer: P3 · Status: Not started
+**Tier 1** · Owner: **P1** · Reviewer: P3 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 The five-tier prompting hierarchy, caregiver-facing, identical across all games.
