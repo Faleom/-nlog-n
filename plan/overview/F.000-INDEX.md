@@ -99,7 +99,7 @@ Note: F.021 and F.022 were Tier 3 by the guide's own default (§16.1) and are
 | F.017 | Companion mechanic in Game 1 | 2 | P2 | P4 | Not started | F.004, F.008, F.016 |
 | F.018 | Avoid list | 2 | P4 | P1 | Not started | F.005 |
 | F.019 | Caregiver dashboard | 2 | P4 | P1 | Not started | F.010, F.011, F.013 |
-| F.020 | Branch handoff & no-screening | 2 | P3 | P2 | Not started | F.010, F.015 |
+| F.020 | Branch handoff & no-screening | 2 | P3 | P2 | Implemented, self-verified — needs fresh-context review | F.010, F.015 |
 | **F.021** | **Game 3 Mode A: Shadow Match** | **2 — required** | **P2** | **P4** | Not started | F.008, F.009 |
 | **F.022** | **Game 2: Sequencing + routines** | **2 — required** | **P1** | **P3** | Not started | F.008, F.009, F.016 |
 | F.023 | Game 3 Modes B & C | 3 — stretch | P2 | P4 | Not started | F.021 |
