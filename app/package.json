@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "smoke:f001": "tsx scripts/smoke-f001.ts",
     "smoke:f005": "tsx scripts/smoke-f005.ts",
-    "smoke": "npm run smoke:f001 && npm run smoke:f005"
+    "smoke": "npm run smoke:f001 && npm run smoke:f005 && npm run smoke:f009",
+    "smoke:f009": "tsx scripts/smoke-f009.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

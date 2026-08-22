@@ -17,8 +17,19 @@ export const INTERACTION_CONFIG = {
 
   MAX_ATTEMPTS_PER_TRIAL: 3, // then errorless completion
 
+  // Cross-session support-tier fading (F.011 — the 5-tier support ladder:
+  // full physical -> partial -> gesture -> verbal -> independent). Reads
+  // saved history across sessions. NOT the same mechanism as
+  // DISENGAGEMENT_TIER3_STREAK below.
   STEP_UP_UNPROMPTED_STREAK: 3, // consecutive unprompted correct
   STEP_DOWN_TIER3_STREAK: 2, // consecutive tier-3 completions
+
+  // Same-session difficulty signal (F.009's own disengagement detection —
+  // §7.7: "3 consecutive tier-3 trials -> step difficulty down or switch
+  // modality"). This is the in-trial prompt hierarchy (tiers 0-3: wait /
+  // repeat / highlight / animate), a different tier concept from the
+  // support ladder above, and a different threshold (3, not 2).
+  DISENGAGEMENT_TIER3_STREAK: 3,
 
   SESSION_CAP_FIRST_MINUTES: 12,
   SESSION_CAP_DECREMENT_MINUTES: 1,

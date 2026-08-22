@@ -1,6 +1,6 @@
 # F.009 — Interaction State Machine
 
-**Tier 1** · Owner: **P1** · Reviewer: P3 · Status: Not started
+**Tier 1** · Owner: **P1** · Reviewer: P3 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 The moment-to-moment loop: what happens on right, wrong and idle. §7.7 says
