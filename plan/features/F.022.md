@@ -1,6 +1,6 @@
 # F.022 — Game 2: Toy Story Sequencing + Routine Anchors
 
-**Tier 2 — required.** All three games ship this weekend. · Owner: **P1** · Reviewer: P3 · Status: Not started
+**Tier 2 — required.** All three games ship this weekend. · Owner: **P1** · Reviewer: P3 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 2–4 crops form a routine from the child's own objects and their **real** daily
