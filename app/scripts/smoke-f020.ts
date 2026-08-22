@@ -135,16 +135,25 @@ async function main() {
   //     never outcomes
   //   - branchHandoff.ts / smoke-f020.ts: this file's own structural proof
   //     that history is accepted and then ignored
+  //   - CaregiverDashboard.tsx / caregiverDashboard.ts: F.019's own
+  //     spec-required feature (§7.9) -- DISPLAYING real session history to
+  //     the caregiver who already owns it. The §10 rule this file exists
+  //     to enforce is specifically about COMPUTING A CONCERN from history,
+  //     not reading it at all -- a recap and a generalization tracker are
+  //     not a concern signal, they're the dashboard doing its job.
   const HISTORY_READER_ALLOWLIST = new Set([
     'src/engine/profileStore.ts',
     'src/engine/fading.ts',
     'src/engine/sessionLifecycle.ts',
     'src/engine/branchHandoff.ts',
+    'src/engine/caregiverDashboard.ts',
+    'src/screens/CaregiverDashboard.tsx',
     'scripts/smoke-f020.ts',
     'scripts/smoke-f001.ts', // F.001's own test, verifying the store functions themselves work
     'scripts/smoke-f010.ts', // F.010's own test, same reason (and asserts activityLogging.ts does NOT read history)
     'scripts/smoke-f011.ts', // F.011's own test, reads history to set up fixtures
     'scripts/smoke-f013.ts', // F.013's own test, same reason
+    'scripts/smoke-f019.ts', // F.019's own test, reads history to set up real fixtures for the dashboard
   ]);
 
   await test('no file outside the allowlist reads activity history', () => {
@@ -184,6 +193,12 @@ async function main() {
     'scripts/smoke-f013.ts',
     'scripts/smoke-f014.ts', // asserts the ABSENCE of "tally" in F.014's files -- the word appears only inside that assertion
     'scripts/smoke-f020.ts', // this file's own allowlist text
+    'src/engine/routineSequencing.ts', // Game 2's own same-slot wrong-attempt
+    // counter -- the tap-to-place equivalent of F.009's same-trial tier
+    // escalation, a different interaction shape but the identical category
+    // of "within one attempt at one skill", never a cross-session concern
+    'scripts/smoke-f022.ts', // F.022's own test, names that counter in prose
+    'scripts/smoke-f019.ts', // F.019's own test, asserts the ABSENCE of "streak" etc. in the dashboard
   ]);
 
   await test('no counter/streak/threshold/tally construct exists outside the allowlist', () => {
