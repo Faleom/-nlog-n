@@ -10,10 +10,11 @@
     "preview": "vite preview",
     "smoke:f001": "tsx scripts/smoke-f001.ts",
     "smoke:f005": "tsx scripts/smoke-f005.ts",
-    "smoke": "npm run smoke:f001 && npm run smoke:f005 && npm run smoke:f009 && npm run smoke:f010 && npm run smoke:f011",
+    "smoke": "npm run smoke:f001 && npm run smoke:f005 && npm run smoke:f009 && npm run smoke:f010 && npm run smoke:f011 && npm run smoke:f013",
     "smoke:f009": "tsx scripts/smoke-f009.ts",
     "smoke:f010": "tsx scripts/smoke-f010.ts",
-    "smoke:f011": "tsx scripts/smoke-f011.ts"
+    "smoke:f011": "tsx scripts/smoke-f011.ts",
+    "smoke:f013": "tsx scripts/smoke-f013.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

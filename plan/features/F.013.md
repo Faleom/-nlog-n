@@ -1,6 +1,6 @@
 # F.013 — Session Cap, Fade & Off-Screen Handoff
 
-**Tier 1** · Owner: **P1** · Reviewer: P3 · Status: Not started
+**Tier 1** · Owner: **P1** · Reviewer: P3 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 The app ends itself, and gets shorter over time. This is the headline Impact
