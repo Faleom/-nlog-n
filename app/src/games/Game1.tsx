@@ -91,7 +91,7 @@ export function Game1({ profile }: Game1Props) {
       skillId: `find-${target.category}`,
       context: 'living-room', // TODO(F.008): real context from the capture flow
       supportTier: tier,
-      onScreenPrompted: machineRef.current.currentTier > 0,
+      onScreenTier: machineRef.current.currentTier,
     });
     setLastLoggedTier(tier);
     setPhase('idle');

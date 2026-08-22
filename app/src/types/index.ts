@@ -135,10 +135,23 @@ export interface ChildProfile {
 /** 1 = full physical, 5 = independent. See engineering config for tier copy. */
 export type SupportTier = 1 | 2 | 3 | 4 | 5;
 
+/** F.009's in-trial prompt hierarchy tier (0-3: wait/repeat/highlight/animate).
+ * A different axis from SupportTier (1-5, F.010's caregiver ladder) — see
+ * engine/activityLogging.ts for how the two relate. */
+export type OnScreenPromptTier = 0 | 1 | 2 | 3;
+
 export interface SkillRecord {
   skillId: string;
   context: string;
+  /** Caregiver-reported, F.010's five-tier ladder (off-screen physical support). */
   supportTier: SupportTier;
+  /** F.009's raw in-trial prompt tier for the confirmation tap. F.011's
+   * fading logic reads this specifically (e.g. "reached tier 3") — a
+   * collapsed boolean can't tell "needed the maximum on-screen prompting"
+   * apart from "just needed one gentle repeat". */
+  onScreenTier: OnScreenPromptTier;
+  /** Derived convenience — onScreenTier > 0. Kept alongside onScreenTier
+   * (not computed on read) so simple consumers don't need the tier detail. */
   prompted: boolean;
   timestamp: string;
 }

@@ -119,11 +119,12 @@ async function main() {
     assert.equal(session.activitiesRun, 0);
   });
 
-  await test('appendSkillRecord records skill, context, support tier, prompted', async () => {
+  await test('appendSkillRecord records skill, context, support tier, on-screen tier, prompted', async () => {
     await appendSkillRecord(sessionId, {
       skillId: 'find-red-object',
       context: 'kitchen',
       supportTier: 3,
+      onScreenTier: 2,
       prompted: true,
       timestamp: new Date().toISOString(),
     });
@@ -133,6 +134,7 @@ async function main() {
     assert.equal(session?.skillRecords[0]?.skillId, 'find-red-object');
     assert.equal(session?.skillRecords[0]?.context, 'kitchen');
     assert.equal(session?.skillRecords[0]?.supportTier, 3);
+    assert.equal(session?.skillRecords[0]?.onScreenTier, 2);
     assert.equal(session?.skillRecords[0]?.prompted, true);
   });
 

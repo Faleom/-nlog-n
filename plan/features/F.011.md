@@ -1,6 +1,6 @@
 # F.011 — Fading Logic
 
-**Tier 1** · Owner: **P1** · Reviewer: P3 · Status: Not started
+**Tier 1** · Owner: **P1** · Reviewer: P3 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Tracks support tier per skill across sessions. A consistent pattern of needing

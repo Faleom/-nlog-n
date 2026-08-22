@@ -62,7 +62,7 @@ async function main() {
       skillId: 'find-red-cup',
       context: 'kitchen',
       supportTier: 3,
-      onScreenPrompted: true,
+      onScreenTier: 2,
     });
     const record = session.skillRecords.at(-1);
     assert.equal(record?.skillId, 'find-red-cup');
@@ -83,7 +83,7 @@ async function main() {
       skillId: 'find-blue-ball',
       context: 'bedroom',
       supportTier: 1, // caregiver gave lots of physical help...
-      onScreenPrompted: false, // ...but the on-screen tap was unprompted
+      onScreenTier: 0, // ...but the on-screen tap was unprompted
     });
     const history = await getSkillHistory(childId, 'find-blue-ball', 'bedroom');
     assert.equal(history[0]?.supportTier, 1);

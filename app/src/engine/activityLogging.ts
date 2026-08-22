@@ -9,7 +9,7 @@
 // profileStore.getSkillHistory.
 
 import { appendSkillRecord } from './profileStore';
-import type { SessionLog, SupportTier } from '../types';
+import type { OnScreenPromptTier, SessionLog, SupportTier } from '../types';
 
 export interface LogActivityOutcomeInput {
   sessionId: string;
@@ -18,9 +18,10 @@ export interface LogActivityOutcomeInput {
   /** Caregiver-reported, from F.010's five-tier ladder — how much
    * off-screen support was actually needed, not what was suggested. */
   supportTier: SupportTier;
-  /** From F.009's trial resolution (`resolution.prompted`) — did the
-   * on-screen confirmation hierarchy fire at all. */
-  onScreenPrompted: boolean;
+  /** From F.009's trial resolution (`resolution.tier`) — the raw in-trial
+   * prompt tier the confirmation tap resolved at. `prompted` is derived
+   * from this, not passed separately, so the two can never disagree. */
+  onScreenTier: OnScreenPromptTier;
 }
 
 export async function logActivityOutcome(input: LogActivityOutcomeInput): Promise<SessionLog> {
@@ -28,7 +29,8 @@ export async function logActivityOutcome(input: LogActivityOutcomeInput): Promis
     skillId: input.skillId,
     context: input.context,
     supportTier: input.supportTier,
-    prompted: input.onScreenPrompted,
+    onScreenTier: input.onScreenTier,
+    prompted: input.onScreenTier > 0,
     timestamp: new Date().toISOString(),
   });
 }
