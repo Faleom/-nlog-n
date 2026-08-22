@@ -52,6 +52,13 @@ import {
   shuffleGrid,
   targetDescriptionForLevel,
 } from './game1Difficulty';
+import {
+  COMPANION_HUNT_PROMPT_TEMPLATE,
+  HELPER_FRAMING_PROMPT_TEMPLATE,
+  hasCompanion,
+  rewardFrameColour,
+  shouldUseHelperFraming,
+} from './game1Companion';
 import type { ChildProfile, SupportTier, TaggedCrop } from '../types';
 
 type Phase =
@@ -171,6 +178,7 @@ export function Game1({ profile }: Game1Props) {
   const [captureNotice, setCaptureNotice] = useState<'blur-failed' | null>(null);
   const [slowCapture, setSlowCapture] = useState(false);
   const [level, setLevel] = useState<Game1Level>(1);
+  const [companionHuntActive, setCompanionHuntActive] = useState(false);
 
   // §8.1 "Profile tuning": derived once from the four response-profile
   // dimensions, never a condition (ARCHITECTURE-RULES.md §5.2). Recomputed
@@ -221,8 +229,26 @@ export function Game1({ profile }: Game1Props) {
       setSessionNumber(number);
       setLevel(savedLevel);
       sessionStartedAtRef.current = Date.now();
+
+      // §6.3 "Bookend: greets at start" — the goodbye half already exists
+      // (childFacingHandoffLine, called from handleEndSession). With no
+      // Companion set this renders through the same neutral 'your friend'
+      // default engine/slots.ts already provides — no branching needed.
+      if (hasCompanion(profile)) {
+        void adapters.speechOut.say(
+          renderLine('Hi! {companion} is ready to play!', slotValuesFromProfile(profile), profile.context),
+        );
+      }
     })();
-  }, [profile.id]);
+    // Depends on the whole `profile` object, not just `profile.id` — the
+    // greeting reads profile.context.companion, and `handleEndSession`
+    // (the goodbye half of this same bookend) already depends on the full
+    // `profile` object for the identical reason. This DOES mean the
+    // effect (and therefore a fresh session + a repeated greeting) fires
+    // again if the parent hands down a new `profile` object with the same
+    // id — acceptable here since App.tsx currently only ever produces a
+    // new profile reference on a genuine change, not on every render.
+  }, [profile]);
 
   async function handleLevelChange(newLevel: Game1Level) {
     setLevel(newLevel);
@@ -269,6 +295,7 @@ export function Game1({ profile }: Game1Props) {
     const picked = pickNextTarget(pool, lastTargetIdRef.current);
     lastTargetIdRef.current = picked.id;
     setTarget(picked);
+    setCompanionHuntActive(false);
     const grid = buildConfirmationGrid(pool, picked, effectiveLevel);
     // §8.1: calm/sameness profiles keep the reward crop in the same
     // position every trial (no shuffle); other profiles get a shuffled
@@ -280,9 +307,59 @@ export function Game1({ profile }: Game1Props) {
     setPhase('searching');
     machineRef.current.startTrial();
 
-    const template = buildSearchPromptTemplate(effectiveLevel, picked, tuning);
-    const line = renderLine(template, slotValuesFromProfile(profile), profile.context);
+    // §6.3/§8.1 "Helper who needs help": every 3rd trial swaps the
+    // standard "{companion} wants..." framing for the prosocial
+    // "{companion} can't reach the {object}..." framing. Both are spoken
+    // AND are what the caregiver's 'searching' screen renders (see the
+    // JSX below) — §6.3's "never an instruction the caregiver can't see
+    // on screen" requirement.
+    const useHelperFraming = hasCompanion(profile) && shouldUseHelperFraming(trialCountRef.current + 1);
+    const template = useHelperFraming
+      ? HELPER_FRAMING_PROMPT_TEMPLATE
+      : buildSearchPromptTemplate(effectiveLevel, picked, tuning);
+    const line = renderLine(
+      template,
+      slotValuesFromProfile(profile, { 'object.name': picked.name }),
+      profile.context,
+    );
     void adapters.speechOut.say(line);
+  }
+
+  /** §8.1 "Companion hunt": the child's own toy, not a room crop — the
+   * highest-motivation target available. Caregiver-triggered (see the
+   * 'searching' JSX's "Make this a {companion} hunt!" button) rather than
+   * app-scheduled, since the app has no reliable way to know in advance
+   * which trial will actually be a session's last one (cap/idle/caregiver
+   * endings are all unpredictable) — §8.1 says "reserve for the final
+   * trial", so letting the caregiver deliberately choose it as the last
+   * one is the honest way to satisfy that. Ends the session immediately
+   * after, which is what makes it actually "final" rather than a guess. */
+  function startCompanionHuntTrial() {
+    setCompanionHuntActive(true);
+    setDeadCropIds(new Set());
+    setPromptTier(0);
+    setPhase('searching');
+    machineRef.current.startTrial();
+    void adapters.speechOut.say(
+      renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile), profile.context),
+    );
+  }
+
+  /** The companion-hunt equivalent of handleTap: there's only one real
+   * object (their actual Companion toy) so, unlike a normal trial, there's
+   * no discrimination grid to tap — the caregiver's "They brought it"
+   * confirmation IS the resolution. Still logged as a real activity
+   * (§7.6's support-tier report still applies) and still resolves through
+   * F.009's machine so its tier/timing bookkeeping stays consistent with
+   * every other trial. */
+  function handleCompanionFound() {
+    machineRef.current.recordAttempt(true);
+    setPhase('celebrating');
+    lastObjectNameRef.current = profile.context.companion?.name ?? null;
+    void adapters.speechOut.say(
+      renderLine('{companion}!', slotValuesFromProfile(profile), profile.context),
+    );
+    setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
   }
 
   async function handleCapturePress() {
@@ -313,6 +390,10 @@ export function Game1({ profile }: Game1Props) {
   }
 
   function handleTheyBroughtIt() {
+    if (companionHuntActive) {
+      handleCompanionFound();
+      return;
+    }
     setPhase('confirming');
     void adapters.speechOut.say('Show me — which one did you bring?');
   }
@@ -352,22 +433,31 @@ export function Game1({ profile }: Game1Props) {
   }
 
   async function handleSupportTierReport(tier: SupportTier) {
-    if (!sessionId || !target) return;
+    if (!sessionId) return;
+    if (!companionHuntActive && !target) return;
+    const skillId = companionHuntActive ? 'find-companion' : `find-${target?.category}`;
+
     await logActivityOutcome({
       sessionId,
-      skillId: `find-${target.category}`,
+      skillId,
       context: 'living-room', // TODO(context selection is outside F.008 — see F.007/onboarding)
       supportTier: tier,
       onScreenTier: machineRef.current.currentTier,
     });
     setLastLoggedTier(tier);
-    const suggestion = await getFadingSuggestion(
-      profile.id,
-      `find-${target.category}`,
-      tier,
-      profile.nickname ?? 'they',
-    );
+    const suggestion = await getFadingSuggestion(profile.id, skillId, tier, profile.nickname ?? 'they');
     setFadingSuggestion(suggestion);
+
+    if (companionHuntActive) {
+      // §8.1: the Companion hunt is reserved for the session's FINAL
+      // trial (see startCompanionHuntTrial's header for why that's
+      // caregiver-triggered rather than app-guessed) — logging its
+      // outcome is what actually ends the session, delivering the
+      // Companion's goodbye bookend (childFacingHandoffLine, already
+      // Companion-framed) immediately after.
+      void handleEndSession('caregiver');
+      return;
+    }
 
     trialCountRef.current += 1;
     // §8.1 lively/short-attention tuning: "movement break every 3 trials".
@@ -530,10 +620,16 @@ export function Game1({ profile }: Game1Props) {
 
       {phase === 'searching' && (
         <>
-          <p>
-            Caregiver view: find {target && targetDescriptionForLevel(level, target)} —{' '}
-            {searchScopeLabelForLevel(level)}. (Level {level})
-          </p>
+          {companionHuntActive ? (
+            <p>
+              Caregiver view: help them find {profile.context.companion?.name ?? 'their Companion'}!
+            </p>
+          ) : (
+            <p>
+              Caregiver view: find {target && targetDescriptionForLevel(level, target)} —{' '}
+              {searchScopeLabelForLevel(level)}. (Level {level})
+            </p>
+          )}
           <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
             Support tier {suggestedTierInfo.tier} — {suggestedTierInfo.name}:{' '}
             {suggestedTierInfo.instruction}
@@ -542,6 +638,17 @@ export function Game1({ profile }: Game1Props) {
             <p style={{ fontSize: '0.75rem', background: '#eef', padding: 6, borderRadius: 6 }}>
               {fadingSuggestion.message}
             </p>
+          )}
+          {/* §8.1: Companion hunt reserved for the session's final trial —
+              caregiver-triggered, see startCompanionHuntTrial's header for
+              why. Hidden with no Companion set (§6.3 review checklist). */}
+          {!companionHuntActive && hasCompanion(profile) && (
+            <button
+              style={{ minWidth: 88, minHeight: 88, fontSize: '0.8rem' }}
+              onClick={startCompanionHuntTrial}
+            >
+              Make this a {profile.context.companion?.name} hunt!
+            </button>
           )}
           <button style={{ minWidth: 88, minHeight: 88 }} onClick={handleTheyBroughtIt}>
             They brought it
@@ -575,20 +682,86 @@ export function Game1({ profile }: Game1Props) {
         </div>
       )}
 
-      {phase === 'celebrating' && target && (
-        // CHILD-FACING. The object IS the reward (§7.7) — no confetti, no
-        // stars, no text. Just their own crop, scaled up.
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
-          <CropButton
-            crop={target}
-            dead={false}
-            dimmed={false}
-            isTargetHighlighted={false}
-            isTargetBouncing={false}
-            disabled
-            celebrating
-            onTap={() => {}}
-          />
+      {phase === 'celebrating' && (companionHuntActive || target) && (
+        // CHILD-FACING. The object (or, for a Companion hunt, the
+        // Companion's own photo) IS the reward (§7.7) — no confetti, no
+        // stars, no text. §8.1 "Reward: their photo appears on success,
+        // framed in {fav_colour}" — reward frame colour applies to both
+        // paths. §6.3: the Companion is DELIGHTED here — this is its one
+        // celebratory state; there is no corresponding "sad" render
+        // anywhere in this file for a wrong tap (§7.7's wrong-tap handling
+        // is silence + fade only, never a Companion reaction).
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            paddingTop: 40,
+            position: 'relative',
+          }}
+        >
+          <div
+            style={
+              rewardFrameColour(profile)
+                ? {
+                    padding: 8,
+                    borderRadius: 20,
+                    border: `4px solid ${rewardFrameColour(profile)}`,
+                  }
+                : undefined
+            }
+          >
+            {companionHuntActive ? (
+              <div
+                aria-label={profile.context.companion?.name}
+                className="g1-crop g1-crop--celebrating"
+                style={{
+                  minWidth: 88,
+                  minHeight: 88,
+                  borderRadius: 16,
+                  backgroundImage: `url(${profile.context.companion?.photo})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              />
+            ) : (
+              target && (
+                <CropButton
+                  crop={target}
+                  dead={false}
+                  dimmed={false}
+                  isTargetHighlighted={false}
+                  isTargetBouncing={false}
+                  disabled
+                  celebrating
+                  onTap={() => {}}
+                />
+              )
+            )}
+          </div>
+          {/* Small delighted Companion cameo on a normal (non-hunt)
+              celebration — §8.0/§18's "profile-swap demo moment": this
+              cameo, the audio greeting, the hunt button, and the helper
+              framing are ALL driven by the same profile.context.companion
+              read, so changing the Companion in settings changes every one
+              of them with no branching code here. */}
+          {!companionHuntActive && hasCompanion(profile) && (
+            <div
+              aria-label={profile.context.companion?.name}
+              style={{
+                position: 'absolute',
+                bottom: -8,
+                right: 'calc(50% - 70px)',
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                border: '3px solid #fff',
+                boxShadow: '0 0 0 2px rgba(0,0,0,0.15)',
+                backgroundImage: `url(${profile.context.companion?.photo})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+          )}
         </div>
       )}
 

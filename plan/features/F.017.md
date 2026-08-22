@@ -1,6 +1,6 @@
 # F.017 — Companion Mechanic in Game 1
 
-**Tier 2** · Owner: **P2** · Reviewer: P4 · Status: Not started
+**Tier 2** · Owner: **P2** · Reviewer: P4 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Wires the Companion through Game 1 as guide, target, helper and bookend. This is
