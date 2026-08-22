@@ -1,6 +1,6 @@
 # F.002 — Shared Onboarding: Age, Nickname, Two Doors
 
-**Tier 0** · Owner: **P4** · Reviewer: P1 · Status: Not started
+**Tier 0** · Owner: **P4** · Reviewer: P1 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 The entry every parent sees before the branches split. Age in months (the only
