@@ -1,6 +1,6 @@
 # F.012 — Game 1 Difficulty Levels 1–4
 
-**Tier 1** · Owner: **P2** · Reviewer: P4 · Status: Not started
+**Tier 1** · Owner: **P2** · Reviewer: P4 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Four difficulty axes on the Game 1 loop, moving along together.

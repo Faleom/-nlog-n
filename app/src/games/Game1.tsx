@@ -43,6 +43,15 @@ import {
 import { SUPPORT_TIERS, DEFAULT_STARTING_SUPPORT_TIER } from '../config/supportLadder';
 import { GENERIC_FALLBACK_CROPS } from './genericFallbackCrops';
 import { pickNextTarget } from './game1Trial';
+import { getGame1Level, setGame1Level, type Game1Level } from './game1Level';
+import {
+  applyProfileTuning,
+  buildConfirmationGrid,
+  buildSearchPromptTemplate,
+  searchScopeLabelForLevel,
+  shuffleGrid,
+  targetDescriptionForLevel,
+} from './game1Difficulty';
 import type { ChildProfile, SupportTier, TaggedCrop } from '../types';
 
 type Phase =
@@ -52,6 +61,7 @@ type Phase =
   | 'confirming'
   | 'celebrating'
   | 'reportingSupport'
+  | 'movementBreak'
   | 'sessionEnded';
 
 interface Game1Props {
@@ -139,16 +149,33 @@ const GAME1_STYLES = `
 .g1-crop--highlighted { animation: g1-pulse 1.2s ease-in-out infinite; }
 .g1-crop--bouncing { animation: g1-bounce 0.6s ease-in-out infinite; }
 .g1-crop--celebrating { animation: g1-celebrate 800ms ease-out forwards; z-index: 1; position: relative; }
+/* §4.3: "cap the grid on phones, never shrink the target" — below the
+   tablet breakpoint the confirmation grid becomes a horizontally
+   scrolling carousel (~2.5 crops visible) instead of wrapping into a
+   shrunk grid. flex-shrink:0 on each crop is what actually enforces the
+   88pt floor never shrinking; overflow-x:auto is what makes 6 crops fit
+   without wrapping. */
+@media (max-width: 600px) {
+  .g1-grid { flex-wrap: nowrap !important; overflow-x: auto; justify-content: flex-start !important; padding: 0 8px; }
+  .g1-crop { flex-shrink: 0; }
+}
 `;
 
 export function Game1({ profile }: Game1Props) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [crops, setCrops] = useState<TaggedCrop[]>([]);
   const [target, setTarget] = useState<TaggedCrop | null>(null);
+  const [confirmGrid, setConfirmGrid] = useState<TaggedCrop[]>([]);
   const [promptTier, setPromptTier] = useState<PromptTier>(0);
   const [deadCropIds, setDeadCropIds] = useState<Set<string>>(new Set());
   const [captureNotice, setCaptureNotice] = useState<'blur-failed' | null>(null);
   const [slowCapture, setSlowCapture] = useState(false);
+  const [level, setLevel] = useState<Game1Level>(1);
+
+  // §8.1 "Profile tuning": derived once from the four response-profile
+  // dimensions, never a condition (ARCHITECTURE-RULES.md §5.2). Recomputed
+  // only if the profile object itself changes, not per trial.
+  const tuning = applyProfileTuning(profile);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionNumber, setSessionNumber] = useState<number | null>(null);
@@ -166,6 +193,11 @@ export function Game1({ profile }: Game1Props) {
   const sessionStartedAtRef = useRef<number>(0);
   const lastObjectNameRef = useRef<string | null>(null);
   const lastTargetIdRef = useRef<string | null>(null);
+  // §8.1 lively/short-attention tuning: "movement break every 3 trials".
+  // Counts trials resolved THIS session, not persisted — the cadence is a
+  // per-session pacing device, not a fact worth remembering across
+  // sessions the way the level itself is.
+  const trialCountRef = useRef<number>(0);
 
   const handleEndSession = useCallback(
     async (reason: 'cap' | 'idle' | 'caregiver') => {
@@ -180,15 +212,22 @@ export function Game1({ profile }: Game1Props) {
 
   useEffect(() => {
     void (async () => {
-      const [session, number] = await Promise.all([
+      const [session, number, savedLevel] = await Promise.all([
         startSession(profile.id),
         getSessionNumber(profile.id),
+        getGame1Level(profile.id),
       ]);
       setSessionId(session.id);
       setSessionNumber(number);
+      setLevel(savedLevel);
       sessionStartedAtRef.current = Date.now();
     })();
   }, [profile.id]);
+
+  async function handleLevelChange(newLevel: Game1Level) {
+    setLevel(newLevel);
+    await setGame1Level(profile.id, newLevel);
+  }
 
   // The single poller driving both F.009's idle detection and F.013's cap
   // check, exactly as in the engine's design (see interactionMachine.ts —
@@ -219,20 +258,30 @@ export function Game1({ profile }: Game1Props) {
     return () => clearInterval(interval);
   }, [sessionId, sessionNumber, phase, handleEndSession]);
 
-  function startTrialWith(pool: TaggedCrop[]) {
+  /**
+   * Starts a new trial from the session's existing crop pool. `effectiveLevel`
+   * defaults to the caregiver-set level, but the movement-break return path
+   * (§7.7: "always to a task one level easier than the one that triggered
+   * it") passes a one-lower override for exactly one trial without
+   * persisting that as the child's new level.
+   */
+  function startTrialWith(pool: TaggedCrop[], effectiveLevel: Game1Level = level) {
     const picked = pickNextTarget(pool, lastTargetIdRef.current);
     lastTargetIdRef.current = picked.id;
     setTarget(picked);
+    const grid = buildConfirmationGrid(pool, picked, effectiveLevel);
+    // §8.1: calm/sameness profiles keep the reward crop in the same
+    // position every trial (no shuffle); other profiles get a shuffled
+    // layout each trial. buildConfirmationGrid itself always stays
+    // deterministic — the shuffle is this explicit, separate opt-in step.
+    setConfirmGrid(tuning.fixedLayout ? grid : shuffleGrid(grid));
     setDeadCropIds(new Set());
     setPromptTier(0);
     setPhase('searching');
     machineRef.current.startTrial();
 
-    const line = renderLine(
-      '{companion} wants something {fav_colour}!',
-      slotValuesFromProfile(profile, { fav_colour: picked.colour }),
-      profile.context,
-    );
+    const template = buildSearchPromptTemplate(effectiveLevel, picked, tuning);
+    const line = renderLine(template, slotValuesFromProfile(profile), profile.context);
     void adapters.speechOut.say(line);
   }
 
@@ -281,7 +330,8 @@ export function Game1({ profile }: Game1Props) {
         profile.context,
       );
       void adapters.speechOut.say(line);
-      setTimeout(() => setPhase('reportingSupport'), 800);
+      // §8.1 lively/short-attention tuning: "faster celebration".
+      setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
       return;
     }
 
@@ -295,11 +345,8 @@ export function Game1({ profile }: Game1Props) {
     // acknowledgement of "wrong" beyond that — see §7.7's "never: red X,
     // buzzer... a wrong tap produces silence plus fade and nothing else."
     if (outcome.tier === 1 && target) {
-      const line = renderLine(
-        '{companion} wants something {fav_colour}!',
-        slotValuesFromProfile(profile, { fav_colour: target.colour }),
-        profile.context,
-      );
+      const template = buildSearchPromptTemplate(level, target, tuning);
+      const line = renderLine(template, slotValuesFromProfile(profile), profile.context);
       void adapters.speechOut.say(line, { rate: 0.85 });
     }
   }
@@ -321,12 +368,43 @@ export function Game1({ profile }: Game1Props) {
       profile.nickname ?? 'they',
     );
     setFadingSuggestion(suggestion);
+
+    trialCountRef.current += 1;
+    // §8.1 lively/short-attention tuning: "movement break every 3 trials".
+    // §7.7's own engine-driven breaks (disengagement-triggered, capped at
+    // 3/session via machineRef.current.takeMovementBreak()) are separate
+    // and unaffected — this is Game 1 additionally OFFERING one on a fixed
+    // cadence for profiles that benefit from predictable pacing, still
+    // subject to the same session cap.
+    if (
+      tuning.movementBreakEveryNTrials !== null &&
+      trialCountRef.current % tuning.movementBreakEveryNTrials === 0 &&
+      machineRef.current.takeMovementBreak()
+    ) {
+      setPhase('movementBreak');
+      const line = renderLine(
+        '{movement} like a {fav_animal}!',
+        slotValuesFromProfile(profile),
+        profile.context,
+      );
+      void adapters.speechOut.say(line);
+      return;
+    }
+
     // §8.1: "one photo per session, not per trial" — the NEXT trial reuses
     // the same crop set rather than re-prompting for a capture. Only the
     // pre-capture 'idle' screen (before crops exist) shows the capture
     // button; every trial after the first flows straight back into
     // 'searching'.
     startTrialWith(crops);
+  }
+
+  /** §7.7: "Return: always to a task one level easier than the one that
+   * triggered it." A one-trial-only override — does NOT persist as the
+   * child's new level (see startTrialWith's `effectiveLevel` param). */
+  function handleMovementBreakDone() {
+    const easierLevel = Math.max(1, level - 1) as Game1Level;
+    startTrialWith(crops, easierLevel);
   }
 
   if (phase === 'sessionEnded') {
@@ -394,6 +472,26 @@ export function Game1({ profile }: Game1Props) {
             {fadingSuggestion.message}
           </p>
         )}
+        {/* F.012: caregiver-set difficulty level, persisted per child
+            (game1Level.ts). Deliberately no auto-advancement — see that
+            file's header for why. */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Level:</span>
+          {([1, 2, 3, 4] as const).map((l) => (
+            <button
+              key={l}
+              style={{
+                minWidth: 44,
+                minHeight: 44,
+                fontWeight: l === level ? 'bold' : 'normal',
+                border: l === level ? '2px solid #557' : '1px solid #ccc',
+              }}
+              onClick={() => void handleLevelChange(l)}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
         <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleCapturePress()}>
           Take a photo of the room
         </button>
@@ -432,7 +530,10 @@ export function Game1({ profile }: Game1Props) {
 
       {phase === 'searching' && (
         <>
-          <p>Caregiver view: find something {target?.colour}.</p>
+          <p>
+            Caregiver view: find {target && targetDescriptionForLevel(level, target)} —{' '}
+            {searchScopeLabelForLevel(level)}. (Level {level})
+          </p>
           <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
             Support tier {suggestedTierInfo.tier} — {suggestedTierInfo.name}:{' '}
             {suggestedTierInfo.instruction}
@@ -454,8 +555,8 @@ export function Game1({ profile }: Game1Props) {
         // makes it dead; tier 2 highlights the target and dims the rest;
         // tier 3 makes only the target tappable (bounce + disabled
         // distractors), so the child literally cannot fail from here.
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-          {crops.map((crop) => {
+        <div className="g1-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+          {confirmGrid.map((crop) => {
             const isTarget = crop.id === target?.id;
             return (
               <CropButton
@@ -506,6 +607,18 @@ export function Game1({ profile }: Game1Props) {
             ))}
           </div>
         </>
+      )}
+
+      {phase === 'movementBreak' && (
+        // §7.7 "Movement breaks": audio + a simple icon, no scoring, no
+        // counting the child's actual movements. Caregiver taps to
+        // continue when ready — no timer forcing the pace.
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, paddingTop: 40 }}>
+          <p style={{ fontSize: '2rem' }}>🤸</p>
+          <button style={{ minWidth: 88, minHeight: 88 }} onClick={handleMovementBreakDone}>
+            Ready to keep going
+          </button>
+        </div>
       )}
     </div>
   );
