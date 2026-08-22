@@ -1,6 +1,6 @@
 # F.003 — Response Profile: Four Questions + Declaration Pre-fill
 
-**Tier 0** · Owner: **P4** · Reviewer: P1 · Status: Not started
+**Tier 0** · Owner: **P4** · Reviewer: P1 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Replaces the old condition field entirely. Four questions about **what the

@@ -1,6 +1,6 @@
 # F.016 — Context Profile: Quick Preferences
 
-**Tier 2** · Owner: **P4** · Reviewer: P1 · Status: Not started
+**Tier 2** · Owner: **P4** · Reviewer: P1 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Layer 2 of the Child Context Profile — tap-only, ~30 seconds, everything

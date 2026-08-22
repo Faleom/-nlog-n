@@ -1,6 +1,6 @@
 # F.018 — Avoid List
 
-**Tier 2** · Owner: **P4** · Reviewer: P1 · Status: Not started
+**Tier 2** · Owner: **P4** · Reviewer: P1 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 > *"Anything we should stay away from?"*
