@@ -1,6 +1,6 @@
 # F.004 — Companion Capture
 
-**Tier 0** · Owner: **P4** · Reviewer: P1 · Status: Not started
+**Tier 0** · Owner: **P4** · Reviewer: P1 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 The parent photographs the child's favourite toy, names it, picks a pronoun.
