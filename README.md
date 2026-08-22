@@ -18,10 +18,12 @@ of truth. Build plan: [`plan/`](plan/README.md).
 
 | | Role | What they own |
 |---|---|---|
-| **Person 1** | Engine core | The shared machinery every game runs on: the device data store, the slot/template system that personalises every line of text, the moment-to-moment interaction rules (right/wrong/idle handling), the support-level ladder and its fading logic, and the session timer that makes the app shrink itself over time |
-| **Person 2** | Camera & Game 1 | The camera pipeline — on-device face blurring, object recognition, photo handling — and Game 1 itself, the scavenger-hunt game that's the live demo centrepiece |
+| **Person 1** | Engine core, then Game 2 | The shared machinery every game runs on: the device data store, the slot/template system that personalises every line of text, the moment-to-moment interaction rules (right/wrong/idle handling), the support-level ladder and its fading logic, and the session timer that makes the app shrink itself over time. Then Game 2 — Toy Story Sequencing |
+| **Person 2** | Camera, Game 1, Game 3 | The camera pipeline — on-device face blurring, object recognition, photo handling — and Game 1, the scavenger-hunt game that's the live demo centrepiece. Then Game 3, a silhouette-matching game |
 | **Person 3** | Content, Branch 2, video | The object-to-activity content table, the entire "worried parent" branch (milestone info, question-card generation, and the safety checks around it), and — once that's done — owns turning the finished build into the pitch video |
 | **Person 4** | Onboarding & caregiver view | Everything a parent fills in at setup, including the child's favourite toy becoming the app's in-app character, plus the parent-facing dashboard that shows session history |
+
+All three games — Game 1, Game 2, and Game 3 — ship this weekend.
 
 Each person's full brief — dependencies, build order, review responsibilities —
 is in [`plan/assignments/`](plan/assignments/).

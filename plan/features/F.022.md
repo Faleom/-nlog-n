@@ -1,6 +1,6 @@
 # F.022 — Game 2: Toy Story Sequencing + Routine Anchors
 
-**Tier 3 — cut first, without discussion** · Owner: **P1** · Reviewer: P3 · Status: Not started
+**Tier 2 — required.** All three games ship this weekend. · Owner: **P1** · Reviewer: P3 · Status: Not started
 
 ## What
 2–4 crops form a routine from the child's own objects and their **real** daily
@@ -9,7 +9,11 @@ routine. Model it, act it out with the real toy off-screen, then order it.
 ## Depends on / Blocks
 Depends on F.008, F.009, F.016. Blocks nothing.
 
-> **Only start this if Tier 2 is done and tested** (§16.1).
+**Sequenced after P1's engine chain** (F.001 → F.005 → F.009 → F.010 → F.011 →
+F.013), not before it. That chain is still the highest-risk, most-depended-on
+work in the build and does not slow down for this file. This is what P1 moves
+to once it's frozen and stable — which, by the time F.016 also lands, should be
+early enough in the weekend that this isn't a rush.
 
 ## Done when
 - **Routine anchors** captured first: two of bath time, bedtime, snack, getting

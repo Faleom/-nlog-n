@@ -112,34 +112,52 @@ build is going well. It has an owner from Wave 0 and it activates here.
 
 ---
 
-## Wave 4 — The differentiators
+## Wave 4 — The differentiators, and the other two games
 
-Parallel, no interdependencies:
+**Team decision: all three games ship this weekend.** F.021 and F.022 moved
+from optional (§16.1's default) to required — see
+`F.000-INDEX.md` § Scope decision. Both are sequenced here, not earlier,
+because each depends on its owner's own chain being frozen first.
 
-- **P2 → F.017** Companion mechanic in Game 1. The profile-swap demo moment
-  lives here.
-- **P4 → F.018** avoid list, then **F.019** dashboard
-- **P3 → F.020** branch handoff, alongside video work
+Parallel, no interdependencies between the rows below:
 
-**F.017 is the highest-value file in this wave.** It's what turns the Companion
-from a stored photo into the thing judges remember, and it carries the
-four-second profile-swap moment from §18.
+- **P2 → F.017** Companion mechanic in Game 1 — the profile-swap demo moment.
+  **Then P2 → F.021** Shadow Match (Game 3, Mode A). Sequential for P2, not
+  parallel with each other — F.017 first, because Game 1 is still the
+  centrepiece and F.021 reuses machinery P2 is already deep in.
+- **P1 → F.022** Game 2 sequencing + routine anchors, once F.013 (the end of
+  P1's engine chain) and F.016 (quick preferences, P4) are both in.
+- **P4 → F.018** avoid list, then **F.019** dashboard.
+- **P3 → F.020** branch handoff, alongside video work.
 
-**Gate:** Tier 2 done **and tested**. Not "written."
+**F.017 is still the highest-value file in this wave** — it's what turns the
+Companion from a stored photo into the thing judges remember. But **F.021 and
+F.022 are no longer optional**, so don't let them slip to "if there's time."
+They're scheduled, they have a gate, and they're reviewed like everything else.
+
+**Gate:** Tier 2 done **and tested** — which now includes F.021 and F.022, not
+just the original differentiators.
 
 ---
 
-## Wave 5 — Only if Wave 4's gate passed
+## Wave 5 — Stretch: the last mile of Game 3
 
-- **P2 → F.021** Shadow Match — cheapest second game, reuses everything
-- **P1 → F.022** Game 2 sequencing + routine anchors
+**Only F.023 lives here now.** Real owner (P2), built only after F.021 is done
+and tested — not in parallel with it, since Modes B and C share F.021's engine
+and level state.
 
-> §16.3's finding, worth re-reading before starting either: *the second and
-> third games are worth roughly nothing.* Judges see one game working and one
-> more working and score it as one idea, executed. **Breadth doesn't compound;
-> brokenness does.**
+- **P2 → F.023** Trace, then Puzzle if time remains (§8.3's own build order:
+  Puzzle is cheaper and more demoable than Trace, so if only one lands, make
+  it Puzzle — the file's Done-when section has been updated accordingly).
 
-Start these only if there is genuinely nothing left to polish or test.
+> This is the wave §16.3's finding actually applies to now: a third *mode*
+> inside an already-working Game 3 moves judging scores least of anything left
+> to build. Game 1, Game 2 and Game 3's first mode are the required floor —
+> **this is the genuinely optional layer on top**, and the first thing cut if
+> Sunday runs long.
+
+Start this only if there is genuinely nothing left to polish or test on
+anything required.
 
 ---
 

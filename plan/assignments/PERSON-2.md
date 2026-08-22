@@ -10,7 +10,25 @@ You own the pipeline everything is built from, and the game the demo is.
 | **F.008** | 0 | **Game 1, one level, end to end** ← the Tier 0 gate |
 | **F.012** | 1 | Game 1 difficulty levels 1–4 |
 | **F.017** | 2 | Companion mechanic in Game 1 — the profile-swap demo moment |
-| F.021 | 3 | Shadow Match — only if Tier 2 is done and tested |
+| **F.021** | **2 — required** | Game 3, Mode A: Shadow Match. All three games ship this weekend |
+| F.023 | 3 — stretch | Game 3, Modes B & C: Trace and Puzzle. First thing cut if time runs short |
+
+## Your second and third builds: Game 3
+
+**F.021 used to be optional. It isn't any more** — the team decided all three
+games ship this weekend. Sequence it after F.017, once Game 1 is genuinely
+solid: Shadow Match reuses your own crop and silhouette machinery, so it's a
+natural extension of work you're already deep in, not a context switch.
+
+Game 3 is a silhouette-matching game: a silhouette at top, real photos below,
+the child picks the match. Four levels, the last of which hands directly into
+Game 1's own loop — same skill, different distance. Silhouettes generate
+**client-side** from the crop, no extra API call.
+
+**F.023 (Trace and Puzzle, the other two Game 3 modes) is real but genuinely
+stretch** — build it only after F.021 is done and tested, and treat it as the
+first thing you drop if Sunday runs long. Read `../features/F.023.md` when you
+get there; §8.3 says build Puzzle before Trace if only one lands.
 
 ## What you're building
 

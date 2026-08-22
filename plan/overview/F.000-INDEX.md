@@ -36,6 +36,29 @@ The guide doesn't state these; correct them if wrong.
   `../engineering/TECH-DECISIONS.md`. Meets §4's tablet-and-phone-touch
   requirement, native camera included, and deploys instantly for judges.
 
+## Scope decision — all three games ship
+
+**Overriding §16.1's default here.** The guide's own tiering treats Game 2 and
+Game 3 as optional, cut-first-without-discussion, on the finding in §16.3 that
+a second and third game move judging scores least. The team has decided
+otherwise: **all three games are required this weekend, not optional.**
+
+What that changes concretely:
+- **F.021 (Game 3, Mode A) and F.022 (Game 2)** move from Tier 3 to **Tier 2 —
+  required.** Not conditional on a Sunday checkpoint; scheduled like everything
+  else in Tier 2.
+- **F.023 (Game 3, Modes B & C)** moves from "spec only, do not build" to a
+  real Tier 3 file with an owner (P2) — genuinely stretch, built only if F.021
+  is done and tested first, and still the first thing cut if the weekend runs
+  long.
+- **The honest tradeoff, stated plainly rather than buried:** this removes the
+  scope-safety margin §16.4's tiering was built to protect. There is now more
+  required work competing for the same three days, and the Tier-1 freeze
+  checkpoint in `BUILD-ORDER.md` still governs — if Tier 1 isn't done, that
+  checkpoint fires and the team freezes scope regardless of this decision.
+  **The real fallback under this new scope is F.023, not Game 2 or Game 3
+  Mode A.** If something has to give, it's Trace and Puzzle, not a whole game.
+
 ---
 
 ## Tiers
@@ -45,8 +68,11 @@ The guide doesn't state these; correct them if wrong.
 | **0** | The floor. If only this exists you still have a working, novel, demoable product |
 | **1** | The credible product. **This is the version that competes for the track** |
 | **2** | The differentiators |
-| **3** | Cut first, without discussion. Only start if Tier 2 is done **and tested** |
+| **3** | Stretch — has a real owner, built only after its Tier 2 dependency is done and tested. First thing cut if time runs short |
 | **4** | **Do not start.** Spec only — evidence for the modular claim |
+
+Note: F.021 and F.022 were Tier 3 by the guide's own default (§16.1) and are
+**Tier 2 here** — see "Scope decision" above.
 
 ---
 
@@ -74,9 +100,9 @@ The guide doesn't state these; correct them if wrong.
 | F.018 | Avoid list | 2 | P4 | P1 | Not started | F.005 |
 | F.019 | Caregiver dashboard | 2 | P4 | P1 | Not started | F.010, F.011, F.013 |
 | F.020 | Branch handoff & no-screening | 2 | P3 | P2 | Not started | F.010, F.015 |
-| F.021 | Game 3 Mode A: Shadow Match | 3 | P2 | P4 | Not started | F.008, F.009 |
-| F.022 | Game 2: Sequencing + routines | 3 | P1 | P3 | Not started | F.008, F.009, F.016 |
-| F.023 | Game 3 Modes B & C | 4 | — | — | **Spec only** | — |
+| **F.021** | **Game 3 Mode A: Shadow Match** | **2 — required** | **P2** | **P4** | Not started | F.008, F.009 |
+| **F.022** | **Game 2: Sequencing + routines** | **2 — required** | **P1** | **P3** | Not started | F.008, F.009, F.016 |
+| F.023 | Game 3 Modes B & C | 3 — stretch | P2 | P4 | Not started | F.021 |
 | F.024 | Generalization re-testing | 4 | — | — | **Spec only** | — |
 | F.025 | Social story sub-flow | 4 | — | — | **Spec only** | — |
 | F.026 | Demo, video & submission | — | P3 | P4 | Not started | F.008 |
@@ -116,8 +142,10 @@ graph TD
   F013 --> F019
   F015 --> F020[F.020 Branch handoff]
   F010 --> F020
-  F009 --> F021[F.021 Shadow Match]
-  F009 --> F022[F.022 Game 2]
+  F009 --> F021[F.021 Shadow Match - REQUIRED]
+  F016 --> F022
+  F009 --> F022[F.022 Game 2 - REQUIRED]
+  F021 --> F023[F.023 Trace and Puzzle - stretch]
   F008 --> F026[F.026 Demo and video]
 ```
 
@@ -133,14 +161,21 @@ Two chains, two people, converging on Game 1.
 
 | Person | Owns | Why |
 |---|---|---|
-| **P1** | Engine core — store, slots, state machine, ladder, fading, session cap | One head on the shared state model. §7.7's state machine is the highest-scrutiny code in the build |
-| **P2** | Perception + Game 1 — pipeline, Game 1, levels, Companion in-game | The camera and the demo centrepiece. §17 budgets half a day for the face-blur spike alone |
+| **P1** | Engine core, **then Game 2** — store, slots, state machine, ladder, fading, session cap, then Toy Story Sequencing | One head on the shared state model first — §7.7's state machine is the highest-scrutiny code in the build. Game 2 is scheduled *after* that chain is frozen, not competing with it |
+| **P2** | Perception + Game 1 + Game 3 — pipeline, Game 1, levels, Companion in-game, then Shadow Match, then Trace/Puzzle if time allows | The camera and the demo centrepiece come first. §17 budgets half a day for the face-blur spike alone. Game 3 reuses the same crop/silhouette machinery P2 already owns, so it's a natural extension rather than new territory |
 | **P3** | Lookup table → Branch 2 → **video** | The lookup table is content authoring, parallelisable on day one. Branch 2 is structurally separate. Then §16.4's instruction: whoever finishes Branch 2 moves to video |
 | **P4** | Onboarding, profiles, Companion capture, context, avoid list, dashboard | Everything the parent fills in, plus the Companion — the differentiator — and the caregiver view |
 
 **Tier 0 load:** P1 ×2, P2 ×2, P3 ×1, P4 ×3. P4 carries the most Tier 0 files
 but three of them are small forms. **P3 finishes Tier 0 early by design** and
 should float onto whatever is behind before starting Branch 2.
+
+**With all three games required, P1 and P2 each carry a second build phase
+that used to be optional.** Both are sequenced to start only once each
+person's own Tier 0/1 chain is frozen — Game 2 and Game 3 don't compete with
+the engine or with Game 1 for the same hours, they follow them. That's the
+whole reason this redistribution is survivable rather than just more work
+piled onto an already-full plate.
 
 ## Review pairings
 

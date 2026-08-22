@@ -1,15 +1,18 @@
 # F.021 — Game 3 Mode A: Shadow Match
 
-**Tier 3 — cut first, without discussion** · Owner: **P2** · Reviewer: P4 · Status: Not started
+**Tier 2 — required.** All three games ship this weekend. · Owner: **P2** · Reviewer: P4 · Status: Not started
 
 ## What
 Silhouette at top, real photos below, child picks the match. The cheapest second
 game because it reuses every crop and the whole engine.
 
 ## Depends on / Blocks
-Depends on F.008, F.009. Blocks nothing.
+Depends on F.008, F.009. Blocks nothing directly, but this is Game 3's floor —
+F.023 (Modes B/C) builds on top of whatever this file establishes.
 
-> **Only start this if Tier 2 is done and tested** (§16.1).
+**Sequenced after Game 1 (F.008 → F.012 → F.017), not before it.** Game 1 is
+still the demo centrepiece and still comes first for P2. This is what P2 moves
+to once Game 1 is solid, not a parallel track competing for the same hours.
 
 ## Done when
 - Four levels: identical photo → same object different angle/lighting → black
@@ -37,7 +40,10 @@ Depends on F.008, F.009. Blocks nothing.
 - [ ] Wrong tap silent, per F.009?
 
 ## Not in this file
-Modes B (Trace) and C (Puzzle) — **Tier 4, do not start**.
+Modes B (Trace) and C (Puzzle) — **F.023, built after this one lands and is
+tested.** Do not start them in parallel with this file; they share this file's
+engine and level state, so building them concurrently means two contexts
+guessing at an interface that isn't frozen yet.
 
 ## Guide refs
 §8.3, §16.1

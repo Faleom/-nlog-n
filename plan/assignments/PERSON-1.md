@@ -13,12 +13,31 @@ end up on the critical path for most of the build.
 | **F.010** | 1 | Support ladder + caregiver logging |
 | **F.011** | 1 | Fading logic |
 | **F.013** | 1 | Session cap, fade, off-screen handoff |
-| F.022 | 3 | Game 2 sequencing — only if Tier 2 is done and tested |
+| **F.022** | **2 — required** | Game 2: Toy Story Sequencing. All three games ship this weekend |
 
 F.009 → F.010 → F.011 → F.013 is strictly sequential. Each reads the last one's
-state.
+state. **F.022 comes after that chain is frozen, not alongside it** — it's a
+second phase, not a fifth thing competing for the same hours.
 
-## What you're building
+## Your second build: Game 2
+
+**This used to be optional. It isn't any more** — the team decided all three
+games ship this weekend, which is why F.022 is Tier 2 rather than the Tier 3
+"cut first" bucket the guide defaults to. Practically, this doesn't compete with
+your engine chain for time: you build it *after* F.013 lands, once F.016 (P4's
+quick preferences) has landed too.
+
+Game 2 is Toy Story Sequencing: 2–4 crops form the child's **real** daily
+routine (bath, bedtime, snack — whichever two P4 captured as routine anchors).
+Model it, then the caregiver takes the child off-screen to *act it out with the
+real toy* — that's where the learning happens, the screen is only the score —
+then back on-screen to tap the crops in order. Saves as a printable visual
+schedule, which is a real clinical artefact, not just a game outcome.
+
+Read `../features/F.022.md` in full when you get there — it has its own Done
+criteria and review checklist, same rigor as everything else.
+
+## What you're building (engine)
 
 The parts that make this an intervention rather than a quiz app.
 
