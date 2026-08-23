@@ -1,13 +1,20 @@
-# Design tokens — dark-first liquid glass
+# Design tokens — dark-first liquid glass, with a light alternative
 
-**Status: LOCKED (Phase 1).** This document is the single source of truth for the
-visual system. `src/App.css`'s `:root` block is the implementation of what is
-written here; `src/design/fonts.css` is the font delivery. If a value changes,
-it changes here first.
+**Status: LOCKED (Phase 1 palette) + Phase 3 (light theme).** This document is
+the single source of truth for the visual system. `src/App.css`'s `:root`
+block is the implementation of what is written here; `src/design/fonts.css`
+is the font delivery. If a value changes, it changes here first.
 
-Dark is **the** mode. There is no toggle, no `prefers-color-scheme` branch, no
-`[data-theme]` attribute, and no light palette hiding anywhere. Every token in
-`:root` is a dark value.
+Dark is **the default**. It is this app's deliberate identity, chosen for this
+audience, and it is what renders with no `[data-theme]` attribute set at all —
+see `:root` in `src/App.css`. A caregiver can switch to a genuinely designed
+light theme from the Setup tab; that choice sets `[data-theme="light"]` on
+`<html>` and is read back from `:root[data-theme='light']` in `src/App.css`,
+persisted via `src/engine/themePreference.ts`. There is still no
+`prefers-color-scheme` branch anywhere — the OS setting never silently
+overrides the caregiver's own explicit choice. §9 below documents the light
+palette; every section before it describes dark, which remains the primary,
+most-considered mode.
 
 Three references govern the system: Duolingo (one thing at a time, low cognitive
 load), Apple's liquid glass (translucent, layered, softly refractive), and a
@@ -471,11 +478,14 @@ to solid `--color-surface`. The bloom still works — it is a plain blurred `<im
 | File | Role |
 | --- | --- |
 | `src/design/DESIGN-TOKENS.md` | **This document. Source of truth.** |
-| `src/App.css` `:root` | The token implementation. Same token names as before; new dark values; new tokens appended. |
-| `src/App.css` (rules) | Base `button`, `.app`, `.app-header`, `.child-face`/`.caregiver-face`, `.room-frame*`, print overrides. |
+| `src/App.css` `:root` | The dark token implementation (default/unset `[data-theme]`). |
+| `src/App.css` `:root[data-theme='light']` | The light token implementation — same token names, §9's values. |
+| `src/App.css` (rules) | Base `button`, `.app`, `.app-header`, `.child-face`/`.caregiver-face`, `.room-frame*`, print overrides, plus the light-mode ambient-gradient override. |
 | `src/design/fonts.css` | The two `@font-face` sets. Latin subsets only. No CDN. |
-| `src/index.css` | `color-scheme: dark`. |
-| `vite.config.ts` | `woff2` in workbox `globPatterns`; PWA `theme_color`/`background_color` set to the dark ground. |
+| `src/index.css` | `color-scheme: dark` by default, `light` under `:root[data-theme='light']`. |
+| `src/engine/themePreference.ts` | Reads/writes the caregiver's light/dark choice via the shared `StoragePort`. |
+| `src/App.tsx` | Owns the `theme` state, mirrors it onto `<html data-theme>`, renders the Appearance toggle in the Setup tab. |
+| `vite.config.ts` | `woff2` in workbox `globPatterns`; PWA `theme_color`/`background_color` stay set to the dark ground (the app's default identity) regardless of the caregiver's in-app choice. |
 
 Token **names** were all preserved, so every existing consumer — `Game1.tsx`,
 `Game2.tsx`, `Game3ShadowMatch.tsx`, and everything under `src/screens/` — picked
@@ -521,3 +531,169 @@ Also for Phase 2:
 - `npx tsc -b --force`, `npx oxlint`, `npm run build` — all clean.
 - `dist/sw.js` inspected: all three `.woff2` files are in the precache manifest,
   so the app still works fully offline on a cold launch.
+
+---
+
+## 9. Light theme (Phase 3)
+
+Not dark inverted. Same token names, same structural relationships (ground is
+still six values with the same raised/sunken direction; interactive still has
+a base + a "more contrast on strong glass" step; glass is still fill + border
++ two-tone rim + inner glow + shadow), different values chosen against a
+paper ground instead of computed from the black one.
+
+### 9.1 Ground
+
+Same hue family as dark — ~265 violet-plum, very low saturation — approached
+from the light side. `--color-ink` is dark's own `--color-surface` hex
+(`#241e2e`, Slate Plum) reused verbatim as light's text colour: the two
+themes share one small vocabulary of plum tones and just swap which end of it
+each token sits at. Not pure black on purpose, for the same halation reason
+dark avoided pure white on Nightshade.
+
+| Token | Name | Hex | vs dark |
+| --- | --- | --- | --- |
+| `--color-surface-sunken` | Putty | `#EAE2D6` | page behind the device, a step *deeper* than the ground, same relationship dark's Pitch has to Nightshade |
+| `--color-bg` | Parchment | `#F6F1E9` | the app's own ground |
+| `--color-surface` | — | `#FFFDF9` | raised surface, a step *lighter*, same relationship dark's Slate Plum has to Nightshade |
+| `--color-ink` | Ink Plum | `#241E2E` | = dark's `--color-surface`. 14.37:1 on Parchment |
+| `--color-ink-muted` | — | `#5E5169` | 6.54:1 on Parchment |
+| `--color-border` | — | `#E4DAE6` | decorative hairline |
+| `--color-border-strong` | — | `#8B7C99` | functional edge, 3.43:1 on Parchment, 3.73:1 on the glass composite |
+
+### 9.2 Interactive and reserved
+
+Periwink is restored close to the `#5b52e8` DESIGN-TOKENS §1.2 already
+documents as light mode's *original* value — dark re-pitched it lighter
+because a dark ground needs the hue to come toward the light; a light ground
+never stopped needing it to sit *under* the paper, so light mode returns
+there instead of inheriting dark's re-pitch.
+
+| Token | Hex / value | vs dark |
+| --- | --- | --- |
+| `--color-primary` | `#5B52E8` | 4.89:1 on Parchment. Button polarity goes back to NORMAL here — a saturated fill with light ink — because plain Periwink already clears AA on paper; dark's flip existed only to fix a failure light mode never has. |
+| `--color-primary-bright` | `#4A3FD4` | small text on `--glass-bg-strong`; 6.66:1 there. Kept as a distinct token for the same visual-hierarchy role dark's version fills, even though light's plain primary does not fail on strong glass the way dark's does. |
+| `--color-primary-ink` | `#FAF7FF` | warm near-white ink on a Periwink fill, 5.50:1 |
+| `--color-accent` (Ember) | `#A6540F` | 4.79:1 on Parchment. Same "sits under the paper" re-pitch as primary. |
+| `--color-accent-ink` | `#FFFBF6` | 4.79:1+ on the new Ember fill |
+| `--color-reward` (Sunburst) | `#B87805` | **Reserved, unchanged role.** Dark's raw `#ffc93c` measures under 2:1 on Parchment — a straight carry-over would read as washed pastel, not "reward". Re-pitched darker/richer so it stays legible as a rim/glow/confetti colour and still reads as the same golden family. `--color-reward-ink` (`#2a1d02`, unchanged) still measures 4.49:1 on it. |
+| `--color-companion` (Blush) | `#C43F68` | **Reserved, unchanged role.** Same re-pitch reasoning as Sunburst — deep rose instead of dark's bright pink, 4.39:1 non-text contrast on Parchment. |
+
+Both reserved hues keep their exclusivity rule from §1.3 unchanged: reward
+beats and the Companion only, never chrome, in either theme.
+
+### 9.3 Glass, tuned for a light base
+
+The inverse of DESIGN-TOKENS §3.1's dark tuning, not its negation:
+
+1. **Fill alpha goes back up, not further down.** `--glass-bg:
+   rgba(255,255,255,0.55)`, `--glass-bg-strong: rgba(255,255,255,0.72)` — the
+   denser white-frost alpha §3.1 already describes as the *original*
+   pre-dark value, restored rather than reinvented, because a light ground
+   needs a visibly frosted pane, not a thin tint.
+2. **`brightness()` drops out of the filter.** `--glass-brightness: 1.` Dark
+   needed to physically lift the ground because blur+saturate alone lift
+   nothing off black. A light ground already has all the luminance a
+   frosted pane needs; brightness() here would blow the panel out toward
+   flat white instead of reading as glass.
+3. **The rim keeps its two-tone shape but softens.** The top edge stays a
+   genuine bright catch-light (`rgba(255,255,255,0.9)`); the bottom
+   edge and inner glow shrink from dark's near-black/bright-white pair to a
+   near-imperceptible ink shadow (`rgba(36,30,46,0.08)`) and a soft white
+   sheen — present, not zeroed, so `--glass-highlight` still reads as one
+   three-part material on both themes.
+4. **`--glass-border` flips from white to ink.** A `rgba(255,255,255,x)`
+   line is the only thing visible against Nightshade; it is invisible
+   against Parchment. Light's border is `rgba(36,30,46,0.12)` — the same
+   move applied to every other white-only rim/wash token in `App.css`
+   (`--surface-wash`, `--surface-wash-active`, `--hatch-line`, and
+   `--color-tile-border`, §9.4).
+5. **Shadows shrink and warm.** §3.2 states a dark shadow "cannot be a bit
+   of the ink colour — it must be near-black and much larger." On light it
+   can be exactly that: `--glass-shadow` and `--shadow-md` both become
+   smaller, softer, and tinted with `--color-ink` (`rgba(36,30,46,x)`)
+   instead of flat black.
+
+### 9.4 The child-facing "light stage on light shell" question
+
+Game3ShadowMatch's silhouette tiles and TraceAndColour's drawing surface both
+already consume `--color-tile` / `--color-tile-border` / `--glass-border`
+rather than hardcoded literals (confirmed by reading both files), so no game
+file needed editing — retuning these tokens here is sufficient.
+
+**Deliberate call: `--color-tile` stays light in both themes.** This is not
+a stylistic preference carried over from §1.4 — it is a hard technical
+requirement. Game3's silhouettes render with `filter: brightness(0)` (solid
+black) and `silhouetteCanvas.ts` produces black-on-transparent PNGs; a dark
+tile would make both invisible regardless of theme. `--color-tile` is
+`#FFFFFF` in light mode (brighter than dark's `#F0EAF5`, which only needed
+to beat a near-black ground and did not need to hold its own against a light
+one).
+
+**What DOES change: `--color-tile-border`.** Dark's bright
+`rgba(255,255,255,0.86)` rim is what separates a light tile from the
+near-black shell around it. Carried unchanged into light mode, that same
+white rim disappears against a light shell — exactly the "light stage
+directly on a light ground with no edge at all" failure mode this phase's
+brief called out by name. Light's tile border is redefined as a soft
+ink-tinted line, `rgba(36,30,46,0.16)`, giving every tile a visible edge
+against its now-light surroundings without touching the tile's own colour
+(which, per the requirement above, cannot move). Both games pick this up
+automatically through the token, and the outer `--glass-border`/
+`--glass-shadow` around each tile (also retuned in §9.3) carry the rest of
+the definition that used to come for free from sheer luminance contrast
+against Nightshade.
+
+**Recommend a human eyeball this on a real device.** The contrast math says
+this holds, but "does the tile still read as a distinct lit object, not just
+a slightly-outlined patch of the same colour as the page" is a judgement
+call worth a second set of eyes on Game3's option grid and TraceAndColour's
+drawing surface specifically, in light mode, on an actual phone screen.
+
+### 9.5 Utility surfaces and track colours
+
+Same re-pitch principle as §9.2 — darker/more saturated so text and
+non-text contrast both clear their bars against Parchment instead of
+Nightshade:
+
+| Token | Light value | vs dark |
+| --- | --- | --- |
+| `--color-danger` | `#B23A2C` | 5.28:1 on Parchment |
+| `--color-danger-soft` | `#FBEAE7` | pale coral wash, was a dark tinted panel |
+| `--color-info-soft` | `#ECEBF9` | pale periwink wash, was a dark tinted panel |
+| `--track-find-it/-story/-match/-trace` | `#5B52E8` / `#0E7A6F` / `#8A4FD6` / `#3E6FC9` | each ≥4.35:1 on the near-white dashboard card composite |
+
+### 9.6 Wiring and persistence
+
+`data-theme="light"` / unset (dark) on `<html>`, set in `App.tsx` from a
+`theme` state variable, never a JS-computed inline style — the same
+CSS-custom-property flow every other token already uses. Persisted through
+`src/engine/themePreference.ts`, which reads/writes a single
+`'themePreference'` key via the same `StoragePort` `profileStore.ts` uses for
+every other caregiver preference (a device-level key, parallel to
+`ACTIVE_PROFILE_KEY`, not scoped to a child profile). No
+`prefers-color-scheme` branch: the OS setting is never read.
+
+Toggle location: the Setup tab's "This device" area in `App.tsx`, next to Log
+out — both are device-level settings, not profile-level ones, and Setup was
+already the caregiver's settings home. Rendered as a two-option segmented
+row (`.home-theme-row`/`.home-theme-option` in `App.css`), the same
+construction as the dashboard's session-length picker but at the standard
+`--touch-min` (44px) floor rather than that picker's deliberate 88px
+exception — this is ordinary settings chrome, not a control tapped while
+holding a child.
+
+### 9.7 Verification performed in Phase 3
+
+- Every contrast figure in §9.1/§9.2/§9.5 computed with the same WCAG
+  relative-luminance formula §3.5 uses, including glass fills composited
+  over Parchment — not eyeballed.
+- Confirmed via grep that `--touch-min` semantics are unchanged by this
+  phase (still 44px, still applied only where it already was) and that
+  every existing `--color-reward`/`--color-companion` reference (the reward/
+  Companion states in `SessionCelebration.tsx`, `BlockStackMatch.tsx`,
+  `Game3ShadowMatch.tsx`, `SortByRule.tsx`, `TraceAndColour.tsx`, and the
+  `.room-frame--reward`/`--companion` rules in `App.css`) is a genuine
+  reward/Companion moment, never general chrome — nothing in this phase
+  added a new reference to either token.
+- `npx tsc -b`, `npx oxlint`, `npm run smoke`, `npm run build` — all clean.
