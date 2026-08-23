@@ -111,6 +111,33 @@ Status: `Not started` / `In progress` / `In review` / `Done`.
 
 ---
 
+## Central routing — done
+
+`app/src/App.tsx` now wires every screen and game built tonight into one
+real flow: onboarding → two doors → Branch 1's one-time preference chain
+(response profile → Companion → quick preferences → avoid list) → Branch 1
+home (both games, dashboard, always-available branch switch, the F.020
+neutral note prompt) / Branch 2 (milestones → card → immediate activity
+offer back into Branch 1). A returning profile skips straight to Branch 1
+home; each preference screen is separately revisitable from home via an
+"Edit: ..." button that routes back to home instead of forward through the
+chain.
+
+**Verified**: `tsc -b` clean across the whole tree (confirms every screen's
+props line up), full `npm run smoke` clean, production build clean, and the
+dev server serves `App.tsx` with no build/transform error.
+
+**Not verified, and can't be from here**: an actual click-through of the
+flow in a real browser. No render-testing framework (jsdom/RTL) exists
+anywhere in this codebase — every person's screens stayed UI-thin with
+logic in tested engine modules, and introducing one now for just this file
+would break that consistency. Someone needs to open the app on a real
+device and walk the whole path once: onboarding → a branch → back to
+home → the other branch → a game → the dashboard → switch branch again.
+That's the one thing standing between this and a real demo rehearsal.
+
+---
+
 ## Dependency graph
 
 ```mermaid
