@@ -21,7 +21,7 @@
 // because it costs real money on every run.
 
 import type { TaggedCrop } from '../../types';
-import type { VisionPort } from '../ports';
+import type { VisionPort, VisionResult } from '../ports';
 import { DETECTION_MAX_LONG_EDGE, computeDownscaleFactor, scaledSize } from '../face/faceGeometry';
 import { canvasToDataUrl, cropCanvas, dataUrlToBase64, drawScaled } from '../imaging/canvasUtils';
 import { regionFromRawBbox, parseVisionResponse } from './visionParsing';
@@ -59,18 +59,32 @@ const API_BASE = ((import.meta as unknown as { env?: Record<string, string | und
  * actually sent, already downscaled) — see visionParsing.ts for how the
  * response is parsed and padded once it comes back.
  */
-export const VISION_PROMPT = `List the distinct physical household objects visible in this photo.
+export const VISION_PROMPT = `List the physical objects in this photo that a 3-5 year old child could safely go and fetch on their own.
 
 Return ONLY a JSON array (no prose, no markdown fences) where each entry has exactly this shape:
 {"name": string, "colour": string, "category": string, "function": string, "bbox": {"x": number, "y": number, "width": number, "height": number}}
 
 - "name": a short, concrete noun a young child would use for it (e.g. "cup", "ball", "shoe").
 - "colour": its single most obvious colour, as one plain word.
-- "category": a broad kind (e.g. "drinkware", "toy", "clothing", "furniture").
+- "category": a broad kind (e.g. "drinkware", "toy", "clothing", "textile").
 - "function": a short phrase completing "you ___ it" (e.g. "drink from", "play with", "wear").
 - "bbox": a tight pixel bounding box in THIS image's own coordinates (top-left origin, x/y/width/height in pixels of this exact image, not normalised 0-1).
 
-Only include objects a preschooler could recognise and go find in a room. Never include a person, a body part, or anything that looks like a person, even blurred or partial. If you see nothing usable, return [].`;
+Every object you return MUST pass ALL FIVE tests below. If it fails even one, leave it out entirely:
+
+1. PORTABLE — a small child can pick it up and carry it in two hands. Exclude furniture (beds, sofas, tables, wardrobes, chairs), appliances, doors, windows, rugs and curtains.
+2. REACHABLE — it rests on the floor or on low furniture, within reach of a child standing on their own two feet. Exclude anything mounted, fixed or up high: ceiling and wall lights, fans, air conditioners, power points, switches, wall art, curtain rails, and anything on a high shelf or on top of a wardrobe.
+3. BIG ENOUGH TO SPOT — clearly visible from across the room. Exclude small items: coins, buttons, batteries, keys, jewellery, marbles, and anything small enough to fit in a toddler's mouth.
+4. SAFE TO HANDLE — exclude anything sharp (knives, scissors, tools), hot or burning (kettles, irons, candles, heaters), electrical (cords, chargers, power banks, appliances), fragile enough to shatter (drinking glasses, mirrors, vases, ornaments, picture frames), or harmful if swallowed (medicine, cleaning products, batteries, small detachable parts).
+5. NOT A PERSON — never include a person, a body part, or anything that looks like a person, even blurred or partial. A doll or a soft toy is fine.
+
+Everyday tableware IS allowed and wanted: a child's cup, mug, plate, bowl or spoon all pass test 4. Exclude tableware only when it is clearly a glass drinking glass or a decorative ornament.
+
+Look hard for the things a young child already knows by name: soft toys, balls, dolls, toy cars, building blocks, books, cups, bottles, bowls, shoes, socks, hats, bags, blankets, pillows, cushions and towels.
+
+Return AT MOST 10 objects — pick the biggest, clearest and most distinct ones, and never list the same kind of thing twice (one ball, not four). Two or three genuine objects beat stretching to fill a quota.
+
+If nothing in the photo passes all five tests, return [].`;
 
 async function imageToTransmitPayload(image: ImageBitmap): Promise<{
   base64: string;
@@ -106,7 +120,7 @@ function extractResponseText(content: unknown): string {
 
 export function createClaudeVision(): VisionPort {
   return {
-    async recognizeObjects(image: ImageBitmap): Promise<TaggedCrop[]> {
+    async recognizeObjects(image: ImageBitmap): Promise<VisionResult> {
       const { base64, mediaType, sentCanvas } = await imageToTransmitPayload(image);
 
       const res = await fetch(`${API_BASE}/claude`, {
@@ -121,10 +135,19 @@ export function createClaudeVision(): VisionPort {
       const content = (body as { content?: unknown }).content;
       const text = extractResponseText(content);
 
+      // A truncated list parses as garbage or as a short partial array —
+      // either way it is a FAILURE, not "the room had nothing in it", and
+      // the caregiver must not be told those are the same thing.
+      if ((body as { stop_reason?: string }).stop_reason === 'max_tokens') {
+        throw new Error(
+          'Vision response was cut off by max_tokens — the object list is incomplete.',
+        );
+      }
+
       const rawObjects = parseVisionResponse(text);
       const imageSize = { width: sentCanvas.width, height: sentCanvas.height };
 
-      return rawObjects.map((obj, index) => {
+      const crops = rawObjects.map((obj, index) => {
         const region = regionFromRawBbox(obj.bbox, imageSize);
         const cropped = cropCanvas(sentCanvas, region);
         return {
@@ -137,6 +160,19 @@ export function createClaudeVision(): VisionPort {
           image: canvasToDataUrl(cropped),
         } satisfies TaggedCrop;
       });
+
+      // The scene is `sentCanvas` itself — already redacted (the pipeline
+      // guarantees that upstream) and already downscaled — because every
+      // bbox above is in exactly this canvas's pixel space. Handing back a
+      // differently-sized copy would misplace every marker drawn on it.
+      return {
+        crops,
+        scene: {
+          dataUrl: canvasToDataUrl(sentCanvas, 'image/jpeg', 0.8),
+          width: sentCanvas.width,
+          height: sentCanvas.height,
+        },
+      };
     },
   };
 }

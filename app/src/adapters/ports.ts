@@ -27,6 +27,33 @@ export interface RedactionPort {
   redactRegions(image: ImageBitmap, regions: Region[]): Promise<ImageBitmap>;
 }
 
+/**
+ * What a vision adapter hands back: the tagged crops, plus optionally the
+ * exact image those crops' bboxes are measured against.
+ *
+ * `scene` exists so a caller can draw the objects back onto the room they
+ * came from (Game 1's end-of-session recap). It is REDACTED and downscaled
+ * — the same bytes that were transmitted, never the raw camera photo — and
+ * it is the adapter's own transmitted image specifically because every
+ * `TaggedCrop.bbox` is in that image's pixel space. Any other copy of the
+ * room (a differently-scaled one, say) would put the boxes in the wrong
+ * place, so this must be the adapter's, not one the caller re-derives.
+ *
+ * Optional: an adapter that has no meaningful scene to give (fixtures) just
+ * omits it, and callers must render fine without it.
+ */
+export interface VisionScene {
+  /** Data URL of the redacted, downscaled image. Never persisted. */
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+export interface VisionResult {
+  crops: TaggedCrop[];
+  scene?: VisionScene;
+}
+
 export interface VisionPort {
   /**
    * Sends an already-redacted image for object recognition and returns
@@ -34,7 +61,7 @@ export interface VisionPort {
    * does not check that; the caller (F.006's pipeline) is responsible for
    * calling FaceDetectPort + RedactionPort first, always.
    */
-  recognizeObjects(image: ImageBitmap): Promise<TaggedCrop[]>;
+  recognizeObjects(image: ImageBitmap): Promise<VisionResult>;
 }
 
 export interface TextGenPort {

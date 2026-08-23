@@ -28,7 +28,7 @@
 //      brief: "make it a type error or an impossible code path."
 
 import { adapters } from '../registry';
-import type { AdapterRegistry } from '../ports';
+import type { AdapterRegistry, VisionResult, VisionScene } from '../ports';
 import type { Region, TaggedCrop } from '../../types';
 
 declare const REDACTED_BRAND: unique symbol;
@@ -53,7 +53,7 @@ async function redact(
 async function recognize(
   ports: Pick<AdapterRegistry, 'vision'>,
   image: RedactedImage,
-): Promise<TaggedCrop[]> {
+): Promise<VisionResult> {
   if (!knownRedacted.has(image)) {
     // This should be unreachable through the type system alone — reaching
     // it means someone force-cast a raw ImageBitmap `as RedactedImage` to
@@ -68,15 +68,33 @@ async function recognize(
 }
 
 export type CaptureRoomOutcome =
-  | { kind: 'success'; crops: TaggedCrop[] }
+  /**
+   * `scene` is the REDACTED, downscaled room image the crops were found in
+   * — the same bytes that went over the wire, faces already destroyed — so
+   * Game 1 can show the objects back in place at the end of a session.
+   *
+   * This does NOT weaken §7.4/§12.1's "discard the photo" guarantee, and
+   * the distinction matters: that guarantee is about the RAW capture, which
+   * is still closed and dropped inside this function and never reaches a
+   * caller (see below). What travels out here is the already-blurred
+   * derivative. It is held in React state for the life of one session and
+   * never handed to StoragePort — keep it that way: writing this to
+   * storage WOULD break §14, since it is a real picture of a family's home.
+   */
+  | { kind: 'success'; crops: TaggedCrop[]; scene?: VisionScene }
   /** §11: "Recognition returns nothing usable → fall back to generic
-   * activities for the chosen context. Never show an error." Fires both
-   * when vision genuinely found nothing AND when the vision call itself
-   * failed (network error, API outage — §11's "demo-day API outage" row
-   * names exactly this path: pre-seeded/generic content, not an error
-   * screen). Callers render their own generic/fixture activity set here,
+   * activities." The photo WAS read successfully and genuinely contained
+   * nothing a child could safely fetch. Callers render their generic set
    * quietly — not an error screen. */
   | { kind: 'no-objects-found' }
+  /** The recognition call itself failed — network error, API outage, or a
+   * response truncated by max_tokens. Degrades to the SAME generic set as
+   * above (§11's "demo-day API outage" row: pre-seeded content, never an
+   * error screen), and is a separate kind only so the caller can word its
+   * quiet notice honestly. Telling a caregiver "nothing in your photo was
+   * safe to fetch" when the truth is "the call fell over" sends them off
+   * to re-shoot a photo that was never the problem. */
+  | { kind: 'recognition-failed' }
   /** §11 / §4.4: "Face-blur fails or is uncertain → hard stop. Discard the
    * photo, tell the parent it couldn't be processed, offer to retake.
    * Never proceed on an unblurred image." Fires if face detection OR
@@ -160,23 +178,26 @@ export async function captureRoomAndRecognize(
     closeIfPossible(raw);
     raw = null;
 
-    let crops: TaggedCrop[];
+    let result: VisionResult;
     try {
-      crops = await recognize(ports, redacted);
+      result = await recognize(ports, redacted);
     } catch {
       // §11 "demo-day API outage" row: a failed vision call degrades to
       // the same quiet generic-activities fallback as "found nothing" —
-      // never an error screen, never a retry loop burning API calls.
+      // never an error screen, never a retry loop burning API calls. The
+      // OUTCOME is distinct from no-objects-found only so the caller can
+      // say something true about why; the user-visible degradation is
+      // identical.
       closeIfPossible(redacted);
-      return { kind: 'no-objects-found' };
+      return { kind: 'recognition-failed' };
     }
     closeIfPossible(redacted);
 
-    if (crops.length === 0) {
+    if (result.crops.length === 0) {
       // §11: no error shown, caller falls back to generic activities.
       return { kind: 'no-objects-found' };
     }
-    return { kind: 'success', crops };
+    return { kind: 'success', crops: result.crops, scene: result.scene };
   } finally {
     if (slowTimer) clearTimeout(slowTimer);
     if (raw) closeIfPossible(raw);
