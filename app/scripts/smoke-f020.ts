@@ -205,6 +205,13 @@ async function main() {
     // to activity history in any way. Confirmed: this file never imports
     // profileStore or reads a SkillRecord.
     'scripts/smoke-f021.ts', // F.021's own test, asserts the ABSENCE of "counter" etc. in Game3ShadowMatch.tsx, plus its own image-threshold tests
+    'scripts/smoke-trace.ts', // Trace and Colour's own test. Names the
+    // geometric completion THRESHOLD (traceLogic.ts's COMPLETE_AT) in its
+    // prose -- the fraction of one outline a finger has covered in the
+    // current round, the same category as silhouette.ts's pixel-brightness
+    // cutoff above. Confirmed: neither that file nor games/trace/* imports
+    // profileStore or reads a SkillRecord, and the value resets to zero
+    // with every shape, so nothing accumulates across trials or sessions.
   ]);
 
   await test('no counter/streak/threshold/tally construct exists outside the allowlist', () => {

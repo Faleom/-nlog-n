@@ -1134,8 +1134,8 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
         >
           Choose a photo of the room
         </button>
-        <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleEndSession('caregiver')}>
-          End session
+        <button type="button" className="quiet-action" onClick={() => void handleEndSession('caregiver')}>
+          <span className="quiet-action-chip">End session</span>
         </button>
       </div>
     );
