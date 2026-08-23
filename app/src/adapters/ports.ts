@@ -215,8 +215,17 @@ export interface SoundPort {
    * has said sound/movement should stay calm (ResponseProfile's
    * `soundMovement: 'calm'`) -- it never fully silences it, since this is
    * one channel of UI-STANDARDS' "immediate feedback on every press", not
-   * the only one (the existing :active press states are the other). */
-  playClick(opts?: { quiet?: boolean }): void;
+   * the only one (the existing :active press states are the other).
+   * `favSound` personalises the tone's pitch/timbre/envelope to the
+   * child's quick-preference favourite sound (QuickPreferences.favSound,
+   * one of the QuickPreferences screen's SOUNDS options) -- a small
+   * variation on the same click, never a different volume. `quiet` always
+   * wins regardless of `favSound`: it is an accessibility accommodation,
+   * not a preference, and a personalised tone must never be used to make
+   * a calm-profile click louder or busier than the default. An unset or
+   * unrecognised `favSound` renders the exact same tone as before this
+   * option existed. */
+  playClick(opts?: { quiet?: boolean; favSound?: string }): void;
 }
 
 /**
