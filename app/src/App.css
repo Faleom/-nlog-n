@@ -403,42 +403,90 @@
    the same way --color-primary-bright already does for Periwink. None of
    the seven's hex values equal --color-reward (#FFC93C) or --color-companion
    (#FF7E9D) — those two stay reserved for genuine reward/Companion beats
-   regardless of which accent is active. */
+   regardless of which accent is active.
+
+   GROUND WASH. Buttons alone read as "a coloured control sitting in an
+   unrelated app" rather than "this app noticed their favourite colour",
+   so --color-surface-sunken/--color-bg/--color-surface/--color-border(-strong)
+   below also get a wash of the same hue: each is the ORIGINAL neutral
+   plum value linearly mixed with the accent's own colour at a low ratio
+   (9-10% for the three ground surfaces, 16-20% for the two border
+   tokens, which can carry slightly more without reading as "coloured
+   text"). --color-ink and --color-ink-muted are NOT touched — text
+   contrast against the new ground stays >=13:1 / >=6:1 respectively for
+   every hue, both comfortably above the >=4.5:1 floor everything else in
+   this file holds to, and --color-border-strong stays >=3.5:1 against
+   its own new ground (the non-text UI-component floor). --glass-bg and
+   --glass-bg-strong are deliberately left untouched: they are
+   translucent white overlays over whatever backdrop-filter blurs behind
+   them, so they already pick up a whisper of this same wash automatically
+   once --color-bg is tinted, with no extra tokens needed. Reserved hues,
+   track colours and --color-danger are untouched, same as always. */
 :root[data-accent='red'] {
   --color-primary: #ff4d5b;
   --color-primary-bright: #ff808a;
   --color-primary-ink: #261214;
   --color-primary-soft: rgba(255, 77, 91, 0.24);
+  --color-surface-sunken: #26121a;
+  --color-bg: #2d1823;
+  --color-surface: #382232;
+  --color-border: #6a3f55;
+  --color-border-strong: #8f6789;
 }
 :root[data-accent='orange'] {
   --color-primary: #e67300;
   --color-primary-bright: #ff8c1a;
   --color-primary-ink: #261c12;
   --color-primary-soft: rgba(230, 115, 0, 0.24);
+  --color-surface-sunken: #241611;
+  --color-bg: #2b1c1a;
+  --color-surface: #35262a;
+  --color-border: #654643;
+  --color-border-strong: #8b6d7b;
 }
 :root[data-accent='yellow'] {
   --color-primary: #ccbb00;
   --color-primary-bright: #ffea00;
   --color-primary-ink: #262412;
   --color-primary-soft: rgba(204, 187, 0, 0.24);
+  --color-surface-sunken: #211e11;
+  --color-bg: #28231a;
+  --color-surface: #332c2a;
+  --color-border: #605543;
+  --color-border-strong: #87797b;
 }
 :root[data-accent='green'] {
   --color-primary: #00b23c;
   --color-primary-bright: #00e64d;
   --color-primary-ink: #122619;
   --color-primary-soft: rgba(0, 178, 60, 0.24);
+  --color-surface-sunken: #0d1d17;
+  --color-bg: #142220;
+  --color-surface: #212b2f;
+  --color-border: #37534f;
+  --color-border-strong: #667784;
 }
 :root[data-accent='blue'] {
   --color-primary: #4d97ff;
   --color-primary-bright: #80b5ff;
   --color-primary-ink: #121a26;
   --color-primary-soft: rgba(77, 151, 255, 0.24);
+  --color-surface-sunken: #141a2b;
+  --color-bg: #1c1f34;
+  --color-surface: #282941;
+  --color-border: #474d76;
+  --color-border-strong: #7373a3;
 }
 :root[data-accent='pink'] {
   --color-primary: #ff33aa;
   --color-primary-bright: #ff66bf;
   --color-primary-ink: #26121e;
   --color-primary-soft: rgba(255, 51, 170, 0.24);
+  --color-surface-sunken: #261022;
+  --color-bg: #2d152b;
+  --color-surface: #382039;
+  --color-border: #6a3965;
+  --color-border-strong: #8f6396;
 }
 
 /* Accent-by-favColour, light-theme pitch. The seven blocks above were
@@ -456,42 +504,78 @@
    specificity as the plain :root[data-theme='light'] block above, but
    wins because it is declared later and is more specific in practice
    (two attributes vs one) -- so light mode never inherits an accent hue
-   tuned for the wrong background. */
+   tuned for the wrong background.
+
+   The same Ground-wash treatment described in the dark block's comment
+   above applies here too, mixed against the LIGHT theme's own neutral
+   Ground values instead of the dark ones, at the same ratios. --color-ink
+   and --color-ink-muted stay untouched here as well; contrast against the
+   new washed grounds stays >=12:1 / >=5.4:1 for every hue. */
 :root[data-theme='light'][data-accent='red'] {
   --color-primary: #de0011;
   --color-primary-bright: #c4000f;
   --color-primary-ink: #faf7ff;
   --color-primary-soft: rgba(222, 0, 17, 0.16);
+  --color-surface-sunken: #e9cbc2;
+  --color-bg: #f4d9d3;
+  --color-surface: #fce6e4;
+  --color-border: #e3aebb;
+  --color-border-strong: #986883;
 }
 :root[data-theme='light'][data-accent='orange'] {
   --color-primary: #ad5700;
   --color-primary-bright: #964b00;
   --color-primary-ink: #faf7ff;
   --color-primary-soft: rgba(173, 87, 0, 0.16);
+  --color-surface-sunken: #e4d4c1;
+  --color-bg: #efe2d2;
+  --color-surface: #f8eee3;
+  --color-border: #d9c0b8;
+  --color-border-strong: #907681;
 }
 :root[data-theme='light'][data-accent='yellow'] {
   --color-primary: #786e00;
   --color-primary-bright: #6b6200;
   --color-primary-ink: #faf7ff;
   --color-primary-soft: rgba(120, 110, 0, 0.16);
+  --color-surface-sunken: #dfd6c1;
+  --color-bg: #e9e4d2;
+  --color-surface: #f3f0e3;
+  --color-border: #cec4b8;
+  --color-border-strong: #887a81;
 }
 :root[data-theme='light'][data-accent='green'] {
   --color-primary: #007f2b;
   --color-primary-bright: #007026;
   --color-primary-ink: #faf7ff;
   --color-primary-soft: rgba(0, 127, 43, 0.16);
+  --color-surface-sunken: #d3d8c5;
+  --color-bg: #dde6d6;
+  --color-surface: #e8f2e6;
+  --color-border: #b6c8c1;
+  --color-border-strong: #757c87;
 }
 :root[data-theme='light'][data-accent='blue'] {
   --color-primary: #0065f2;
   --color-primary-bright: #0058d4;
   --color-primary-ink: #faf7ff;
   --color-primary-soft: rgba(0, 101, 242, 0.16);
+  --color-surface-sunken: #d3d6d9;
+  --color-bg: #dde3ea;
+  --color-surface: #e8eff8;
+  --color-border: #b6c3e8;
+  --color-border-strong: #7578a7;
 }
 :root[data-theme='light'][data-accent='pink'] {
   --color-primary: #d4007b;
   --color-primary-bright: #bd006e;
   --color-primary-ink: #faf7ff;
   --color-primary-soft: rgba(212, 0, 123, 0.16);
+  --color-surface-sunken: #e8cbcd;
+  --color-bg: #f3d9de;
+  --color-surface: #fbe6ee;
+  --color-border: #e1aed1;
+  --color-border-strong: #976894;
 }
 /* No light-theme override for 'purple': the light theme's own default
    --color-primary (#5b52e8) already IS the light pitch of Periwink, so
