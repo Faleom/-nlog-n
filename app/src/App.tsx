@@ -37,6 +37,7 @@ import { Branch2Card } from './screens/Branch2Card';
 import { NeutralNotePrompt } from './components/NeutralNotePrompt';
 import { Game1 } from './games/Game1';
 import { Game2 } from './games/Game2';
+import { Game3ShadowMatch } from './games/Game3ShadowMatch';
 import { getActiveProfile } from './engine/profileStore';
 import { installAvoidFilter } from './engine/avoidFilter';
 import type { Branch2FlowResult } from './engine/branch2';
@@ -54,6 +55,7 @@ type Screen =
   | { kind: 'branch1Home' }
   | { kind: 'game1' }
   | { kind: 'game2' }
+  | { kind: 'game3' }
   | { kind: 'dashboard' }
   | { kind: 'branch2Milestones' }
   | { kind: 'branch2Card'; answers: ConcernAnswers; childAgeMonths: number }
@@ -215,6 +217,15 @@ function App() {
     );
   }
 
+  if (screen.kind === 'game3') {
+    return (
+      <div className="app">
+        <button onClick={goToBranch1Home}>← Back</button>
+        <Game3ShadowMatch profile={profile} />
+      </div>
+    );
+  }
+
   if (screen.kind === 'dashboard') {
     return (
       <div className="app">
@@ -279,6 +290,9 @@ function App() {
           </button>
           <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => setScreen({ kind: 'game2' })}>
             Play — Toy Story Sequencing
+          </button>
+          <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => setScreen({ kind: 'game3' })}>
+            Play — Shadow Match
           </button>
           <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => setScreen({ kind: 'dashboard' })}>
             Caregiver dashboard

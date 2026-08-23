@@ -200,6 +200,11 @@ async function main() {
     'scripts/smoke-f022.ts', // F.022's own test, names that counter in prose
     'scripts/smoke-f019.ts', // F.019's own test, asserts the ABSENCE of "streak" etc. in the dashboard
     'scripts/smoke-f008.ts', // F.008's own test, asserts the ABSENCE of "counter" etc. in Game1.tsx
+    'src/games/silhouette.ts', // an image-processing luminance THRESHOLD for
+    // generating a silhouette from a crop -- a pixel-brightness cutoff, unrelated
+    // to activity history in any way. Confirmed: this file never imports
+    // profileStore or reads a SkillRecord.
+    'scripts/smoke-f021.ts', // F.021's own test, asserts the ABSENCE of "counter" etc. in Game3ShadowMatch.tsx, plus its own image-threshold tests
   ]);
 
   await test('no counter/streak/threshold/tally construct exists outside the allowlist', () => {

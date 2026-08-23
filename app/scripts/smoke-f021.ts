@@ -1,7 +1,7 @@
 // Real functional check for F.021 — Game 3 Mode A: Shadow Match. Run
 // with: npm run smoke:f021
 //
-// silhouette.ts, game3Level.ts, and game3ShadowMatch.ts are pure (or
+// silhouette.ts, game3Level.ts, and game3ShadowMatchLogic.ts are pure (or
 // StoragePort-backed) — fully testable without a browser. silhouetteCanvas.ts
 // and Game3ShadowMatch.tsx's own rendering need a human on a real device —
 // see PERSON-2's final report.
@@ -20,7 +20,7 @@ import {
   companionAsCrop,
   requiresFetchingTheRealObject,
   sampleKindForLevel,
-} from '../src/games/game3ShadowMatch';
+} from '../src/games/game3ShadowMatchLogic';
 import type { ChildProfile, TaggedCrop } from '../src/types';
 import type { Game3Level } from '../src/games/game3Level';
 

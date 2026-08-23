@@ -42,7 +42,7 @@ import {
   requiresFetchingTheRealObject,
   sampleKindForLevel,
   type SampleKind,
-} from './game3ShadowMatch';
+} from './game3ShadowMatchLogic';
 import { generateSilhouetteDataUrl } from './silhouetteCanvas';
 import type { ChildProfile, SupportTier, TaggedCrop } from '../types';
 
@@ -91,7 +91,7 @@ const PHONE_REVEAL_BATCH = 2;
 const PHONE_BREAKPOINT_QUERY = '(max-width: 600px)';
 
 /** §8.3 Level 2: simulates "different angle or lighting" over the SAME
- * crop image via CSS transform + filter — see game3ShadowMatch.ts's
+ * crop image via CSS transform + filter — see game3ShadowMatchLogic.ts's
  * ALTERED_SAMPLE_FILTER/TRANSFORM header for why there's no second real
  * photo to show instead. Returns plain inline-style values; identity
  * (no-op) for every other sample kind. */
@@ -151,7 +151,7 @@ export function Game3ShadowMatch({ profile }: Game3ShadowMatchProps) {
   const [sampleImage, setSampleImage] = useState<string>('');
   const [sampleLoading, setSampleLoading] = useState(false);
   // §8.3 Level 2: "same object, different angle or lighting" — the sample
-  // IMAGE itself never changes (see game3ShadowMatch.ts's
+  // IMAGE itself never changes (see game3ShadowMatchLogic.ts's
   // ALTERED_SAMPLE_FILTER/TRANSFORM header for why there's no second photo
   // to show), but the sample KIND drives whether that simulated-angle
   // style is applied when rendering it below.
