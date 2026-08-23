@@ -11,10 +11,10 @@
 // adapters/vision/claudeVision.ts) is where the vendor import lives, per
 // the oxlint no-restricted-imports rule.
 
-import { createFixtureCapture } from './fixtures/fixtureCapture';
-import { createFixtureFaceDetect } from './fixtures/fixtureFaceDetect';
-import { createFixtureRedaction } from './fixtures/fixtureRedaction';
-import { createFixtureVision } from './fixtures/fixtureVision';
+import { createDeviceCamera } from './capture/deviceCamera';
+import { createBlazeFaceLocal } from './face/blazeFaceLocal';
+import { createCanvasMosaic } from './redaction/canvasMosaic';
+import { createClaudeVision } from './vision/claudeVision';
 import { createHaikuCard } from './textgen/haikuCard';
 import { createFixtureSpeechOut } from './fixtures/fixtureSpeechOut';
 import { createIndexedDbStorage } from './storage/indexedDbStorage';
@@ -29,10 +29,10 @@ import type { AdapterRegistry } from './ports';
 // -----------------------------------------------------------------------
 
 export const adapters: AdapterRegistry = {
-  capture: createFixtureCapture(), // TODO(F.006): swap for DeviceCamera
-  faceDetect: createFixtureFaceDetect(), // TODO(F.006): swap for BlazeFaceLocal — NEVER a network adapter
-  redaction: createFixtureRedaction(), // TODO(F.006): swap for CanvasMosaic
-  vision: createFixtureVision(), // TODO(F.006): swap for ClaudeVision
+  capture: createDeviceCamera(), // F.006 — done. getUserMedia in-app viewfinder, file-input fallback.
+  faceDetect: createBlazeFaceLocal(), // F.006 — done. Local BlazeFace, never a network adapter.
+  redaction: createCanvasMosaic(), // F.006 — done. Destructive mosaic + blur on the actual pixel buffer.
+  vision: createClaudeVision(), // F.006 — done. claude-sonnet-5 via the serverless proxy, redacted image only.
   textGen: createHaikuCard(), // F.015 — done. Real Haiku call behind the §9.4 guardrail; see adapters/textgen/haikuCard.ts and rawTextCard.ts (the guardrail-failure fallback).
   speechOut: createFixtureSpeechOut(), // TODO(F.010): swap for WebSpeechOut
   storage: createIndexedDbStorage(), // F.001 — done. Real, on-device, persists across restarts.

@@ -36,6 +36,12 @@
       "rules": {
         "no-restricted-imports": "off"
       }
+    },
+    {
+      "files": ["scripts/verify-vision-live.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
     }
   ]
 }

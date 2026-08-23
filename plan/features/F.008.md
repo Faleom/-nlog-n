@@ -1,6 +1,6 @@
 # F.008 — Game 1 End-to-End, One Level ← **TIER 0 GATE**
 
-**Tier 0** · Owner: **P2** · Reviewer: P4 · Status: Not started
+**Tier 0** · Owner: **P2** · Reviewer: P4 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 The whole product in one loop. Audio names a target; the child leaves the
