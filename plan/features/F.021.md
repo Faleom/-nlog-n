@@ -1,6 +1,6 @@
 # F.021 — Game 3 Mode A: Shadow Match
 
-**Tier 2 — required.** All three games ship this weekend. · Owner: **P2** · Reviewer: P4 · Status: Not started
+**Tier 2 — required.** All three games ship this weekend. · Owner: **P2** · Reviewer: P4 · Status: Implemented, self-verified — needs fresh-context review
 
 ## What
 Silhouette at top, real photos below, child picks the match. The cheapest second
