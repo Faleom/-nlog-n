@@ -202,6 +202,77 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+/* ---- Accent-by-favColour --------------------------------------------
+   Onboarding's "A few favourites" screen (QuickPreferences.tsx) captures
+   the child's favColour as one of COLOURS = red/orange/yellow/green/blue/
+   purple/pink. This block is the ONLY place that colour touches the
+   design system: it re-points the four "Interactive" accent tokens
+   (--color-primary, --color-primary-bright, --color-primary-ink,
+   --color-primary-soft) per favColour. Nothing else in :root moves —
+   ground, glass, ink/border and the reserved Sunburst/Blush tokens are
+   untouched by every rule below.
+
+   Applied via `document.documentElement.dataset.accent` in App.tsx (see
+   the useEffect there), not read from React props, so any component
+   using var(--color-primary) picks it up for free with no prop drilling.
+   Deliberately an attribute on <html>, kept separate from any future
+   `[data-theme]` attribute a light/dark toggle might add elsewhere —
+   the two are independent axes (which colour vs. which brightness) and
+   should be free to combine as `<html data-theme="light" data-accent="green">`
+   without either rule having to know the other exists.
+
+   'purple' is not listed below: it IS the :root default (Periwink), so
+   favColour === 'purple' and favColour === undefined both resolve to the
+   same values with no override needed — this is also the no-regression
+   fallback for profiles saved before this field existed, and for the
+   Branch 2 / no-profile screens that never set the attribute at all.
+
+   Each hue below was picked, not guessed: same method as every other
+   token in this file (WCAG relative-luminance against Nightshade #16121D,
+   composited --glass-bg #26232D and --glass-bg-strong #322E38), so every
+   colour clears the same bars Periwink does — >=4.5:1 as text on the app
+   ground AND on --glass-bg, with -bright standing in on --glass-bg-strong
+   the same way --color-primary-bright already does for Periwink. None of
+   the seven's hex values equal --color-reward (#FFC93C) or --color-companion
+   (#FF7E9D) — those two stay reserved for genuine reward/Companion beats
+   regardless of which accent is active. */
+:root[data-accent='red'] {
+  --color-primary: #ff4d5b;
+  --color-primary-bright: #ff808a;
+  --color-primary-ink: #261214;
+  --color-primary-soft: rgba(255, 77, 91, 0.24);
+}
+:root[data-accent='orange'] {
+  --color-primary: #e67300;
+  --color-primary-bright: #ff8c1a;
+  --color-primary-ink: #261c12;
+  --color-primary-soft: rgba(230, 115, 0, 0.24);
+}
+:root[data-accent='yellow'] {
+  --color-primary: #ccbb00;
+  --color-primary-bright: #ffea00;
+  --color-primary-ink: #262412;
+  --color-primary-soft: rgba(204, 187, 0, 0.24);
+}
+:root[data-accent='green'] {
+  --color-primary: #00b23c;
+  --color-primary-bright: #00e64d;
+  --color-primary-ink: #122619;
+  --color-primary-soft: rgba(0, 178, 60, 0.24);
+}
+:root[data-accent='blue'] {
+  --color-primary: #4d97ff;
+  --color-primary-bright: #80b5ff;
+  --color-primary-ink: #121a26;
+  --color-primary-soft: rgba(77, 151, 255, 0.24);
+}
+:root[data-accent='pink'] {
+  --color-primary: #ff33aa;
+  --color-primary-bright: #ff66bf;
+  --color-primary-ink: #26121e;
+  --color-primary-soft: rgba(255, 51, 170, 0.24);
+}
+
 * {
   box-sizing: border-box;
 }
