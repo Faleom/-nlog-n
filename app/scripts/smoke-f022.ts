@@ -177,7 +177,12 @@ async function main() {
   section('F.022 — story parsing: tolerant of prose/markdown fences around the JSON');
 
   await test('a response wrapped in a markdown code fence still parses', () => {
-    const raw = { steps: [{ sentence: 'First — {companion} picks up the duck.', objectRef: 'duck' }, { sentence: 'Last — {companion} puts away the duck.', objectRef: 'duck' }] };
+    // Two DIFFERENT objects, not the same one twice -- a step-reused-object
+    // story is now itself a validation failure (see parseStoryResponse's
+    // duplicate-objectRef check), so a fixture reusing 'duck' for both
+    // steps would fail this test for a reason unrelated to what it's
+    // actually checking (markdown-fence tolerance).
+    const raw = { steps: [{ sentence: 'First — {companion} picks up the duck.', objectRef: 'duck' }, { sentence: 'Last — {companion} gets dried off with the towel.', objectRef: 'towel' }] };
     const text = '```json\n' + JSON.stringify(raw) + '\n```';
     const story = parseStoryResponse(text, objects);
     assert.equal(story.steps.length, 2);
@@ -227,6 +232,32 @@ async function main() {
       steps: [
         { sentence: 'First — {companion} gets in the bath.', objectRef: 'bath' },
         { sentence: 'Last — {companion} plays with the rocket ship.', objectRef: 'rocket ship' },
+      ],
+    };
+    assert.throws(() => parseStoryResponse(JSON.stringify(raw), objects), StoryGenerationFailedError);
+  });
+
+  await test('the same objectRef used twice throws, even though each use is individually valid', () => {
+    // The real-world bug this guards: a story that revisits one real
+    // object across two steps used to pass this validation cleanly (each
+    // "bath" reference matches a known object on its own) and only broke
+    // later, at render time in Game2.tsx -- the second step's crop was
+    // already claimed by the first, so it fell back to an unrelated
+    // generic-coloured swatch with no connection to that step's sentence.
+    const raw = {
+      steps: [
+        { sentence: 'First — {companion} gets in the bath.', objectRef: 'bath' },
+        { sentence: 'Then — {companion} splashes in the bath some more.', objectRef: 'bath' },
+      ],
+    };
+    assert.throws(() => parseStoryResponse(JSON.stringify(raw), objects), StoryGenerationFailedError);
+  });
+
+  await test('the same objectRef in different casing still counts as reused', () => {
+    const raw = {
+      steps: [
+        { sentence: 'First — {companion} gets in the bath.', objectRef: 'bath' },
+        { sentence: 'Then — {companion} splashes some more.', objectRef: 'BATH' },
       ],
     };
     assert.throws(() => parseStoryResponse(JSON.stringify(raw), objects), StoryGenerationFailedError);

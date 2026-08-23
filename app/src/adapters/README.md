@@ -14,6 +14,7 @@ One subdirectory per port. This is the **only** place a vendor SDK
 | `textgen/` | `TextGenPort` | `haikuCard.ts`, `rawTextCard.ts` | P3 | F.015 |
 | `speech/` | `SpeechOutPort` | `webSpeechOut.ts` | P1 | F.010 |
 | `storage/` | `StoragePort` | `indexedDbStorage.ts` | P1 | F.001 |
+| `sound/` | `SoundPort` | `webClickSound.ts` — synthesised via Web Audio, no asset file | — | app-wide button tap feedback |
 | `fixtures/` | all of the above | already written — see `ports.ts` | — | — |
 
 **When your real adapter is ready:** write it in your subdirectory, then swap

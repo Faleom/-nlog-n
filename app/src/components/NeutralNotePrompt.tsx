@@ -27,13 +27,13 @@ export function NeutralNotePrompt({ history = [], onSaveNote, onDismiss }: Neutr
   return (
     <div className="neutral-note-prompt">
       <p>{text}</p>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button style={{ minWidth: 88, minHeight: 88 }} onClick={onSaveNote}>
-          Yes, save a note
-        </button>
-        <button style={{ minWidth: 88, minHeight: 88 }} onClick={onDismiss}>
-          No
-        </button>
+      {/* Both buttons are plain base-glass and equal-width by design --
+          styling that made either answer look like the expected one would
+          break §10. The 88x88 floor comes from the base `button` rule, so
+          it no longer needs restating inline here. */}
+      <div className="neutral-note-prompt-actions">
+        <button onClick={onSaveNote}>Yes, save a note</button>
+        <button onClick={onDismiss}>No</button>
       </div>
     </div>
   );

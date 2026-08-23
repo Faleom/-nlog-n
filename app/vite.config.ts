@@ -100,20 +100,31 @@ export default defineConfig(({ mode, command }) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'App Guide v3 Project',
-          short_name: 'AppGuideV3',
+          name: 'Hello World',
+          short_name: 'Hello World',
           start_url: '/',
           display: 'standalone',
           orientation: 'portrait', // §4.3 — phone locks to portrait
-          background_color: '#ffffff',
-          theme_color: '#ffffff',
+          // Dark-first: these two are what the OS paints for the splash
+          // screen and the status-bar chrome of the installed PWA. Left
+          // white they produce a white flash on every cold launch of a
+          // dark app. Values are --color-bg / --color-surface-sunken
+          // from src/App.css (see src/design/DESIGN-TOKENS.md).
+          background_color: '#0e0c13',
+          theme_color: '#16121d',
           icons: [],
         },
         workbox: {
           // Precache the app shell + the BlazeFace model once F.006 lands.
           // Room photos and vision calls are never cached — they're
           // transient by design (§14).
-          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          // woff2 is in this list on purpose: the self-hosted face
+          // (src/design/fonts.css) is bundled at build time, and this is
+          // what keeps it available on a cold offline launch. Without
+          // it the app would silently fall back to the system stack the
+          // first time it is opened without a connection — exactly the
+          // failure the "no web fonts" rule used to prevent.
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         },
       }),
     ],

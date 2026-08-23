@@ -1,0 +1,37 @@
+/* Self-hosted webfonts. NOTHING HERE MAY EVER BECOME A NETWORK FETCH.
+   ------------------------------------------------------------------
+   The app claims to run fully offline (STATUS.md "The API key";
+   vite.config.ts's VitePWA workbox precache). This face ships as a .woff2
+   file inside the bundle: `@fontsource-variable/*` is resolved at BUILD
+   time, Vite emits the woff2 into dist/assets with a content hash, and
+   workbox precaches it (globPatterns includes woff2 — see vite.config.ts).
+   There is no <link> to fonts.googleapis.com, no @import from a CDN, no
+   runtime fetch. First load pulls it from our own origin; every load
+   after that is served by the service worker.
+
+   Latin subset only, declared by hand rather than importing the
+   package's own index.css. The package ships cyrillic / cyrillic-ext /
+   latin-ext / vietnamese too, and a precache-everything service worker
+   would push all of it down whether or not a single glyph is ever drawn.
+   index.html is lang="en".
+
+   One face now, not two — see src/design/DESIGN-TOKENS.md for why. */
+
+/* Standard "latin" unicode-range, copied verbatim from the upstream
+   fontsource subset CSS so the range stays in sync with the file. */
+
+/* --- Nunito Variable: the app's one typeface, child and caregiver alike --
+   One variable file covers 200-1000, which is what lets the dark-mode
+   optical weight trim (--weight-caregiver-body: 420) exist at all — a
+   static-weight package could only give 400 or 500. */
+@font-face {
+  font-family: 'Nunito Variable';
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url('@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}

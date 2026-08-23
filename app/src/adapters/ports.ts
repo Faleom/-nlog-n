@@ -5,7 +5,7 @@
 // enforces this. A feature file talks to a port; it never knows which
 // adapter is wired in.
 
-import type { Region, SamenessAnswer, TaggedCrop } from '../types';
+import type { AttentionSpanAnswer, CommunicationAnswer, Region, SamenessAnswer, TaggedCrop } from '../types';
 
 export interface CapturePort {
   /** Opens the device camera and returns a full-resolution photo. */
@@ -151,6 +151,15 @@ export interface StoryGenPort {
     objects: DetectedObjectForStory[];
     childAgeMonths: number;
     sameness?: SamenessAnswer;
+    /** §5.2's rule -- "tuning keys off response dimensions, not a
+     * condition label" -- applies to these two exactly as it does to
+     * `sameness`: passed through as a plain behavioural preference
+     * (favour short sentences, favour a shorter story), never surfaced to
+     * the model as a diagnostic or clinical descriptor. See the server-side
+     * prompt construction in api/claude.ts for the exact plain-language
+     * phrasing used for each. */
+    attentionSpan?: AttentionSpanAnswer;
+    communication?: CommunicationAnswer;
     stepCount?: number;
     /** §6.2/§6.4's Layer 4 hard exclusion. Callers must already exclude
      * any object matching these from `objects` (defense at the
@@ -181,12 +190,33 @@ export class StoryGenerationFailedError extends Error {
 export interface SpeechOutPort {
   /** Speaks a line of text aloud. Must resolve when speech finishes. */
   say(text: string, opts?: { rate?: number }): Promise<void>;
+  /** Cancels whatever is currently speaking (if anything) and never speaks
+   * it again -- unlike say(), never resolves a pending call, it silences
+   * it. Called on navigation so leaving a game or closing the app mid-line
+   * doesn't leave the browser's global speechSynthesis talking over a
+   * screen it no longer applies to. Safe to call when nothing is
+   * speaking. */
+  stop(): void;
 }
 
 export interface StoragePort {
   get<T>(key: string): Promise<T | undefined>;
   set<T>(key: string, value: T): Promise<void>;
   delete(key: string): Promise<void>;
+}
+
+export interface SoundPort {
+  /** A short, neutral confirmation tone for a button press -- the same
+   * sound for every button everywhere, never a distinct "correct" or
+   * "wrong" sound (Game 1's §7.7 rule that a wrong tap gets silence, not
+   * a buzzer, still holds; this is generic press feedback, not judgment).
+   * Synchronous and fire-and-forget: nothing in the app needs to await a
+   * tap sound finishing. `quiet` softens the volume for a profile that
+   * has said sound/movement should stay calm (ResponseProfile's
+   * `soundMovement: 'calm'`) -- it never fully silences it, since this is
+   * one channel of UI-STANDARDS' "immediate feedback on every press", not
+   * the only one (the existing :active press states are the other). */
+  playClick(opts?: { quiet?: boolean }): void;
 }
 
 /**
@@ -207,4 +237,5 @@ export interface AdapterRegistry {
   story: StoryGenPort;
   speechOut: SpeechOutPort;
   storage: StoragePort;
+  sound: SoundPort;
 }

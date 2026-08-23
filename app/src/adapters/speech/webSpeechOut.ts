@@ -126,5 +126,18 @@ export function createWebSpeechOut(): SpeechOutPort {
         synth.speak(utterance);
       });
     },
+
+    stop() {
+      // Same lazy-read reasoning as say(): this file has to stay
+      // importable under Node (the smoke harness), where `window` doesn't
+      // exist at all. Guarded rather than read unconditionally.
+      if (typeof window === 'undefined') return;
+      // cancel() clears the utterance queue AND stops whatever is
+      // currently speaking; it fires the in-flight utterance's own
+      // onerror (never onend), which say()'s promise already treats as a
+      // silent, resolving outcome -- so a call site awaiting say() when
+      // stop() interrupts it still resolves rather than hanging.
+      window.speechSynthesis.cancel();
+    },
   };
 }

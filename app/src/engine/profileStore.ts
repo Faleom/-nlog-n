@@ -78,6 +78,20 @@ export async function setActiveProfile(id: string): Promise<void> {
 }
 
 /**
+ * Drops the "who is active on this device" pointer and nothing else.
+ *
+ * This is what the home hub's "Log out" button calls. There is no account
+ * and no password anywhere in this app -- the active-profile id IS the
+ * whole session -- so logging out is exactly this one delete. Note what it
+ * deliberately does NOT touch: PROFILES_KEY, SESSIONS_KEY and
+ * QUESTION_CARDS_KEY are all left intact, so the child's profile, history
+ * and question cards survive. setActiveProfile(id) puts any of them back.
+ */
+export async function clearActiveProfile(): Promise<void> {
+  await adapters.storage.delete(ACTIVE_PROFILE_KEY);
+}
+
+/**
  * Patches a profile. Nested objects (responseProfile, context and its four
  * sub-layers) are merged field-by-field rather than replaced wholesale, so
  * a caller can set one favourite colour without clobbering everything else

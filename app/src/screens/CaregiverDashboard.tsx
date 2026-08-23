@@ -7,6 +7,17 @@
 // path of this component (loading included) — not first-run only, no
 // dismiss button, no "seen it" flag in storage. Phone layout: accordion,
 // recap open by default (UI-STANDARDS.md).
+//
+// Visual pass (Phase 2): the data, the aggregation and the accordion
+// behaviour below are untouched; only the markup wrapping them changed.
+// This is a CAREGIVER screen, so per DESIGN-TOKENS §4.2 it is denser than
+// a child screen: three glass cards on --glass-bg-strong at --radius-md,
+// Periwink tint, tight caregiver rhythm, muted secondary text — and none
+// of the reserved hues (Sunburst/Blush) or child-side tokens, which §4.3
+// forbids here outright. Every accordion header is a real 88x88 target
+// (UI-STANDARDS, no exceptions); the browser-default triangle markers are
+// now an inline SVG chevron so the affordance does not depend on a glyph
+// falling through to the system font stack.
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { getSessionsForChild } from '../engine/profileStore';
@@ -29,12 +40,12 @@ interface OpenSections {
   skills: boolean;
 }
 
+// Permanent, undismissable, on every return path. Styled as a quiet
+// standing note rather than a warning: it is a statement of what this
+// screen IS, not an interruption, so it gets the muted ink and a plain
+// left rule instead of any of the saturated hues.
 function Banner() {
-  return (
-    <p style={{ fontSize: '0.8rem', opacity: 0.75, borderTop: '1px solid #ccc', paddingTop: 8 }}>
-      {NON_DIAGNOSTIC_BANNER}
-    </p>
-  );
+  return <p className="dashboard-banner">{NON_DIAGNOSTIC_BANNER}</p>;
 }
 
 export function CaregiverDashboard({ profile }: CaregiverDashboardProps) {
@@ -47,9 +58,9 @@ export function CaregiverDashboard({ profile }: CaregiverDashboardProps) {
 
   if (!sessions) {
     return (
-      <div className="screen">
+      <div className="screen dashboard">
         <Banner />
-        <p>Loading…</p>
+        <p className="dashboard-empty">Loading…</p>
       </div>
     );
   }
@@ -59,7 +70,7 @@ export function CaregiverDashboard({ profile }: CaregiverDashboardProps) {
   const generalized = getGeneralizedSkills(sessions);
 
   return (
-    <div className="screen">
+    <div className="screen dashboard">
       <Banner />
 
       <Accordion
@@ -69,13 +80,16 @@ export function CaregiverDashboard({ profile }: CaregiverDashboardProps) {
       >
         {latest ? (
           <>
-            <p>{describeSessionRecap(latest)}</p>
-            <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-              Skills touched: {distinctSkillsThisSession(latest).join(', ') || 'none yet'}
+            <p className="dashboard-recap-line">{describeSessionRecap(latest)}</p>
+            <p className="dashboard-meta">
+              <span className="dashboard-meta-label">Skills touched</span>
+              <span className="dashboard-meta-value">
+                {distinctSkillsThisSession(latest).join(', ') || 'none yet'}
+              </span>
             </p>
           </>
         ) : (
-          <p>No sessions logged yet.</p>
+          <p className="dashboard-empty">No sessions logged yet.</p>
         )}
       </Accordion>
 
@@ -85,13 +99,26 @@ export function CaregiverDashboard({ profile }: CaregiverDashboardProps) {
         onToggle={() => setOpen((o) => ({ ...o, trend: !o.trend }))}
       >
         {trend.length === 0 ? (
-          <p>No sessions logged yet.</p>
+          <p className="dashboard-empty">No sessions logged yet.</p>
         ) : (
-          <ul>
+          // Plain numbers in a plain list, deliberately: no arrows, no
+          // colour, no comparison between rows. §7.9 — a shorter session
+          // is a fact, and annotating it would turn a log into a
+          // screening tool. The layout below only lines the figures up.
+          <ul className="dashboard-list">
             {trend.map((point) => (
-              <li key={point.sessionNumber}>
-                Session {point.sessionNumber}: longest focus stretch {point.focusStretchMinutes} min
-                ({point.durationMinutes} min total)
+              <li key={point.sessionNumber} className="dashboard-trend-row">
+                <span className="dashboard-trend-session">Session {point.sessionNumber}</span>
+                <span className="dashboard-trend-figures">
+                  <span className="dashboard-figure">
+                    <span className="dashboard-figure-value">{point.focusStretchMinutes} min</span>
+                    <span className="dashboard-figure-caption">longest focus stretch</span>
+                  </span>
+                  <span className="dashboard-figure">
+                    <span className="dashboard-figure-value">{point.durationMinutes} min</span>
+                    <span className="dashboard-figure-caption">session total</span>
+                  </span>
+                </span>
               </li>
             ))}
           </ul>
@@ -104,12 +131,22 @@ export function CaregiverDashboard({ profile }: CaregiverDashboardProps) {
         onToggle={() => setOpen((o) => ({ ...o, skills: !o.skills }))}
       >
         {generalized.length === 0 ? (
-          <p>No skills have reached independent yet — that&rsquo;s expected early on.</p>
+          <p className="dashboard-empty">
+            No skills have reached independent yet. That&rsquo;s expected early on.
+          </p>
         ) : (
-          <ul>
+          <ul className="dashboard-list">
             {generalized.map((g) => (
-              <li key={g.skillId}>
-                {g.skillId} — independent in {g.contexts.join(', ')}
+              <li key={g.skillId} className="dashboard-skill-row">
+                <span className="dashboard-skill-name">{g.skillId}</span>
+                <span className="dashboard-figure-caption">Independent in</span>
+                <span className="dashboard-context-chips">
+                  {g.contexts.map((context) => (
+                    <span key={context} className="dashboard-chip">
+                      {context}
+                    </span>
+                  ))}
+                </span>
               </li>
             ))}
           </ul>
@@ -131,11 +168,30 @@ function Accordion({
   children: ReactNode;
 }) {
   return (
-    <div>
-      <button onClick={onToggle} style={{ width: '100%', textAlign: 'left' }}>
-        {open ? '▾' : '▸'} {title}
+    <section className="dashboard-card">
+      <button
+        type="button"
+        className="dashboard-card-toggle"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <span className="dashboard-card-title">{title}</span>
+        <span
+          className={open ? 'dashboard-chevron is-open' : 'dashboard-chevron'}
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 12 12" width="12" height="12" fill="none">
+            <path
+              d="M4.25 2 L8.25 6 L4.25 10"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
       </button>
-      {open && <div style={{ padding: 8 }}>{children}</div>}
-    </div>
+      {open && <div className="dashboard-card-body">{children}</div>}
+    </section>
   );
 }

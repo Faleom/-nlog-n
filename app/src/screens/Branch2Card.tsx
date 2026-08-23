@@ -140,7 +140,7 @@ export function Branch2Card({ answers, childAgeMonths, onOfferActivity }: Branch
         <h2>Saved</h2>
         <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{cardText}</pre>
         <p style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-          Nearest service (placeholder — replace with a real, verified local listing):
+          Nearest service (placeholder, replace with a real, verified local listing):
         </p>
         <p style={{ fontSize: '0.8rem' }}>
           {PLACEHOLDER_HEALTH_SERVICE.name}
@@ -163,7 +163,7 @@ export function Branch2Card({ answers, childAgeMonths, onOfferActivity }: Branch
       )}
       {pathChosen !== null && (
         <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-          Saved either way — no reminders, no follow-up. It's here whenever you want it.
+          Saved either way. No reminders, no follow-up. It's here whenever you want it.
         </p>
       )}
     </div>

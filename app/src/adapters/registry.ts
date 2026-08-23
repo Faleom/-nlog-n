@@ -19,6 +19,7 @@ import { createHaikuCard } from './textgen/haikuCard';
 import { createClaudeStory } from './story/claudeStory';
 import { createWebSpeechOut } from './speech/webSpeechOut';
 import { createIndexedDbStorage } from './storage/indexedDbStorage';
+import { createWebClickSound } from './sound/webClickSound';
 import type { AdapterRegistry } from './ports';
 
 // -----------------------------------------------------------------------
@@ -38,4 +39,5 @@ export const adapters: AdapterRegistry = {
   story: createClaudeStory(), // F.022 redesign — done. Real Haiku call behind strict validation; see adapters/story/claudeStory.ts and templateStory.ts (the validation-failure fallback, wired directly in engine/game2Story.ts, not through this registry — see that file's comment).
   speechOut: createWebSpeechOut(), // Web Speech API -- see adapters/speech/webSpeechOut.ts
   storage: createIndexedDbStorage(), // F.001 — done. Real, on-device, persists across restarts.
+  sound: createWebClickSound(), // App-wide button tap feedback -- see adapters/sound/webClickSound.ts
 };

@@ -112,14 +112,14 @@ export function CompanionCapture({ profile, onComplete, onSkip }: CompanionCaptu
           />
         </label>
         <p>Pronoun</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${PRONOUNS.length}, 1fr)`, gap: 8 }}>
           {PRONOUNS.map((p) => (
             <button
               key={p.value}
               onClick={() => setPronoun(p.value)}
               style={{
-                background: pronoun === p.value ? '#333' : 'white',
-                color: pronoun === p.value ? 'white' : 'black',
+                background: pronoun === p.value ? 'var(--color-primary)' : 'var(--color-surface)',
+                color: pronoun === p.value ? 'var(--color-primary-ink)' : 'var(--color-ink)',
               }}
             >
               {p.label}
@@ -137,7 +137,7 @@ export function CompanionCapture({ profile, onComplete, onSkip }: CompanionCaptu
     <div className="screen">
       <h2>Their favourite toy</h2>
       <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-        Photograph a favourite toy or comfort object on its own — no people in the photo.
+        Photograph a favourite toy or comfort object on its own. No people in the photo.
       </p>
       <button disabled={busy} onClick={() => void handleTakePhoto()}>
         Take a photo

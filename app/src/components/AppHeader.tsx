@@ -3,18 +3,23 @@
 // of top-level identity strip a real installed app has, present across
 // (most) screens rather than only contextual chrome.
 //
-// STATUS.md lists "Project name" as a still-open, undecided product
-// decision -- it would be wrong for a UI pass to lock one in. This renders
-// a single placeholder glyph + label rather than a real wordmark; swap
-// APP_NAME_PLACEHOLDER for the real name in this one place once it's
-// picked, or drop back to icon-only by removing the <span> below it.
+// The product name is "Hello World". It is written in exactly three other
+// places -- index.html's <title> and the PWA manifest's name/short_name in
+// vite.config.ts -- so keep those in step with this constant.
+//
+// Note: "My World" is the internal name of Branch 1. It used to be prefixed
+// onto header eyebrows ("MY WORLD · PLAY") and was removed as redundant --
+// this pill is the app's identity, the eyebrow/heading say where you are.
+// Don't reintroduce it as chrome.
 //
 // Not a button, not interactive -- carries none of the touch-target rules,
-// and never speaks (icons/photos/audio for the child; this is caregiver
-// wayfinding chrome). App.tsx suppresses it during a game's child-facing
-// phase using the exact same `childFacing` flag that suppresses
-// ScreenHeader, via GameChrome -- see App.tsx.
-const APP_NAME_PLACEHOLDER = 'Early Learning Companion';
+// and never speaks. Deliberate product decision: unlike ScreenHeader (back
+// button + flow eyebrow, real interactive chrome), this stays visible even
+// during a game's child-facing phase -- GameChrome in App.tsx renders it
+// unconditionally so the app never reads as unbranded while a child is
+// playing, while ScreenHeader stays gated on `childFacing` since it's the
+// interactive half of the original zero-chrome rule.
+const APP_NAME = 'Hello World';
 
 export function AppHeader() {
   return (
@@ -22,7 +27,7 @@ export function AppHeader() {
       <span className="app-header-mark" aria-hidden="true">
         🌱
       </span>
-      <span className="app-header-name">{APP_NAME_PLACEHOLDER}</span>
+      <span className="app-header-name">{APP_NAME}</span>
     </header>
   );
 }

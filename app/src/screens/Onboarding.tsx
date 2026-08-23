@@ -46,7 +46,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       <div className="screen">
         <h1>Let&rsquo;s get started</h1>
         <p style={{ color: 'var(--color-ink-muted)' }}>
-          Just enough to tailor things to your child — nothing else, yet.
+          Just enough to tailor things to your child. Nothing else, yet.
         </p>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           Child&rsquo;s age, in months

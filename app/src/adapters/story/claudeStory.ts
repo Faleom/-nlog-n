@@ -19,7 +19,7 @@
 // prompt below against an actual model response; it's written but
 // deliberately NOT run automatically, same as verify-vision-live.ts.
 
-import type { SamenessAnswer } from '../../types';
+import type { AttentionSpanAnswer, CommunicationAnswer, SamenessAnswer } from '../../types';
 import type { DetectedObjectForStory, GeneratedStoryTemplate, StoryGenPort } from '../ports';
 import { parseStoryResponse } from './storyParsing';
 
@@ -53,7 +53,7 @@ Return ONLY a JSON object (no prose, no markdown fences) of exactly this shape:
 {"steps": [{"sentence": string, "objectRef": string}, ...]}
 
 - "steps" must have between 2 and 4 entries.
-- "objectRef" must be exactly one of the object names listed above, spelled exactly as given there.
+- "objectRef" must be exactly one of the object names listed above, spelled exactly as given there. EVERY STEP MUST USE A DIFFERENT OBJECT -- never reference the same object in two different steps, even if the story would naturally revisit it (e.g. never have one step about "the cushion" and a later step also about "the cushion", even worded differently). Each real object gets used at most once across the whole story.
 - "sentence" is one short routine step, e.g. "{companion} climbs into the warm, bubbly bath." Always use the literal placeholder text "{companion}" (including the curly braces) as the subject of every sentence -- never substitute a real name, a pronoun, or any other word in its place. This placeholder is filled in later by the app, not by you.
 - Never start a sentence with an ordinal word or numbering of any kind -- no "First —", "Then —", "Next —", "Last —", no "1.", nothing. The app numbers and orders the steps itself; your sentence should read as a plain, self-contained moment on its own (start directly with the subject, e.g. "{companion} climbs into...").
 - Give it a little warmth and personality -- a small, cozy moment your {companion} character is having, not a flat instruction list. One vivid, concrete, sensory word or small detail per sentence is enough (a texture, a sound, a feeling) -- still simple, short, and easy for a young child to follow. Never add drama, tension, or anything that isn't calm and reassuring.
@@ -100,6 +100,8 @@ export function createClaudeStory(): StoryGenPort {
       objects: DetectedObjectForStory[];
       childAgeMonths: number;
       sameness?: SamenessAnswer;
+      attentionSpan?: AttentionSpanAnswer;
+      communication?: CommunicationAnswer;
       stepCount?: number;
       avoidedColour?: string;
       avoidedTerms?: string[];
@@ -113,6 +115,8 @@ export function createClaudeStory(): StoryGenPort {
           objects: input.objects,
           childAgeMonths: input.childAgeMonths,
           sameness: input.sameness,
+          attentionSpan: input.attentionSpan,
+          communication: input.communication,
           stepCount: input.stepCount,
           avoidedColour: input.avoidedColour,
           avoidedTerms: input.avoidedTerms,

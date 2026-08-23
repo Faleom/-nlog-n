@@ -23,7 +23,7 @@
 // edited *after* the story was first generated (a renamed Companion shows
 // up immediately, no regeneration needed or wanted).
 
-import type { ChildProfile, SamenessAnswer } from '../types';
+import type { AttentionSpanAnswer, ChildProfile, CommunicationAnswer, SamenessAnswer } from '../types';
 import { renderLine, slotValuesFromProfile } from './slots';
 import type {
   DetectedObjectForStory,
@@ -133,6 +133,12 @@ export async function getOrGenerateStory(
   stepCount?: number,
   avoid?: { colour?: string; terms?: string[] },
   perspective?: 'companion' | 'child',
+  // Not folded into the cache key below, same reasoning as `sameness`
+  // above: these are fixed per-child profile dimensions, not a per-call
+  // choice like stepCount/perspective, so they can never make two calls
+  // for the same photo "genuinely different requests".
+  attentionSpan?: AttentionSpanAnswer,
+  communication?: CommunicationAnswer,
 ): Promise<GeneratedStoryTemplate> {
   // stepCount AND perspective folded into the key -- picking a different
   // count, or a different "who's this about" mode, for the same photo
@@ -168,6 +174,8 @@ export async function getOrGenerateStory(
       objects,
       childAgeMonths,
       sameness,
+      attentionSpan,
+      communication,
       stepCount,
       avoidedColour: avoid?.colour,
       avoidedTerms: avoid?.terms,
@@ -186,6 +194,8 @@ export async function getOrGenerateStory(
       objects,
       childAgeMonths,
       sameness,
+      attentionSpan,
+      communication,
       stepCount,
       avoidedColour: avoid?.colour,
       avoidedTerms: avoid?.terms,
@@ -214,6 +224,8 @@ export async function generateGame2Story(
   stepCount?: number,
   avoid?: { colour?: string; terms?: string[] },
   perspective?: 'companion' | 'child',
+  attentionSpan?: AttentionSpanAnswer,
+  communication?: CommunicationAnswer,
 ): Promise<GeneratedStoryTemplate> {
   const { adapters } = await import('../adapters/registry');
   const { createTemplateStory } = await import('../adapters/story/templateStory');
@@ -233,5 +245,7 @@ export async function generateGame2Story(
     stepCount,
     avoid,
     perspective,
+    attentionSpan,
+    communication,
   );
 }

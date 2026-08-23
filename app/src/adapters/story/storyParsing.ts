@@ -96,6 +96,18 @@ export function parseStoryResponse(
   }
 
   const knownNames = new Set(objects.map((o) => o.name.trim().toLowerCase()));
+  // Every step must point at a DIFFERENT real object. Nothing above catches
+  // this -- each objectRef is checked individually against knownNames, so a
+  // story where two steps both say "cushion" passes validation cleanly.
+  // The break only shows up later, at render time in Game2.tsx: resolving
+  // the SECOND "cushion" step finds its real crop already claimed by the
+  // first, and falls back to an unrelated generic swatch (a red or blue
+  // square with no connection to that step's sentence at all) -- confirmed
+  // the actual cause of that bug, not a rendering issue. Rejecting the
+  // response here instead means a duplicate-object story never reaches the
+  // screen at all; it falls back to the deterministic template generator,
+  // which can't produce this by construction (it slices distinct objects).
+  const seenRefs = new Set<string>();
 
   const result: StoryStepTemplate[] = steps.map((raw, i) => {
     if (!isRawStepShape(raw)) {
@@ -103,11 +115,18 @@ export function parseStoryResponse(
         `step ${i} is missing a non-empty "sentence" or "objectRef"`,
       );
     }
-    if (!knownNames.has(raw.objectRef.trim().toLowerCase())) {
+    const normalizedRef = raw.objectRef.trim().toLowerCase();
+    if (!knownNames.has(normalizedRef)) {
       throw new StoryGenerationFailedError(
         `step ${i}'s objectRef "${raw.objectRef}" does not match any detected object`,
       );
     }
+    if (seenRefs.has(normalizedRef)) {
+      throw new StoryGenerationFailedError(
+        `step ${i}'s objectRef "${raw.objectRef}" is reused from an earlier step -- every step must reference a different object`,
+      );
+    }
+    seenRefs.add(normalizedRef);
     return { sentence: raw.sentence, objectRef: raw.objectRef };
   });
 

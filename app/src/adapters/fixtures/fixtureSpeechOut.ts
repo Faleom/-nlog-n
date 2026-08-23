@@ -8,5 +8,8 @@ export function createFixtureSpeechOut(): SpeechOutPort {
     async say() {
       // intentionally silent
     },
+    stop() {
+      // nothing was ever speaking
+    },
   };
 }

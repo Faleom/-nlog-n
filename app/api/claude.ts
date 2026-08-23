@@ -35,6 +35,12 @@ type StoryRequest = {
   objects: StoryObjectInput[];
   childAgeMonths: number;
   sameness?: 'sameness-helps' | 'somewhat' | 'variety';
+  /** §5.2's rule -- a response DIMENSION, never a condition label. Both
+   * folded into the prompt as a plain, positive behavioural note (short
+   * sentences, a shorter or longer story) -- see PLAIN_LANGUAGE_BY_* below,
+   * never the raw enum value or any clinical-sounding term. */
+  attentionSpan?: 'brief' | 'moderate' | 'sustained';
+  communication?: 'not-with-words-yet' | 'single-words' | 'short-phrases' | 'full-sentences';
   /** Caregiver-chosen exact step count, if they picked one on Game 2's
    * idle screen. Clamped server-side to [2, 4] and to objects.length --
    * never trust a client-sent number blindly into the prompt. */
@@ -207,7 +213,7 @@ Return ONLY a JSON object (no prose, no markdown fences) of exactly this shape:
 {"steps": [{"sentence": string, "objectRef": string}, ...]}
 
 - "steps" must have between 2 and 4 entries.
-- "objectRef" must be exactly one of the object names listed above, spelled exactly as given there.
+- "objectRef" must be exactly one of the object names listed above, spelled exactly as given there. EVERY STEP MUST USE A DIFFERENT OBJECT -- never reference the same object in two different steps, even if the story would naturally revisit it (e.g. never have one step about "the cushion" and a later step also about "the cushion", even worded differently). Each real object gets used at most once across the whole story.
 - "sentence" is one short routine step, e.g. "{companion} climbs into the warm, bubbly bath." Always use the literal placeholder text "{companion}" (including the curly braces) as the subject of every sentence -- never substitute a real name, a pronoun, or any other word in its place. This placeholder is filled in later by the app, not by you.
 - Never start a sentence with an ordinal word or numbering of any kind -- no "First —", "Then —", "Next —", "Last —", no "1.", nothing. The app numbers and orders the steps itself; your sentence should read as a plain, self-contained moment on its own (start directly with the subject, e.g. "{companion} climbs into...").
 - Give it a little warmth and personality -- a small, cozy moment your {companion} character is having, not a flat instruction list. One vivid, concrete, sensory word or small detail per sentence is enough (a texture, a sound, a feeling) -- still simple, short, and easy for a young child to follow. Never add drama, tension, or anything that isn't calm and reassuring.
@@ -236,6 +242,23 @@ Example 2 -- objects include "shoes", "backpack", "door":
         ? Math.min(Math.max(Math.round(body.stepCount), 2), 4, body.objects.length)
         : undefined;
 
+      // §5.2: "tuning keys off response dimensions, not a condition
+      // label" -- same rule as `sameness` above. Both maps write out a
+      // plain, positive behavioural instruction; the model is never told
+      // the raw answer value, a field name, or anything that reads as a
+      // diagnosis. Only the values that actually call for different
+      // phrasing than the model's own defaults get an entry -- 'moderate'
+      // and 'full-sentences' are the ordinary case and add nothing.
+      const ATTENTION_SPAN_NOTE: Record<string, string> = {
+        brief: ' This child tends to engage best with shorter stories -- favour the shorter end of the 2-4 step range.',
+        sustained: ' This child can happily follow a longer story -- the fuller end of the 2-4 step range works well here.',
+      };
+      const COMMUNICATION_NOTE: Record<string, string> = {
+        'not-with-words-yet': ' This child is not yet using words to communicate -- keep every sentence very short and simple, using only concrete, everyday words a very young child would recognise.',
+        'single-words': ' This child communicates mainly in single words -- keep sentences short and simple, favouring concrete, familiar words.',
+        'short-phrases': ' This child communicates in short phrases -- keep sentences simple and not too long.',
+      };
+
       // §6.2/§6.4 hard exclusion. The caller has already removed any
       // matching OBJECT from the list above -- this second instruction
       // covers the model's own incidental descriptive language (a vivid
@@ -258,7 +281,7 @@ Example 2 -- objects include "shoes", "backpack", "door":
       const objectsText = `Detected objects (JSON array, each with name/colour/category/function -- use these exact "name" values for "objectRef"):
 ${JSON.stringify(body.objects)}
 
-Child's age: ${body.childAgeMonths} months.${body.sameness ? ` This child's routine-preference profile is "${body.sameness}" -- if "sameness-helps", favour an especially familiar, ordinary routine.` : ''}${clampedStepCount ? `\n\nThe story must have EXACTLY ${clampedStepCount} steps -- not more, not fewer, overriding the "2 to 4" range in the instructions below.` : ''}${avoidTerms.length > 0 ? `\n\nHARD RULE, no exceptions: never use any of these words anywhere in the story, not even as incidental description or colour: ${avoidTerms.map((t) => `"${t}"`).join(', ')}. Write around them entirely.` : ''}${perspectiveOverride}`;
+Child's age: ${body.childAgeMonths} months.${body.sameness ? ` This child's routine-preference profile is "${body.sameness}" -- if "sameness-helps", favour an especially familiar, ordinary routine.` : ''}${body.attentionSpan ? (ATTENTION_SPAN_NOTE[body.attentionSpan] ?? '') : ''}${body.communication ? (COMMUNICATION_NOTE[body.communication] ?? '') : ''}${clampedStepCount ? `\n\nThe story must have EXACTLY ${clampedStepCount} steps -- not more, not fewer, overriding the "2 to 4" range in the instructions below.` : ''}${avoidTerms.length > 0 ? `\n\nHARD RULE, no exceptions: never use any of these words anywhere in the story, not even as incidental description or colour: ${avoidTerms.map((t) => `"${t}"`).join(', ')}. Write around them entirely.` : ''}${perspectiveOverride}`;
 
       const message = await client.messages.create({
         model: 'claude-haiku-4-5',

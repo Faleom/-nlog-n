@@ -55,14 +55,14 @@ export function AvoidListScreen({ profile, onComplete }: AvoidListProps) {
       <ToggleRow label="Surprises and unannounced changes" value={surprises} onChange={setSurprises} />
 
       <p>A colour they dislike</p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 8 }}>
         {COLOUR_SWATCHES.map((c) => (
           <button
             key={c}
             onClick={() => setAvoidedColour(avoidedColour === c ? '' : c)}
             style={{
-              background: avoidedColour === c ? '#333' : 'white',
-              color: avoidedColour === c ? 'white' : 'black',
+              background: avoidedColour === c ? 'var(--color-primary)' : 'var(--color-surface)',
+              color: avoidedColour === c ? 'var(--color-primary-ink)' : 'var(--color-ink)',
             }}
           >
             {c}
@@ -99,8 +99,8 @@ function ToggleRow({
     <button
       onClick={() => onChange(!value)}
       style={{
-        background: value ? '#333' : 'white',
-        color: value ? 'white' : 'black',
+        background: value ? 'var(--color-primary)' : 'var(--color-surface)',
+        color: value ? 'var(--color-primary-ink)' : 'var(--color-ink)',
         textAlign: 'left',
       }}
     >

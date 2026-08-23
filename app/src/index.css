@@ -1,9 +1,16 @@
 /* Reset. Real design tokens (sensory settings, sameness/variety, avoid-list
    colour exclusion) come from the response profile — see
-   plan/engineering/UI-STANDARDS.md. Deliberately minimal here. */
+   plan/engineering/UI-STANDARDS.md. Deliberately minimal here.
+
+   The visual token system lives in src/App.css's :root, specified in
+   src/design/DESIGN-TOKENS.md. */
 
 :root {
-  color-scheme: light;
+  /* Dark is the app's only scheme — not a preference, not a toggle. This
+     is what tells the UA to render scrollbars, form controls and the
+     canvas behind the page in dark. There is deliberately no `light`
+     here and no `light dark` pair. */
+  color-scheme: dark;
 }
 
 * {

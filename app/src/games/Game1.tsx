@@ -27,9 +27,15 @@ import { adapters } from '../adapters/registry';
 import { captureRoomAndRecognize } from '../adapters/pipeline/myWorldPipeline';
 import { renderLine, slotValuesFromProfile } from '../engine/slots';
 import { InteractionMachine, type PromptTier } from '../engine/interactionMachine';
-import { startSession } from '../engine/profileStore';
+import { startSession, updateFocusStretch } from '../engine/profileStore';
 import { logActivityOutcome } from '../engine/activityLogging';
 import { getFadingSuggestion, type FadingSuggestion } from '../engine/fading';
+import {
+  shouldAnnounceChangesInAdvance,
+  shouldReduceAnimation,
+  shouldUseVisualPulseInsteadOfChime,
+} from '../engine/avoidFilter';
+import { getSkillTemplatesForCrop, getSkillTemplatesForObject } from '../engine/skillLookup';
 import {
   childFacingHandoffLine,
   describeSessionRecap,
@@ -43,6 +49,7 @@ import {
 import { SUPPORT_TIERS, DEFAULT_STARTING_SUPPORT_TIER } from '../config/supportLadder';
 import { GENERIC_FALLBACK_CROPS } from './genericFallbackCrops';
 import { ObjectIcon } from './objectIcons';
+import { iconKeyFor } from './objectIconLogic';
 import { pickNextTarget } from './game1Trial';
 import { getGame1Level, setGame1Level, type Game1Level } from './game1Level';
 import {
@@ -61,7 +68,7 @@ import {
   shouldUseHelperFraming,
 } from './game1Companion';
 import type { VisionScene } from '../adapters/ports';
-import type { ChildProfile, SupportTier, TaggedCrop } from '../types';
+import type { ChildProfile, SkillTemplate, SupportTier, TaggedCrop } from '../types';
 
 type Phase =
   | 'idle'
@@ -95,8 +102,68 @@ function swatchColour(colour: string): string {
     'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'brown',
     'black', 'white', 'grey', 'gray', 'gold', 'silver', 'teal', 'cyan',
   ]);
-  return known.has(colour.toLowerCase()) ? colour.toLowerCase() : '#ccc';
+  return known.has(colour.toLowerCase()) ? colour.toLowerCase() : 'var(--color-border-strong)';
 }
+
+/** Never let two objects the child can't reliably tell apart end up as
+ * separate options in the same trial. A real room routinely has several
+ * objects that draw the identical icon (three cushions on one couch, two
+ * near-identical cups) -- same shape, only a subtle tint different, which
+ * is not a reliable cue for a preschooler being asked "which one did you
+ * bring?" (and isn't a reliable cue for the app either: if the picked
+ * target and the child's real physical object are two DIFFERENT cushions
+ * that happen to share a tile, there is no way to confirm correctly).
+ * Keeps the first crop for each distinct icon; everything downstream
+ * (target picking, the confirmation grid) only ever sees one candidate
+ * per look. Deliberately does NOT touch the `crops` state used by
+ * ObjectLegend/RoomMap -- those are caregiver-facing, have real text
+ * names, and showing "found 3 cushions" there is honest information, not
+ * a confusing choice. */
+function dedupeCropsByIcon(pool: TaggedCrop[]): TaggedCrop[] {
+  const seen = new Set<string>();
+  const result: TaggedCrop[] = [];
+  for (const crop of pool) {
+    const key = iconKeyFor(crop.name, crop.category);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(crop);
+  }
+  return result;
+}
+
+/** F.007 (§7.5): the authored skill a trial is actually practising.
+ *
+ * engine/skillLookup.ts returns every skill an object can teach (3-4 per
+ * object, degrading exact object -> category -> fully generic, never
+ * empty). Game 1's interaction shape is exactly ONE of them: go and fetch
+ * the thing and bring it back — the retrieval template, which every
+ * branch of that table authors and names `find-<something>`. Selecting it
+ * by that prefix rather than blindly taking [0] keeps this honest if the
+ * table's ordering ever changes; the ?? is a pure safety net (the lookup
+ * documents that it never returns an empty array).
+ *
+ * This is a DIFFERENT axis from game1Difficulty's
+ * targetDescriptionForLevel: F.007 decides WHICH SKILL is being practised
+ * — and therefore what is logged, faded, and generalization-tracked per
+ * skill — while the difficulty level decides HOW ABSTRACTLY to phrase the
+ * search prompt for it. Neither replaces the other, and this file
+ * deliberately keeps the level-based phrasing untouched.
+ */
+function retrievalSkillFor(templates: SkillTemplate[]): SkillTemplate {
+  return templates.find((t) => t.skillId.startsWith('find-')) ?? templates[0];
+}
+
+/** F.018 §6.2/§6.4 "Surprises and unannounced changes": short spoken
+ * heads-ups, played immediately BEFORE the change they warn about, and
+ * only when shouldAnnounceChangesInAdvance() is true for this child.
+ * Deliberately plain templates run through the same renderLine() pipeline
+ * as every other child-facing line here, so the avoid-list filter still
+ * gets the last word on them. speechSynthesis queues utterances, so a
+ * heads-up spoken just before the real line is genuinely heard first,
+ * with no timer to unwind if the screen changes underneath it. */
+const ANNOUNCE_NEXT_TRIAL_TEMPLATE = "In a moment, we'll look for something new.";
+const ANNOUNCE_LEVEL_CHANGE_TEMPLATE = "In a moment, the game is going to change a little.";
+const ANNOUNCE_MOVEMENT_BREAK_TEMPLATE = "In a moment, we'll stop and move our bodies.";
 
 /** One button rendering a recognised object in the child-facing grid. Zero
  * text (§7.7, §13) — bundled cartoon artwork for the object, on a card
@@ -142,45 +209,94 @@ function CropButton({
   const tint = swatchColour(crop.colour);
 
   return (
-    <button
-      type="button"
-      className={classNames}
-      aria-label={crop.name}
-      disabled={dead || disabled}
-      onClick={onTap}
-      style={{
-        // Explicit square, not min-width/height: the artwork inside sizes
-        // itself as a % of this box, so the box needs a definite size to
-        // resolve against — left implicit, the button sizes to its content
-        // while the content sizes to the button, and the tile balloons.
-        // 96 keeps it clear of §4.4's 88pt floor and still fits four across
-        // inside the 480px app shell.
-        width: 96,
-        height: 96,
-        flexShrink: 0,
-        borderRadius: 16,
-        border: `3px solid ${tint}`,
-        // The coloured border alone disappears when the object's own colour
-        // is white or cream — a white ring on a white card. This hairline
-        // sits just outside it so the tile always has a visible edge, and
-        // "white" still reads as white rather than as nothing.
-        boxShadow: '0 0 0 1px rgba(33, 31, 46, 0.16)',
-        padding: 8,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        // backgroundColor first as the fallback: if color-mix() isn't
-        // supported the `background` line below is dropped as invalid and
-        // this plain white card survives, keeping the artwork readable
-        // (the coloured border still carries the colour cue either way).
-        backgroundColor: '#ffffff',
-        background: `color-mix(in srgb, ${tint} 16%, #ffffff)`,
-      }}
-    >
-      <ObjectIcon name={crop.name} category={crop.category} />
-    </button>
+    // Relative wrapper, not the button itself: the button stays the exact
+    // 96x96 tap target §4.4 requires, and the corner badge below is purely
+    // decorative (aria-hidden) — overlapping it onto the button would
+    // otherwise grow the hit area or shift the icon off-centre.
+    <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
+      <button
+        type="button"
+        className={classNames}
+        aria-label={crop.name}
+        disabled={dead || disabled}
+        onClick={onTap}
+        style={{
+          // Explicit square, not min-width/height: the artwork inside sizes
+          // itself as a % of this box, so the box needs a definite size to
+          // resolve against — left implicit, the button sizes to its content
+          // while the content sizes to the button, and the tile balloons.
+          // 96 keeps it clear of §4.4's 88pt floor and still fits four across
+          // inside the 480px app shell.
+          width: 96,
+          height: 96,
+          borderRadius: 16,
+          border: `3px solid ${tint}`,
+          // The coloured border alone disappears when the object's own colour
+          // is white or cream — a white ring on a white card. This hairline
+          // sits just outside it so the tile always has a visible edge, and
+          // "white" still reads as white rather than as nothing.
+          boxShadow: '0 0 0 1px rgba(33, 31, 46, 0.16)',
+          padding: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          // backgroundColor first as the fallback: if color-mix() isn't
+          // supported the `background` line below is dropped as invalid and
+          // this plain white card survives, keeping the artwork readable
+          // (the coloured border still carries the colour cue either way).
+          backgroundColor: 'var(--color-tile)',
+          background: `color-mix(in srgb, ${tint} 16%, var(--color-tile))`,
+        }}
+      >
+        <ObjectIcon name={crop.name} category={crop.category} />
+      </button>
+      {/* The icon stays the primary, always-legible tap cue (§7.7's whole
+          reason for existing: real bbox crops are blurry/offset/half-cut,
+          unreadable to a pre-literate 3-5 year old). This corner photo is
+          additive, not a replacement — it's what lets the child (or a
+          caregiver pointing alongside them) match the tile to the actual
+          physical object in the room, the same correspondence problem the
+          de-duped icons alone can't solve. Still a photo, not text, so it
+          doesn't break this phase's own "photos/swatches and audio only"
+          rule. Guarded on crop.image so GENERIC_FALLBACK_CROPS tiles
+          (image: '') render no badge rather than an empty circle. */}
+      {crop.image && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            bottom: -6,
+            right: -6,
+            width: 30,
+            height: 30,
+            borderRadius: '50%',
+            border: '2px solid var(--color-tile-border)',
+            boxShadow: '0 1px 4px rgba(33,31,46,0.35)',
+            backgroundImage: `url(${crop.image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+      )}
+    </div>
   );
 }
+
+/** F.018 §6.2 "Fast animation or flashing" -> lowest animation intensity
+ * tier. Every animated escalation/celebration cue still HAPPENS — losing
+ * the tier-2 highlight or the tier-3 "only this one is tappable" cue would
+ * break errorless learning (§7.7) — it just lands as an instant state
+ * change instead of a moving one. Emitted twice from this one definition:
+ * once scoped to the caregiver-set avoid-list flag (a class on the screen
+ * wrapper), once inside a prefers-reduced-motion query so the OS setting
+ * gets the identical treatment, which nothing in this file previously
+ * honoured. */
+const reducedMotionRules = (scope: string) => `
+${scope}.g1-crop--highlighted { animation: none; box-shadow: 0 0 0 6px color-mix(in srgb, var(--g1-accent, var(--color-primary)) 55%, transparent); }
+${scope}.g1-crop--bouncing { animation: none; transform: translateY(-8px); box-shadow: 0 0 0 6px color-mix(in srgb, var(--g1-accent, var(--color-primary)) 55%, transparent); }
+${scope}.g1-crop--celebrating { animation: none; transform: scale(1.2); }
+${scope}.g1-reward-visual--pulsing { animation: none; }
+`;
 
 /** Local styles for the escalation/celebration animations — plain CSS,
  * injected once. No component library in this repo yet, and these three
@@ -198,6 +314,12 @@ const GAME1_STYLES = `
 @keyframes g1-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--g1-accent, var(--color-primary)) 55%, transparent); } 50% { box-shadow: 0 0 0 10px transparent; } }
 @keyframes g1-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 @keyframes g1-celebrate { 0% { transform: scale(1); } 100% { transform: scale(1.6); } }
+/* F.018 §6.2: the success moment for a child whose avoid list says "loud
+   or sudden sounds" — the spoken celebration is withheld and this glow
+   carries the "you did it" instead, in the child's own accent colour.
+   Purely visual, and still nothing §7.7/§13 forbids: no text, no reward
+   graphics of any kind, just the object's own frame lighting up. */
+@keyframes g1-reward-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--g1-accent, var(--color-primary)) 70%, transparent); } 100% { box-shadow: 0 0 0 24px transparent; } }
 .g1-crop { transition: opacity 200ms ease; opacity: 1; }
 .g1-crop--dead { opacity: 0.4; }
 .g1-crop--dimmed { opacity: 0.6; }
@@ -215,6 +337,12 @@ const GAME1_STYLES = `
 @media (max-width: 600px) {
   .g1-grid { flex-wrap: nowrap !important; overflow-x: auto; justify-content: flex-start !important; padding: 0 8px; }
   .g1-crop { flex-shrink: 0; }
+}
+.g1-reward-visual { border-radius: 20px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--g1-accent, var(--color-primary)) 45%, transparent); }
+.g1-reward-visual--pulsing { animation: g1-reward-pulse 900ms ease-out 2; }
+${reducedMotionRules('.g1-reduced-motion ')}
+@media (prefers-reduced-motion: reduce) {
+${reducedMotionRules('')}
 }
 `;
 
@@ -291,18 +419,50 @@ function ObjectLegend({ crops }: { crops: TaggedCrop[] }) {
             key={crop.id}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 84 }}
           >
-            <div
-              className="g1-found-thumb"
-              style={{
-                width: 72,
-                height: 72,
-                border: `3px solid ${tint}`,
-                boxShadow: '0 0 0 1px rgba(33, 31, 46, 0.16)',
-                backgroundColor: '#ffffff',
-                background: `color-mix(in srgb, ${tint} 16%, #ffffff)`,
-              }}
-            >
-              <ObjectIcon name={crop.name} category={crop.category} />
+            <div style={{ position: 'relative', width: 72, height: 72 }}>
+              <div
+                className="g1-found-thumb"
+                style={{
+                  width: 72,
+                  height: 72,
+                  border: `3px solid ${tint}`,
+                  boxShadow: '0 0 0 1px rgba(33, 31, 46, 0.16)',
+                  backgroundColor: 'var(--color-tile)',
+                  background: `color-mix(in srgb, ${tint} 16%, var(--color-tile))`,
+                }}
+              >
+                <ObjectIcon name={crop.name} category={crop.category} />
+              </div>
+              {/* The actual photo cutout, as a small corner badge -- CAREGIVER-
+                  facing only (this component never renders in the child's two
+                  phases), so the blur/offset concern that keeps the crop OFF
+                  the child's tile (see CropButton's header) doesn't apply
+                  here: a caregiver reading the text label alongside it can
+                  make sense of an imperfect crop in a way a pre-literate
+                  child can't. This is what actually answers "which real
+                  cushion is THIS one" once de-duplication (dedupeCropsByIcon)
+                  means only one of several similar objects becomes a
+                  selectable target -- the icon says "a cushion", this says
+                  exactly which. Omitted for crops with no real photo (the
+                  generic fallback set has none). */}
+              {crop.image && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    bottom: -6,
+                    right: -6,
+                    width: 30,
+                    height: 30,
+                    borderRadius: '50%',
+                    border: '2px solid var(--color-tile-border)',
+                    boxShadow: '0 1px 4px rgba(33,31,46,0.35)',
+                    backgroundImage: `url(${crop.image})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }}
+                />
+              )}
             </div>
             <span style={{ fontSize: '0.7rem', opacity: 0.85, textAlign: 'center', lineHeight: 1.3 }}>
               {label}
@@ -359,7 +519,7 @@ function RoomMap({ scene, crops }: { scene: VisionScene; crops: TaggedCrop[] }) 
               height: 34,
               padding: 4,
               borderRadius: '50%',
-              background: '#fff',
+              background: 'var(--color-tile)',
               boxShadow: '0 1px 5px rgba(33,31,46,0.3)',
               display: 'flex',
               alignItems: 'center',
@@ -396,6 +556,24 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const [slowCapture, setSlowCapture] = useState(false);
   const [level, setLevel] = useState<Game1Level>(1);
   const [companionHuntActive, setCompanionHuntActive] = useState(false);
+  /** F.007's authored skill for the CURRENT trial (§7.5) — resolved from
+   * the lookup table when the trial starts, so the skill logged at the end
+   * of the trial is the one the child was actually asked to do, not
+   * whatever the target happens to be by then. Its skillId replaces the
+   * ad-hoc `find-${category}` string this file used to invent; its steps
+   * are shown to the caregiver during 'searching' (never to the child). */
+  const [activeSkill, setActiveSkill] = useState<SkillTemplate | null>(null);
+
+  // F.018's three non-text exclusions (§6.2/§6.4), read exactly the way
+  // Game 2 already reads isColourAvoided: straight off
+  // profile.context.avoidList, through the engine's own checker functions,
+  // never by inspecting the raw flags here. Derived per render, not state —
+  // they are a pure function of the profile, and a caregiver toggling one
+  // mid-session must take effect on the very next trial.
+  const avoidList = profile.context.avoidList;
+  const reduceAnimation = shouldReduceAnimation(avoidList);
+  const visualPulseInsteadOfChime = shouldUseVisualPulseInsteadOfChime(avoidList);
+  const announceChanges = shouldAnnounceChangesInAdvance(avoidList);
 
   // §8.1 "Profile tuning": derived once from the four response-profile
   // dimensions, never a condition (ARCHITECTURE-RULES.md §5.2). Recomputed
@@ -485,7 +663,44 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // new profile reference on a genuine change, not on every render.
   }, [profile]);
 
+  /** F.018 §6.2/§6.4: says a heads-up line, or does nothing at all when
+   * this child's avoid list doesn't ask for one. Every caller below is a
+   * point where something about the activity is ABOUT to change. */
+  function announceChange(template: string) {
+    if (!announceChanges) return;
+    void adapters.speechOut.say(
+      renderLine(template, slotValuesFromProfile(profile), profile.context),
+    );
+  }
+
+  /** §7.9's "focus-stretch trend" — the metric the caregiver dashboard
+   * reads (caregiverDashboard.ts's getFocusStretchTrend). Called after
+   * every resolved trial: the seconds elapsed since this session started
+   * IS the stretch of engagement sustained up to this success, and
+   * updateFocusStretch keeps the running maximum itself, so the largest
+   * value naturally survives as the session's longest stretch.
+   *
+   * Reads the same `elapsedSeconds` the session poller already maintains
+   * from sessionStartedAtRef (rather than calling Date.now() again here),
+   * so this stays a pure read of state the screen already holds and the
+   * two can never disagree; a sub-second difference is immaterial to a
+   * metric the dashboard renders in whole minutes.
+   *
+   * Fire-and-forget, exactly like logActivityOutcome's call sites: a
+   * storage failure here costs one dashboard data point and must never
+   * reach the child's screen or hold up the celebration. */
+  function recordFocusStretch() {
+    if (!sessionId) return;
+    void updateFocusStretch(sessionId, elapsedSeconds).catch(() => {
+      // Deliberately swallowed — see this function's header.
+    });
+  }
+
   async function handleLevelChange(newLevel: Game1Level) {
+    // §6.2: a difficulty change is exactly the kind of unannounced change
+    // the avoid list is about. Spoken before the new level is stored, so
+    // the warning genuinely precedes the change it warns about.
+    announceChange(ANNOUNCE_LEVEL_CHANGE_TEMPLATE);
     setLevel(newLevel);
     await setGame1Level(profile.id, newLevel);
   }
@@ -525,13 +740,25 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
    * (§7.7: "always to a task one level easier than the one that triggered
    * it") passes a one-lower override for exactly one trial without
    * persisting that as the child's new level.
+   *
+   * The pool is de-duplicated by icon (see dedupeCropsByIcon) before target
+   * picking or grid building ever see it -- neither pickNextTarget nor
+   * buildConfirmationGrid need to know this happened, they just always get
+   * a pool where every candidate is visually distinct.
    */
   function startTrialWith(pool: TaggedCrop[], effectiveLevel: Game1Level = level) {
-    const picked = pickNextTarget(pool, lastTargetIdRef.current);
+    const dedupedPool = dedupeCropsByIcon(pool);
+    const picked = pickNextTarget(dedupedPool, lastTargetIdRef.current);
     lastTargetIdRef.current = picked.id;
     setTarget(picked);
     setCompanionHuntActive(false);
-    const grid = buildConfirmationGrid(pool, picked, effectiveLevel);
+    // F.007 (§7.5): the authored skill this trial teaches, resolved from
+    // the real lookup table for the picked object. Purely additive to the
+    // difficulty system below — this decides WHICH skill is practised and
+    // logged; buildSearchPromptTemplate/targetDescriptionForLevel still
+    // own HOW the search prompt is phrased, unchanged.
+    setActiveSkill(retrievalSkillFor(getSkillTemplatesForCrop(picked)));
+    const grid = buildConfirmationGrid(dedupedPool, picked, effectiveLevel);
     // §8.1: calm/sameness profiles keep the reward crop in the same
     // position every trial (no shuffle); other profiles get a shuffled
     // layout each trial. buildConfirmationGrid itself always stays
@@ -557,6 +784,10 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       slotValuesFromProfile(profile, { 'object.name': picked.name }),
       profile.context,
     );
+    // §6.2: a new target appearing is a change. Queued immediately before
+    // the prompt itself, so the child hears the warning and then the thing
+    // it warned about, in that order, with no silent switch.
+    announceChange(ANNOUNCE_NEXT_TRIAL_TEMPLATE);
     void adapters.speechOut.say(line);
   }
 
@@ -575,6 +806,18 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     setPromptTier(0);
     setPhase('searching');
     machineRef.current.startTrial();
+    // F.007 by object name rather than by crop: the Companion is the
+    // child's own toy, not something the vision pass tagged, so there is
+    // no TaggedCrop to hand the lookup. Its steps are what the caregiver
+    // sees during the hunt; the LOGGED skillId deliberately stays
+    // 'find-companion' (see handleSupportTierReport) — the hunt is its own
+    // distinct, highest-motivation skill, not one more generic toy.
+    setActiveSkill(
+      retrievalSkillFor(
+        getSkillTemplatesForObject(profile.context.companion?.name ?? 'toy animal', 'toy'),
+      ),
+    );
+    announceChange(ANNOUNCE_NEXT_TRIAL_TEMPLATE);
     void adapters.speechOut.say(
       renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile), profile.context),
     );
@@ -591,9 +834,17 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     machineRef.current.recordAttempt(true);
     setPhase('celebrating');
     lastObjectNameRef.current = profile.context.companion?.name ?? null;
-    void adapters.speechOut.say(
-      renderLine('{companion}!', slotValuesFromProfile(profile), profile.context),
-    );
+    recordFocusStretch();
+    // §6.2: the same success moment, without the sudden exclamation, for a
+    // child whose avoid list says loud or sudden sounds. The reward frame's
+    // visual pulse (see the celebrating JSX) carries it instead — this
+    // phase already renders the Companion's own photo, so nothing about
+    // "you did it" is lost.
+    if (!visualPulseInsteadOfChime) {
+      void adapters.speechOut.say(
+        renderLine('{companion}!', slotValuesFromProfile(profile), profile.context),
+      );
+    }
     setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
   }
 
@@ -650,7 +901,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       return;
     }
     setPhase('confirming');
-    void adapters.speechOut.say('Show me — which one did you bring?');
+    void adapters.speechOut.say('Show me, which one did you bring?');
   }
 
   function handleTap(crop: TaggedCrop) {
@@ -660,12 +911,23 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       setPhase('celebrating');
       setPromptTier(outcome.tier);
       lastObjectNameRef.current = crop.name;
+      // §7.9: this success is the end of an unbroken stretch of engagement
+      // that started with the session — record it before anything can
+      // interrupt, never awaited (see recordFocusStretch's header).
+      recordFocusStretch();
       const line = renderLine(
         'Your {object.name}!',
         slotValuesFromProfile(profile, { 'object.name': crop.name }),
         profile.context,
       );
-      void adapters.speechOut.say(line);
+      // §6.2 "Loud or sudden sounds": Game 1's one genuinely celebratory
+      // audio moment is withheld and replaced by a purely visual pulse on
+      // the reward frame (see the celebrating JSX). Prompts and heads-ups
+      // still speak — they are the interface (§7.10); this is the sudden,
+      // loud one.
+      if (!visualPulseInsteadOfChime) {
+        void adapters.speechOut.say(line);
+      }
       // §8.1 lively/short-attention tuning: "faster celebration".
       setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
       return;
@@ -690,7 +952,17 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   async function handleSupportTierReport(tier: SupportTier) {
     if (!sessionId) return;
     if (!companionHuntActive && !target) return;
-    const skillId = companionHuntActive ? 'find-companion' : `find-${target?.category}`;
+    // F.007 (§7.5): the authored skill this trial actually practised,
+    // resolved from the real object -> skill -> steps table when the trial
+    // started (startTrialWith). This is what gets logged, faded (F.011)
+    // and generalization-tracked (F.019) — a meaningful, authored skill id
+    // like 'find-cup' or 'find-generic-drinkware', not the ad-hoc
+    // `find-${category}` string this file used to invent for itself. That
+    // string survives only as an unreachable-in-practice fallback for a
+    // trial whose skill never resolved.
+    const skillId = companionHuntActive
+      ? 'find-companion'
+      : (activeSkill?.skillId ?? `find-${target?.category}`);
 
     await logActivityOutcome({
       sessionId,
@@ -726,12 +998,16 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       trialCountRef.current % tuning.movementBreakEveryNTrials === 0 &&
       machineRef.current.takeMovementBreak()
     ) {
-      setPhase('movementBreak');
       const line = renderLine(
         '{movement} like a {fav_animal}!',
         slotValuesFromProfile(profile),
         profile.context,
       );
+      // §6.2: a movement break interrupting the run of trials is a change,
+      // and an abrupt one. Spoken before the phase actually flips, so the
+      // heads-up lands while the child is still on the screen they know.
+      announceChange(ANNOUNCE_MOVEMENT_BREAK_TEMPLATE);
+      setPhase('movementBreak');
       void adapters.speechOut.say(line);
       return;
     }
@@ -761,8 +1037,8 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
               {sessionEndResult && childFacingHandoffLine(profile, sessionEndResult.handoffObjectName)}
             </p>
             <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>
-              Session over ({sessionEndResult?.reason}). No play-again button —
-              this is deliberate (F.013).
+              Session over ({sessionEndResult?.reason}). No play-again button.
+              This is deliberate (F.013).
             </p>
             <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => setShowCaregiverRecap(true)}>
               Caregiver recap
@@ -810,13 +1086,13 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
         <h2>Find It In Your World</h2>
         {sessionNumber && capSeconds && (
           <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>
-            Session {sessionNumber} — cap {Math.round(capSeconds / 60)}min, elapsed{' '}
+            Session {sessionNumber}, cap {Math.round(capSeconds / 60)}min, elapsed{' '}
             {elapsedSeconds}s
           </p>
         )}
         {captureNotice === 'blur-failed' && (
-          <p style={{ fontSize: '0.85rem', color: '#a33' }}>
-            That photo couldn't be processed — let's try again.
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-danger)' }}>
+            That photo couldn't be processed. Let's try again.
           </p>
         )}
         {lastLoggedTier && (
@@ -826,7 +1102,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
           </p>
         )}
         {fadingSuggestion && (
-          <p style={{ fontSize: '0.8rem', background: '#eef', padding: 8, borderRadius: 8 }}>
+          <p style={{ fontSize: '0.8rem', background: 'var(--color-info-soft)', padding: 8, borderRadius: 8 }}>
             {fadingSuggestion.message}
           </p>
         )}
@@ -843,7 +1119,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
                 minWidth: 44,
                 minHeight: 44,
                 fontWeight: l === level ? 'bold' : 'normal',
-                border: l === level ? undefined : '1px solid #ccc',
+                border: l === level ? undefined : '1px solid var(--color-border)',
               }}
               onClick={() => void handleLevelChange(l)}
             >
@@ -915,8 +1191,18 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const suggestedTierInfo =
     SUPPORT_TIERS.find((t) => t.tier === DEFAULT_STARTING_SUPPORT_TIER) ?? SUPPORT_TIERS[0];
 
+  // F.018 §6.2: one class on the wrapper is what turns every animated cue
+  // inside this screen (the only phases that have any) into an instant
+  // state change — see reducedMotionRules. The cues themselves stay.
+  const screenClassName = reduceAnimation ? 'screen g1-reduced-motion' : 'screen';
+  // The object the current trial's F.007 steps are about — the picked crop
+  // normally, the child's own Companion during a hunt.
+  const skillStepObjectName = companionHuntActive
+    ? (profile.context.companion?.name ?? '')
+    : (target?.name ?? '');
+
   return (
-    <div className="screen" style={accentStyle}>
+    <div className={screenClassName} style={accentStyle}>
       <style>{GAME1_STYLES}</style>
 
       {phase === 'searching' && (
@@ -927,14 +1213,37 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
             </p>
           ) : (
             <p>
-              Caregiver view: find {target && targetDescriptionForLevel(level, target)} —{' '}
+              Caregiver view: find {target && targetDescriptionForLevel(level, target)},{' '}
               {searchScopeLabelForLevel(level)}. (Level {level})
             </p>
           )}
           <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-            Support tier {suggestedTierInfo.tier} — {suggestedTierInfo.name}:{' '}
+            Support tier {suggestedTierInfo.tier}, {suggestedTierInfo.name}:{' '}
             {suggestedTierInfo.instruction}
           </p>
+          {/* F.007's authored steps for this trial's skill (§7.5), rendered
+              through the same renderLine() pipeline as every other line so
+              slots fill and the avoid-list filter still runs. CAREGIVER-
+              facing only — this phase is the caregiver's screen, and these
+              steps never reach the child's two zero-text phases, nor do
+              they alter the spoken prompt (which stays F.012's
+              level-appropriate phrasing, above). */}
+          {activeSkill && (
+            <div style={{ fontSize: '0.8rem', opacity: 0.75, lineHeight: 1.5 }}>
+              <span style={{ opacity: 0.75 }}>Practising: {activeSkill.skillId}</span>
+              <ol style={{ margin: '4px 0 0', paddingLeft: 20 }}>
+                {activeSkill.steps.map((skillStep) => (
+                  <li key={skillStep.promptTemplate}>
+                    {renderLine(
+                      skillStep.promptTemplate,
+                      slotValuesFromProfile(profile, { 'object.name': skillStepObjectName }),
+                      profile.context,
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
           {/* Guidance, not an error (§11): the game still runs, and the tone
               stays matter-of-fact. It just says out loud that these are
               stand-in objects, which is the one thing the caregiver cannot
@@ -952,7 +1261,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
               {fallbackReason === 'no-photo'
                 ? 'No photo was chosen, so these are stand-in objects rather than things from your room.'
                 : fallbackReason === 'failed'
-                  ? "We couldn't read that photo just now — these are stand-in objects. The photo was probably fine; it's worth another go."
+                  ? "We couldn't read that photo just now. These are stand-in objects. The photo was probably fine; it's worth another go."
                   : 'Nothing in that photo was something your child could safely go and fetch, so these are stand-in objects.'}{' '}
               <button
                 type="button"
@@ -976,7 +1285,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
             </p>
           )}
           {fadingSuggestion && (
-            <p style={{ fontSize: '0.75rem', background: '#eef', padding: 6, borderRadius: 6 }}>
+            <p style={{ fontSize: '0.75rem', background: 'var(--color-info-soft)', padding: 6, borderRadius: 6 }}>
               {fadingSuggestion.message}
             </p>
           )}
@@ -1003,7 +1312,30 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
         // makes it dead; tier 2 highlights the target and dims the rest;
         // tier 3 makes only the target tappable (bounce + disabled
         // distractors), so the child literally cannot fail from here.
-        <div className="g1-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+        <div
+          className="g1-grid"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 12,
+            justifyContent: 'center',
+            // The `flex: 1` this used to have never actually worked: it
+            // relies on the nearest flex-column ANCESTOR having spare
+            // height to hand out, but .app (this screen's actual parent)
+            // is a plain block, not a flex container -- only the welcome
+            // screen's .app--welcome modifier gets that treatment. So
+            // .screen itself was already only ever as tall as its own
+            // content, meaning flex:1 on this grid had no extra space to
+            // claim, and the tiles stayed pinned top-left regardless.
+            // A direct minHeight sidesteps the whole ancestor chain --
+            // this phase renders nothing else (no text, per §7.7), so it
+            // can safely claim the rest of .app's own 100vh minus its
+            // vertical padding. alignContent still centres the tiles
+            // within whatever height that resolves to.
+            minHeight: 'calc(100vh - 60px)',
+            alignContent: 'center',
+          }}
+        >
           {confirmGrid.map((crop) => {
             const isTarget = crop.id === target?.id;
             return (
@@ -1041,6 +1373,11 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
           }}
         >
           <div
+            className={
+              visualPulseInsteadOfChime
+                ? `g1-reward-visual${reduceAnimation ? '' : ' g1-reward-visual--pulsing'}`
+                : undefined
+            }
             style={
               rewardFrameColour(profile)
                 ? {
@@ -1095,7 +1432,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
                 width: 44,
                 height: 44,
                 borderRadius: '50%',
-                border: '3px solid #fff',
+                border: '3px solid var(--color-tile-border)',
                 boxShadow: '0 0 0 2px rgba(0,0,0,0.15)',
                 backgroundImage: `url(${profile.context.companion?.photo})`,
                 backgroundSize: 'cover',
@@ -1116,7 +1453,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
                 style={{ minWidth: 88, minHeight: 88, textAlign: 'left' }}
                 onClick={() => void handleSupportTierReport(info.tier)}
               >
-                {info.tier}. {info.name} — {info.instruction}
+                {info.tier}. {info.name}: {info.instruction}
               </button>
             ))}
           </div>
