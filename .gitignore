@@ -1,2 +1,8 @@
 .DS_Store
 .claude/worktrees/
+
+# Local dev-machine helpers. Both hardcode absolute Windows paths (one of
+# them a home directory), so they are useless to anyone else and would only
+# break on their machine. Keep them locally, out of the repo.
+.claude/launch.json
+app/rundev.cmd

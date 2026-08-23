@@ -37,7 +37,10 @@ const FIXTURE_CROPS: TaggedCrop[] = [
 export function createFixtureVision(): VisionPort {
   return {
     async recognizeObjects() {
-      return FIXTURE_CROPS;
+      // No `scene`: there is no real room photo behind fixture crops, and
+      // inventing one would put Game 1's recap markers over an image the
+      // crops never came from. Callers render without it.
+      return { crops: FIXTURE_CROPS };
     },
   };
 }

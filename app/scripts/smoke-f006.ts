@@ -24,6 +24,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { section, summarize, test } from './testHarness';
 import { clampRegion, isEmptyRegion, padRegion } from '../src/adapters/imaging/regionMath';
 import { pixelAt, redactPixelsInPlace, type PixelBuffer } from '../src/adapters/imaging/pixelBuffer';
@@ -333,7 +334,7 @@ async function main() {
         async recognizeObjects(image) {
           visionCallCount++;
           assert.equal(image, redactedBitmap, 'vision must ONLY ever receive the redacted image');
-          return overrides.crops ?? [];
+          return { crops: overrides.crops ?? [] };
         },
       },
     };
@@ -383,17 +384,29 @@ async function main() {
       capture: { async capturePhoto(): Promise<ImageBitmap> { throw new Error('permission denied'); } },
       faceDetect: { async findFaces() { return []; } },
       redaction: { async redactRegions(image) { return image; } },
-      vision: { async recognizeObjects() { return []; } },
+      vision: { async recognizeObjects() { return { crops: [] }; } },
     };
     const outcome = await captureRoomAndRecognize({ ports });
     assert.equal(outcome.kind, 'capture-unavailable');
   });
 
-  await test('vision throwing (API outage) degrades to no-objects-found, same as "found nothing" — never an error', async () => {
+  await test('vision throwing (API outage) degrades quietly, but is REPORTED as recognition-failed, not as "found nothing"', async () => {
     const { ports } = makePorts({ crops: [{ id: 'x', name: 'cup', colour: 'red', category: 'drinkware', function: 'drink from', bbox: { x: 0, y: 0, width: 1, height: 1 }, image: '' }] });
     ports.vision.recognizeObjects = async () => {
       throw new Error('network error');
     };
+    const outcome = await captureRoomAndRecognize({ ports });
+    // Still §11's quiet degradation — the CALLER renders the same generic
+    // set and never an error screen. The kinds differ only so the caregiver
+    // notice can be worded truthfully: a truncated or failed call once told
+    // parents "nothing in that photo was safe for your child", about a
+    // photo full of toys, and sent them off to re-shoot for no reason.
+    assert.equal(outcome.kind, 'recognition-failed');
+    assert.notEqual(outcome.kind, 'no-objects-found');
+  });
+
+  await test('vision returning an EMPTY list is no-objects-found, distinct from a failure', async () => {
+    const { ports } = makePorts({ crops: [] });
     const outcome = await captureRoomAndRecognize({ ports });
     assert.equal(outcome.kind, 'no-objects-found');
   });
@@ -416,7 +429,7 @@ async function main() {
       },
       faceDetect: { async findFaces() { return []; } },
       redaction: { async redactRegions(image) { return image; } },
-      vision: { async recognizeObjects() { return []; } },
+      vision: { async recognizeObjects() { return { crops: [] }; } },
     };
     await captureRoomAndRecognize({
       ports: slowPorts,
@@ -466,7 +479,12 @@ async function main() {
   // -------------------------------------------------------------------------
 
   await test('no src file outside adapters/** calls adapters.capture or adapters.vision directly', () => {
-    const srcDir = new URL('../src', import.meta.url).pathname;
+    // `new URL(...).pathname` yields a raw file:// path component
+    // ('/C:/Users/...' with spaces percent-encoded on Windows) — not a
+    // usable filesystem path on that platform. fileURLToPath() does the
+    // platform-correct conversion (drive-letter, decoding) that .pathname
+    // skips.
+    const srcDir = fileURLToPath(new URL('../src', import.meta.url));
     const offenders: string[] = [];
 
     function walk(dir: string) {

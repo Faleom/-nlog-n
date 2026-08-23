@@ -29,6 +29,7 @@
 
 import { readFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
+import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
 import { VISION_PROMPT } from '../src/adapters/vision/claudeVision';
 import { parseVisionResponse } from '../src/adapters/vision/visionParsing';
@@ -131,7 +132,8 @@ function buildTestPng(width: number, height: number): Buffer {
 }
 
 async function main() {
-  loadDotEnv(new URL('../.env', import.meta.url).pathname);
+  // See smoke-f006.ts's identical fix for why .pathname is wrong on Windows.
+  loadDotEnv(fileURLToPath(new URL('../.env', import.meta.url)));
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey || apiKey.includes('REPLACE-ME')) {

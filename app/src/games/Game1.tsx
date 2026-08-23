@@ -22,7 +22,7 @@
 // directly here would silently defeat the whole F.006 face-blur
 // guarantee. scripts/smoke-f006.ts's static check enforces this.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { adapters } from '../adapters/registry';
 import { captureRoomAndRecognize } from '../adapters/pipeline/myWorldPipeline';
 import { renderLine, slotValuesFromProfile } from '../engine/slots';
@@ -42,6 +42,7 @@ import {
 } from '../engine/sessionLifecycle';
 import { SUPPORT_TIERS, DEFAULT_STARTING_SUPPORT_TIER } from '../config/supportLadder';
 import { GENERIC_FALLBACK_CROPS } from './genericFallbackCrops';
+import { ObjectIcon } from './objectIcons';
 import { pickNextTarget } from './game1Trial';
 import { getGame1Level, setGame1Level, type Game1Level } from './game1Level';
 import {
@@ -59,11 +60,13 @@ import {
   rewardFrameColour,
   shouldUseHelperFraming,
 } from './game1Companion';
+import type { VisionScene } from '../adapters/ports';
 import type { ChildProfile, SupportTier, TaggedCrop } from '../types';
 
 type Phase =
   | 'idle'
   | 'capturing'
+  | 'foundObjects'
   | 'searching'
   | 'confirming'
   | 'celebrating'
@@ -81,10 +84,12 @@ interface Game1Props {
   onChildFacingChange?: (isChildFacing: boolean) => void;
 }
 
-/** Loose common-colour-word → CSS colour mapping for the swatch fallback
- * shown when a crop has no `image` (the generic fallback set, or a real
- * crop whose image failed to load) — zero text either way, just a plain
- * colour that stands in for the object until a real photo exists. */
+/** Loose common-colour-word → CSS colour mapping. The recognised object's
+ * own colour is no longer the whole tile (see CropButton) — it's now the
+ * tile's border and background tint, sitting behind the object's artwork.
+ * Two independent cues, both wordless: what the thing IS (the drawing) and
+ * what colour it is (the frame) — which is what makes a level-2 prompt
+ * like "find the RED cup" discriminable at all. */
 function swatchColour(colour: string): string {
   const known = new Set([
     'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'brown',
@@ -93,11 +98,17 @@ function swatchColour(colour: string): string {
   return known.has(colour.toLowerCase()) ? colour.toLowerCase() : '#ccc';
 }
 
-/** One button rendering a crop in the child-facing grid. Zero text (§7.7,
- * §13) — a photo if we have one, otherwise a plain colour swatch. Visual
- * state (dead / dimmed / target-highlighted) is driven entirely by CSS
- * classes so the prompt-hierarchy escalation (F.009) has somewhere to
- * land without any of it being a string the child would need to read. */
+/** One button rendering a recognised object in the child-facing grid. Zero
+ * text (§7.7, §13) — bundled cartoon artwork for the object, on a card
+ * tinted and bordered in the object's own colour. Visual state (dead /
+ * dimmed / target-highlighted) is driven entirely by CSS classes so the
+ * prompt-hierarchy escalation (F.009) has somewhere to land without any of
+ * it being a string the child would need to read.
+ *
+ * Deliberately NOT the photo crop this used to render: see objectIcons.tsx's
+ * header — vision bboxes are approximate (types/index.ts says so), so real
+ * crops arrive offset and blurry, which is the one thing a pre-literate
+ * child cannot recover from. */
 function CropButton({
   crop,
   onTap,
@@ -128,6 +139,8 @@ function CropButton({
     .filter(Boolean)
     .join(' ');
 
+  const tint = swatchColour(crop.colour);
+
   return (
     <button
       type="button"
@@ -136,16 +149,36 @@ function CropButton({
       disabled={dead || disabled}
       onClick={onTap}
       style={{
-        minWidth: 88,
-        minHeight: 88,
+        // Explicit square, not min-width/height: the artwork inside sizes
+        // itself as a % of this box, so the box needs a definite size to
+        // resolve against — left implicit, the button sizes to its content
+        // while the content sizes to the button, and the tile balloons.
+        // 96 keeps it clear of §4.4's 88pt floor and still fits four across
+        // inside the 480px app shell.
+        width: 96,
+        height: 96,
+        flexShrink: 0,
         borderRadius: 16,
-        border: 'none',
-        backgroundColor: swatchColour(crop.colour),
-        backgroundImage: crop.image ? `url(${crop.image})` : undefined,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        border: `3px solid ${tint}`,
+        // The coloured border alone disappears when the object's own colour
+        // is white or cream — a white ring on a white card. This hairline
+        // sits just outside it so the tile always has a visible edge, and
+        // "white" still reads as white rather than as nothing.
+        boxShadow: '0 0 0 1px rgba(33, 31, 46, 0.16)',
+        padding: 8,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        // backgroundColor first as the fallback: if color-mix() isn't
+        // supported the `background` line below is dropped as invalid and
+        // this plain white card survives, keeping the artwork readable
+        // (the coloured border still carries the colour cue either way).
+        backgroundColor: '#ffffff',
+        background: `color-mix(in srgb, ${tint} 16%, #ffffff)`,
       }}
-    />
+    >
+      <ObjectIcon name={crop.name} category={crop.category} />
+    </button>
   );
 }
 
@@ -153,7 +186,16 @@ function CropButton({
  * injected once. No component library in this repo yet, and these three
  * keyframes don't warrant one. */
 const GAME1_STYLES = `
-@keyframes g1-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(90,150,255,0.6); } 50% { box-shadow: 0 0 0 10px rgba(90,150,255,0); } }
+/* --g1-accent: the child's own favourite colour (§8.1's "reward frame in
+   {fav_colour}"), extended here from just the reward frame to every
+   interactive accent in the game — the level selector, the capture/continue
+   buttons, and the escalation pulse/bounce rings all pick it up. Falls back
+   to the app's default --color-primary when no favourite colour is set
+   (Game1() only ever sets --g1-accent when rewardFrameColour() returns a
+   real value — see its render below). color-mix() is what lets a single
+   accent value produce the pulse ring's faded edge without needing a
+   separate rgba() constant per possible colour. */
+@keyframes g1-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--g1-accent, var(--color-primary)) 55%, transparent); } 50% { box-shadow: 0 0 0 10px transparent; } }
 @keyframes g1-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 @keyframes g1-celebrate { 0% { transform: scale(1); } 100% { transform: scale(1.6); } }
 .g1-crop { transition: opacity 200ms ease; opacity: 1; }
@@ -162,6 +204,8 @@ const GAME1_STYLES = `
 .g1-crop--highlighted { animation: g1-pulse 1.2s ease-in-out infinite; }
 .g1-crop--bouncing { animation: g1-bounce 0.6s ease-in-out infinite; }
 .g1-crop--celebrating { animation: g1-celebrate 800ms ease-out forwards; z-index: 1; position: relative; }
+.g1-btn-accent { border: 2px solid var(--g1-accent, var(--color-primary)) !important; }
+.g1-found-thumb { border-radius: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 5px; }
 /* §4.3: "cap the grid on phones, never shrink the target" — below the
    tablet breakpoint the confirmation grid becomes a horizontally
    scrolling carousel (~2.5 crops visible) instead of wrapping into a
@@ -174,6 +218,162 @@ const GAME1_STYLES = `
 }
 `;
 
+/**
+ * The room photo with every recognised object marked in place — the
+ * "here's what we found, and where" view (§8.0's caregiver side; text and
+ * the real photo are both fine here, this never renders in the child's two
+ * phases).
+ *
+ * Positions are percentages of the scene's own dimensions rather than
+ * pixels, because the <img> is width-constrained by its container and will
+ * render at some other size than `scene.width`. Every bbox is in the
+ * scene's pixel space (see VisionScene's doc), so dividing by that is what
+ * keeps a marker on its object at any display size.
+ */
+/**
+ * Where each badge sits, in percent of the scene.
+ *
+ * Objects in a real room cluster (a shelf of toys, a pile on the floor), so
+ * placing every badge dead-centre on its box stacks them into an unreadable
+ * heap. Each badge starts at its object's centre and, if that spot is
+ * already taken, tries a short ring of nearby offsets until one is free.
+ * Deterministic (fixed candidate order, no randomness), so the same photo
+ * always lays out the same way — a badge that jumped around between renders
+ * would be worse than the overlap.
+ */
+const BADGE_OFFSETS: ReadonlyArray<readonly [number, number]> = [
+  [0, 0], [0, -11], [0, 11], [-11, 0], [11, 0],
+  [-9, -9], [9, -9], [-9, 9], [9, 9], [0, -21], [0, 21],
+];
+
+function placeBadges(crops: TaggedCrop[], scene: VisionScene) {
+  const taken: Array<{ x: number; y: number }> = [];
+  const clashes = (x: number, y: number) =>
+    taken.some((t) => Math.abs(t.x - x) < 9 && Math.abs(t.y - y) < 10);
+
+  return crops.map((crop) => {
+    const cx = ((crop.bbox.x + crop.bbox.width / 2) / scene.width) * 100;
+    const cy = ((crop.bbox.y + crop.bbox.height / 2) / scene.height) * 100;
+    const spot =
+      BADGE_OFFSETS.map(([dx, dy]) => ({
+        x: Math.min(94, Math.max(6, cx + dx)),
+        y: Math.min(93, Math.max(7, cy + dy)),
+      })).find((p) => !clashes(p.x, p.y)) ?? { x: cx, y: cy };
+    taken.push(spot);
+    return { crop, ...spot };
+  });
+}
+
+/**
+ * The key to the map: every drawing, labelled.
+ *
+ * The labels live HERE and never on the photo itself — text burned over a
+ * room picture is unreadable at this size and would cover the very objects
+ * it names. This is also what rescues the case where two objects share one
+ * drawing (two soft toys, two cups): the colour word plus the object's own
+ * name separates them, where the artwork alone cannot.
+ *
+ * Caregiver-facing only. Never rendered during 'confirming'/'celebrating',
+ * which are the child's zero-text phases (§7.7, §13).
+ */
+function ObjectLegend({ crops }: { crops: TaggedCrop[] }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+      {crops.map((crop) => {
+        const tint = swatchColour(crop.colour);
+        // "red" + "red cup" would read as "red red cup" -- only prepend the
+        // colour when the name doesn't already carry it.
+        const label = crop.name.toLowerCase().includes(crop.colour.toLowerCase())
+          ? crop.name
+          : `${crop.colour} ${crop.name}`;
+        return (
+          <div
+            key={crop.id}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 84 }}
+          >
+            <div
+              className="g1-found-thumb"
+              style={{
+                width: 72,
+                height: 72,
+                border: `3px solid ${tint}`,
+                boxShadow: '0 0 0 1px rgba(33, 31, 46, 0.16)',
+                backgroundColor: '#ffffff',
+                background: `color-mix(in srgb, ${tint} 16%, #ffffff)`,
+              }}
+            >
+              <ObjectIcon name={crop.name} category={crop.category} />
+            </div>
+            <span style={{ fontSize: '0.7rem', opacity: 0.85, textAlign: 'center', lineHeight: 1.3 }}>
+              {label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RoomMap({ scene, crops }: { scene: VisionScene; crops: TaggedCrop[] }) {
+  const pct = (value: number, total: number) => `${(value / total) * 100}%`;
+  const badges = placeBadges(crops, scene);
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        borderRadius: 14,
+        overflow: 'hidden',
+        border: '1px solid rgba(33,31,46,0.14)',
+        lineHeight: 0,
+      }}
+    >
+      <img src={scene.dataUrl} alt="" style={{ display: 'block', width: '100%', height: 'auto' }} />
+      {badges.map(({ crop, x, y }) => (
+        <div key={crop.id}>
+          {/* The box the model actually returned. Kept — it is the
+              difference between "the app says it found a cup" and "the app
+              can show you which cup" — but drawn as a thin translucent
+              outline rather than a heavy white frame, so a dozen of them
+              read as annotation instead of scaffolding. */}
+          <div
+            style={{
+              position: 'absolute',
+              left: pct(crop.bbox.x, scene.width),
+              top: pct(crop.bbox.y, scene.height),
+              width: pct(crop.bbox.width, scene.width),
+              height: pct(crop.bbox.height, scene.height),
+              border: '1.5px solid rgba(255,255,255,0.75)',
+              borderRadius: 8,
+              boxShadow: '0 0 0 1px rgba(33,31,46,0.22)',
+            }}
+          />
+          <div
+            title={crop.name}
+            style={{
+              position: 'absolute',
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: 'translate(-50%, -50%)',
+              width: 34,
+              height: 34,
+              padding: 4,
+              borderRadius: '50%',
+              background: '#fff',
+              boxShadow: '0 1px 5px rgba(33,31,46,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ObjectIcon name={crop.name} category={crop.category} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [crops, setCrops] = useState<TaggedCrop[]>([]);
@@ -182,6 +382,17 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const [promptTier, setPromptTier] = useState<PromptTier>(0);
   const [deadCropIds, setDeadCropIds] = useState<Set<string>>(new Set());
   const [captureNotice, setCaptureNotice] = useState<'blur-failed' | null>(null);
+  /** The redacted room photo the crops came from, kept for the end-of-session
+   * RoomMap. In React state only — never written to StoragePort (§14: this
+   * is a real picture of a family's home). Dropped when the screen unmounts. */
+  const [scene, setScene] = useState<VisionScene | undefined>(undefined);
+  /** Why we're playing with GENERIC_FALLBACK_CROPS instead of the child's own
+   * things. §11 forbids showing an ERROR here, and this isn't one — without
+   * it the app silently substitutes objects that aren't in the room and the
+   * caregiver is left wondering why it keeps asking for a cup they don't own. */
+  const [fallbackReason, setFallbackReason] = useState<
+    'no-objects' | 'no-photo' | 'failed' | null
+  >(null);
   const [slowCapture, setSlowCapture] = useState(false);
   const [level, setLevel] = useState<Game1Level>(1);
   const [companionHuntActive, setCompanionHuntActive] = useState(false);
@@ -190,6 +401,19 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   // dimensions, never a condition (ARCHITECTURE-RULES.md §5.2). Recomputed
   // only if the profile object itself changes, not per trial.
   const tuning = applyProfileTuning(profile);
+
+  // The onboarding "quick preferences" favourite colour (already the source
+  // of §8.1's reward-frame colour, see rewardFrameColour) doubles as the
+  // whole game's personalised accent — set as a CSS custom property on the
+  // outer wrapper below so every button/pulse/ring in this file can read it
+  // via var(--g1-accent, var(--color-primary)) without per-element plumbing.
+  // null (no favourite colour given) means no property is set at all, so
+  // CSS's own fallback quietly takes over — same "real value or nothing,
+  // never a meaningless default" rule rewardFrameColour already follows.
+  const accentColour = rewardFrameColour(profile);
+  const accentStyle = accentColour
+    ? ({ '--g1-accent': accentColour } as CSSProperties)
+    : undefined;
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionNumber, setSessionNumber] = useState<number | null>(null);
@@ -394,10 +618,30 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // §11: "capture-unavailable" (permission denied / cancelled) and
     // "no-objects-found" (nothing usable recognised, or the vision call
     // itself failed) both degrade the SAME way — quietly, to a generic
-    // activity set, never an error shown.
-    const nextCrops = outcome.kind === 'success' ? outcome.crops : GENERIC_FALLBACK_CROPS;
-    setCrops(nextCrops);
-    startTrialWith(nextCrops);
+    // activity set, never an error shown. Only a real 'success' gets the
+    // "found in your room" reveal below — showing it for the generic
+    // fallback set would misrepresent placeholder crops as real detections.
+    if (outcome.kind === 'success') {
+      setCrops(outcome.crops);
+      setScene(outcome.scene);
+      setFallbackReason(null);
+      setPhase('foundObjects');
+      return;
+    }
+
+    // Still no error screen (§11) — but record WHICH quiet degradation this
+    // was, so the caregiver screen can say what to do differently instead of
+    // silently asking the child to fetch a cup that isn't in their house.
+    setScene(undefined);
+    setFallbackReason(
+      outcome.kind === 'no-objects-found'
+        ? 'no-objects'
+        : outcome.kind === 'recognition-failed'
+          ? 'failed'
+          : 'no-photo',
+    );
+    setCrops(GENERIC_FALLBACK_CROPS);
+    startTrialWith(GENERIC_FALLBACK_CROPS);
   }
 
   function handleTheyBroughtIt() {
@@ -528,6 +772,19 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
           sessionEndResult && (
             <>
               <h3>Session recap</h3>
+              {/* The room they actually played in, with everything the app
+                  found marked in place. Only ever rendered from a real
+                  capture — with fixtures or the fallback set there is no
+                  scene, and a map over someone else's room would be a lie. */}
+              {scene && (
+                <>
+                  <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: 4 }}>
+                    Everything we found in your room:
+                  </p>
+                  <RoomMap scene={scene} crops={crops} />
+                  <ObjectLegend crops={crops} />
+                </>
+              )}
               <p>{describeSessionRecap(sessionEndResult.session)}</p>
               <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
                 Objects recognised: {distinctSkillsThisSession(sessionEndResult.session).join(', ') || 'none'}
@@ -548,7 +805,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   if (phase === 'idle') {
     const capSeconds = sessionNumber ? sessionCapSeconds(sessionNumber) : null;
     return (
-      <div className="screen">
+      <div className="screen" style={accentStyle}>
         <style>{GAME1_STYLES}</style>
         <h2>Find It In Your World</h2>
         {sessionNumber && capSeconds && (
@@ -581,11 +838,12 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
           {([1, 2, 3, 4] as const).map((l) => (
             <button
               key={l}
+              className={l === level ? 'g1-btn-accent' : undefined}
               style={{
                 minWidth: 44,
                 minHeight: 44,
                 fontWeight: l === level ? 'bold' : 'normal',
-                border: l === level ? '2px solid #557' : '1px solid #ccc',
+                border: l === level ? undefined : '1px solid #ccc',
               }}
               onClick={() => void handleLevelChange(l)}
             >
@@ -593,7 +851,11 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
             </button>
           ))}
         </div>
-        <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleCapturePress()}>
+        <button
+          className="g1-btn-accent"
+          style={{ minWidth: 88, minHeight: 88 }}
+          onClick={() => void handleCapturePress()}
+        >
           Choose a photo of the room
         </button>
         <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleEndSession('caregiver')}>
@@ -613,7 +875,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // reasonable enhancement but was not built for Tier 0; see PERSON-2's
     // final report.
     return (
-      <div className="screen">
+      <div className="screen" style={accentStyle}>
         <style>{GAME1_STYLES}</style>
         <p style={{ fontSize: '1rem', opacity: 0.8 }}>
           {slowCapture ? "Still looking around the room..." : 'Looking around the room...'}
@@ -622,11 +884,39 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     );
   }
 
+  if (phase === 'foundObjects') {
+    // CAREGIVER-facing (same audience as 'idle'/'capturing'/'searching' —
+    // text is fine here, the zero-text rule is the CHILD's two phases
+    // only). This is the actual proof-of-detection moment: every crop
+    // shown here is a real cutout the vision call just returned from THIS
+    // room's photo, with the name/colour/category it tagged — not a
+    // fixture, not the generic fallback set (see handleCapturePress: this
+    // phase is only reached on a real 'success' outcome).
+    return (
+      <div className="screen" style={accentStyle}>
+        <style>{GAME1_STYLES}</style>
+        <h2>Found in your room!</h2>
+        <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+          {crops.length} object{crops.length === 1 ? '' : 's'} recognised from the photo:
+        </p>
+        {scene && <RoomMap scene={scene} crops={crops} />}
+        <ObjectLegend crops={crops} />
+        <button
+          className="g1-btn-accent"
+          style={{ minWidth: 88, minHeight: 88 }}
+          onClick={() => startTrialWith(crops)}
+        >
+          Let&rsquo;s play!
+        </button>
+      </div>
+    );
+  }
+
   const suggestedTierInfo =
     SUPPORT_TIERS.find((t) => t.tier === DEFAULT_STARTING_SUPPORT_TIER) ?? SUPPORT_TIERS[0];
 
   return (
-    <div className="screen">
+    <div className="screen" style={accentStyle}>
       <style>{GAME1_STYLES}</style>
 
       {phase === 'searching' && (
@@ -645,6 +935,46 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
             Support tier {suggestedTierInfo.tier} — {suggestedTierInfo.name}:{' '}
             {suggestedTierInfo.instruction}
           </p>
+          {/* Guidance, not an error (§11): the game still runs, and the tone
+              stays matter-of-fact. It just says out loud that these are
+              stand-in objects, which is the one thing the caregiver cannot
+              work out on their own. */}
+          {fallbackReason && (
+            <p
+              style={{
+                fontSize: '0.78rem',
+                background: 'var(--color-accent-soft, #fff1e3)',
+                padding: '8px 10px',
+                borderRadius: 8,
+                lineHeight: 1.45,
+              }}
+            >
+              {fallbackReason === 'no-photo'
+                ? 'No photo was chosen, so these are stand-in objects rather than things from your room.'
+                : fallbackReason === 'failed'
+                  ? "We couldn't read that photo just now — these are stand-in objects. The photo was probably fine; it's worth another go."
+                  : 'Nothing in that photo was something your child could safely go and fetch, so these are stand-in objects.'}{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setFallbackReason(null);
+                  setPhase('idle');
+                }}
+                style={{
+                  minWidth: 0,
+                  minHeight: 0,
+                  padding: '2px 8px',
+                  fontSize: '0.78rem',
+                  border: '1px solid rgba(33,31,46,0.25)',
+                  borderRadius: 6,
+                  background: 'transparent',
+                  boxShadow: 'none',
+                }}
+              >
+                Try another photo
+              </button>
+            </p>
+          )}
           {fadingSuggestion && (
             <p style={{ fontSize: '0.75rem', background: '#eef', padding: 6, borderRadius: 6 }}>
               {fadingSuggestion.message}
