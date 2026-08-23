@@ -50,6 +50,7 @@ import { BlockStackMatch } from './games/BlockStackMatch';
 import { SortByRule } from './games/SortByRule';
 import { adapters } from './adapters/registry';
 import { clearActiveProfile, getActiveProfile } from './engine/profileStore';
+import { getThemePreference, setThemePreference, type ThemeChoice } from './engine/themePreference';
 import { installAvoidFilter } from './engine/avoidFilter';
 import type { Branch2FlowResult } from './engine/branch2';
 import type { ChildProfile } from './types';
@@ -233,11 +234,40 @@ function App() {
   // on a local-only app needs.
   const [confirmLogout, setConfirmLogout] = useState(false);
 
+  // Light/dark. Starts 'dark' -- the same value App.css itself renders with
+  // no [data-theme] attribute set -- so there is no flash of the wrong
+  // theme while the stored preference loads; a caregiver who chose light
+  // sees one dark frame for a moment on cold load, never the reverse.
+  // Device-level, not profile-level (see themePreference.ts), so it is
+  // loaded once here rather than as part of the profile.
+  const [theme, setTheme] = useState<ThemeChoice>('dark');
+
+  // Mirrors `theme` onto <html data-theme>, per App.css's own
+  // `:root[data-theme='light']` selector. Dark stays whatever "unset"
+  // renders as -- the attribute is only ever written for light, never
+  // written as "dark" -- matching the default/unset-state pattern the
+  // requirements ask for and the one src/index.css's color-scheme rule
+  // also keys off.
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  }, [theme]);
+
+  function chooseTheme(next: ThemeChoice) {
+    setTheme(next);
+    void setThemePreference(next);
+  }
+
   useEffect(() => {
     // §6.4: the avoid-list filter is wired once, globally -- it reads
     // whichever profile's context is passed to renderLine() at call time,
     // so this does not need to be re-run per profile switch.
     installAvoidFilter();
+
+    void getThemePreference().then(setTheme);
 
     // Both paths now land on the SAME welcome screen; it is the presence or
     // absence of a locally-stored profile that decides which of its two
@@ -879,6 +909,41 @@ function App() {
             </div>
 
             <hr className="home-divider" />
+
+            {/* Appearance. Device-level, same as Log out below it, not
+                profile-level -- switching child profiles on this device
+                should not silently switch the theme too. Dark is this
+                app's deliberate default identity (see App.css's own
+                header comment), so this is presented as a genuine choice
+                between two designed themes, not a "restore default"
+                escape hatch. */}
+            <div className="home-section">
+              <p className="home-section-label" id="home-theme-title">
+                Appearance
+              </p>
+              <div
+                className="home-theme-row"
+                role="group"
+                aria-labelledby="home-theme-title"
+              >
+                <button
+                  type="button"
+                  className={theme === 'dark' ? 'home-theme-option is-selected' : 'home-theme-option'}
+                  aria-pressed={theme === 'dark'}
+                  onClick={() => chooseTheme('dark')}
+                >
+                  Dark
+                </button>
+                <button
+                  type="button"
+                  className={theme === 'light' ? 'home-theme-option is-selected' : 'home-theme-option'}
+                  aria-pressed={theme === 'light'}
+                  onClick={() => chooseTheme('light')}
+                >
+                  Light
+                </button>
+              </div>
+            </div>
 
             {/* Log out. There is no account and no password in this app, so
                 this clears the "who is active on this device" pointer and

@@ -6,11 +6,18 @@
    src/design/DESIGN-TOKENS.md. */
 
 :root {
-  /* Dark is the app's only scheme — not a preference, not a toggle. This
-     is what tells the UA to render scrollbars, form controls and the
-     canvas behind the page in dark. There is deliberately no `light`
-     here and no `light dark` pair. */
+  /* Dark is the DEFAULT scheme -- what renders with no [data-theme]
+     attribute set at all, matching App.css's own default/unset-state
+     pattern. This is what tells the UA to render scrollbars, form
+     controls and the canvas behind the page in dark. There is
+     deliberately no `light dark` pair and no `prefers-color-scheme`
+     branch anywhere: the OS setting never silently overrides the
+     caregiver's own explicit choice. */
   color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 * {

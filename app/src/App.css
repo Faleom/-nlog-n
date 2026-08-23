@@ -1,8 +1,16 @@
 @import './design/fonts.css';
 
-/* Design system — DARK-FIRST. Dark is the only mode: there is no toggle,
-   no prefers-color-scheme branch, no [data-theme] attribute. The values
-   below ARE the theme.
+/* Design system — DARK-FIRST, with a real light alternative. Dark is the
+   DEFAULT: it is this app's deliberate identity, not a fallback, and it is
+   what renders with no attribute set at all. A caregiver can switch to a
+   genuinely designed light theme (see the "This device" section of the
+   Setup tab); the choice is written to `data-theme="light"` on
+   `<html>` (unset, not "dark", is what dark itself renders from — see the
+   `:root[data-theme="light"]` block below the dark block) and persisted
+   via the same StoragePort every other caregiver preference already uses
+   (src/engine/themePreference.ts). There is deliberately no
+   `prefers-color-scheme` branch anywhere: the OS setting never silently
+   picks a mode the caregiver did not choose.
 
    THE SOURCE OF TRUTH FOR EVERYTHING IN THIS BLOCK IS
    src/design/DESIGN-TOKENS.md. Palette names, contrast measurements,
@@ -200,6 +208,166 @@
   --space-caregiver-gap: 14px; /* caregiver screens pack tighter */
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* ---- Small interactive washes ---------------------------------------
+     A handful of components paint a barely-there fill for an inset row or
+     a pressed state (dashboard rows, the Setup edit list, the "coming
+     soon" hatch). On a dark ground that fill has to be a hint of WHITE to
+     read as "lighter than the surface it sits on". Split out as tokens
+     (rather than left as the rgba(255,255,255,x) literals they used to be)
+     so light mode can give them the opposite polarity below -- a hint of
+     ink, not a hint of white, since lightening an already-light row is
+     invisible. */
+  --surface-wash: rgba(255, 255, 255, 0.05);
+  --surface-wash-active: rgba(255, 255, 255, 0.1);
+  --hatch-line: rgba(255, 255, 255, 0.035);
+}
+
+/* =========================================================================
+   LIGHT THEME — a genuine second surface, not an inverted dark one.
+
+   Ground: same hue family as dark (~265 violet-plum, very low saturation)
+   but now warming toward the SAME ivory dark's own ground warms toward,
+   approached from the light side instead of the black side. `--color-ink`
+   below is dark's own `--color-surface` hex (Slate Plum) reused as light's
+   text colour on purpose -- the two themes share one small vocabulary of
+   plum tones and just swap which end each token sits at, the same way a
+   photograph and its negative share one image. Not pure black on purpose,
+   for the same halation reason dark avoided pure white on Nightshade: a
+   3-5 year old's caregiver is reading this UI one-handed, often in bright
+   light, and a warm near-black is calmer than #000.
+
+   Every rgba(255,255,255,x) glass/rim value below is dark's own value
+   given the OPPOSITE job. Dark needed brightness() and a white-tinted
+   glass because blur+saturate alone lift nothing off a black ground --
+   see DESIGN-TOKENS §3.1. A light ground already has all the luminance a
+   frosted pane needs; brightness() here would blow it out to flat white
+   instead, so --glass-brightness drops back to 1 and the glass fill goes
+   back to the denser white-frost alpha (0.55/0.72) the ORIGINAL pre-dark
+   system used -- see DESIGN-TOKENS §3.1's own description of that value,
+   which is documented there as correct for paper, wrong only once carried
+   onto black unchanged. Borders and hairlines flip from a white rim (the
+   only thing visible against black) to a soft ink-tinted line (the only
+   thing visible against paper) -- an unmodified glass-border here would
+   be a rgba(255,255,255,x) line on a near-white pane and vanish outright.
+   Shadows shrink and warm from near-black/huge to ink-tinted/soft: see
+   DESIGN-TOKENS §3.2's own note that "a shadow cannot be a bit of the ink
+   colour" on dark -- on light it can, and should.
+
+   `--color-tile` stays light in BOTH themes -- not a design preference
+   here, a hard requirement: Game3's silhouettes are rendered with
+   `filter: brightness(0)` (solid black) and silhouetteCanvas.ts produces
+   black-on-transparent PNGs (see Game3ShadowMatch.tsx's own header
+   comment). A dark tile would make both invisible regardless of theme.
+   What DOES change for light is `--color-tile-border`: dark's bright
+   rgba(255,255,255,0.86) rim is what separates a light tile from the
+   near-black shell around it, and that same white rim would all but
+   disappear against light mode's own light shell -- a light stage sitting
+   directly on a light ground with no edge at all. Light's tile border is
+   therefore redefined as a soft ink-tinted line instead of a white one,
+   giving the tile back a visible edge against its now-light surroundings
+   without darkening the tile itself. Same reasoning for the drawing
+   surface in TraceAndColour.tsx (`.t4-stage`) and the sample/crop tiles in
+   Game3ShadowMatch.tsx -- both consume these same tokens, so this one
+   change carries through to both without touching either game file. */
+:root[data-theme='light'] {
+  /* ---- Ground -------------------------------------------------------- */
+  --color-surface-sunken: #eae2d6; /* Putty      — page behind the device */
+  --color-bg: #f6f1e9; /* Parchment  — the app's own ground  */
+  --color-surface: #fffdf9; /* raised solid surface, near-white  */
+  --color-ink: #241e2e; /* Ink Plum   — dark's Slate Plum, reused */
+  --color-ink-muted: #5e5169; /* 6.54:1 on Parchment  */
+  --color-border: #e4dae6; /* decorative hairline  */
+  --color-border-strong: #8b7c99; /* functional edge, 3.43:1 on Parchment, 3.73:1 on glass */
+
+  /* ---- Interactive ----------------------------------------------------
+     Periwink re-pitched back toward the paper it was cut from — see
+     DESIGN-TOKENS §1.2's own note that dark's Periwink is a re-pitch of
+     "light mode's #5b52e8", which sat *under* the page. Restored here
+     verbatim, plus a deeper step for small text on the strong glass fill,
+     which stays comfortably clear on light without needing a bright/dark
+     split the way dark's Periwink did (see the ✗ cells in DESIGN-TOKENS
+     §3.5) — kept anyway for the same visual-hierarchy role. */
+  --color-primary: #5b52e8; /* Periwink, light-pitch. 4.89:1 on Parchment */
+  --color-primary-bright: #4a3fd4; /* Periwink Deep — small text on strong glass */
+  --color-primary-ink: #faf7ff; /* warm near-white ink ON a Periwink fill */
+  --color-primary-soft: rgba(91, 82, 232, 0.16);
+  --color-accent: #a6540f; /* Ember, light-pitch. 4.79:1 on Parchment */
+  --color-accent-soft: #fbeee0; /* pale peach tinted surface */
+  --color-accent-ink: #fffbf6; /* warm near-white ink ON an Ember fill */
+
+  /* ---- Reserved saturation ---------------------------------------------
+     Still the only fully-saturated hues in the system, still never chrome.
+     Dark's Sunburst/Blush are tuned to glow against near-black and read as
+     washed-out pastel against paper if carried over unchanged (a raw
+     #ffc93c measures under 2:1 against Parchment). Both are re-pitched
+     darker/richer here, the same "sits under the paper" move interactive
+     got above, so they stay legible AND still read as the same golden/
+     rose family everywhere they appear (the reward badge's fixed ink text,
+     the Room Frame's reward/Companion rim, SessionCelebration's confetti). */
+  --color-reward: #b87805; /* Sunburst, light-pitch — deep marigold */
+  --color-reward-ink: #2a1d02; /* unchanged: 4.49:1 on the new fill */
+  --color-reward-glow: rgba(184, 120, 5, 0.24);
+  --color-companion: #c43f68; /* Blush, light-pitch — deep rose */
+  --color-companion-glow: rgba(196, 63, 104, 0.22);
+
+  /* ---- Activity track colours ------------------------------------------
+     Same cool, red/green-free family as dark, re-pitched for 4:1+ against
+     a near-white dashboard card instead of against Nightshade. */
+  --track-find-it: #5b52e8;
+  --track-story: #0e7a6f;
+  --track-match: #8a4fd6;
+  --track-trace: #3e6fc9;
+
+  /* ---- Utility surfaces -------------------------------------------------- */
+  --color-danger: #b23a2c; /* 5.28:1 on Parchment */
+  --color-danger-soft: #fbeae7;
+  --color-info-soft: #ecebf9;
+  /* See this block's header comment: MUST stay light in both themes for
+     silhouette contrast, so only its border changes. */
+  --color-tile: #ffffff;
+  --color-tile-ink: #241e2e;
+  --color-tile-border: rgba(36, 30, 46, 0.16);
+
+  /* ---- Shadows ----------------------------------------------------------
+     Small and ink-tinted rather than huge and near-black — a shadow on
+     light CAN be "a bit of the ink colour" (DESIGN-TOKENS §3.2's dark-only
+     rule does not hold in reverse). */
+  --shadow-sm: 0 1px 2px rgba(36, 30, 46, 0.14), 0 1px 1px rgba(36, 30, 46, 0.08);
+  --shadow-md: 0 10px 24px rgba(36, 30, 46, 0.14), 0 3px 8px rgba(36, 30, 46, 0.09);
+
+  /* ---- Liquid glass, tuned for a light base -----------------------------
+     See this block's header comment for why brightness() drops to 1 and
+     the fill goes back to a denser white-frost alpha instead of dark's
+     thin tint. */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(36, 30, 46, 0.12);
+  --glass-blur: 22px;
+  --glass-saturate: 140%;
+  --glass-brightness: 1;
+  --glass-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
+    brightness(var(--glass-brightness));
+  /* Dark needed a two-tone rim (bright top + dark bottom) to fake
+     thickness against a ground with no light of its own. Light's ground
+     already has that light, so the top rim stays a genuine catch-light
+     and the bottom rim/inner-glow shrink to a near-imperceptible ink
+     shadow and a soft white sheen rather than disappearing outright —
+     kept, not zeroed, so `--glass-highlight` still reads as one coherent
+     three-part material instead of a flat single line. */
+  --glass-rim-top: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --glass-rim-bottom: inset 0 -1px 0 rgba(36, 30, 46, 0.08);
+  --glass-inner-glow: inset 0 14px 30px -16px rgba(255, 255, 255, 0.55);
+  --glass-highlight: var(--glass-rim-top), var(--glass-rim-bottom),
+    var(--glass-inner-glow);
+  --glass-shadow: 0 10px 26px rgba(36, 30, 46, 0.16), 0 2px 6px rgba(36, 30, 46, 0.1);
+  --glass-tint-child: rgba(255, 176, 103, 0.1);
+  --glass-tint-caregiver: rgba(139, 123, 255, 0.08);
+
+  /* Same wash tokens, opposite polarity — see the dark block's comment. */
+  --surface-wash: rgba(36, 30, 46, 0.04);
+  --surface-wash-active: rgba(36, 30, 46, 0.08);
+  --hatch-line: rgba(36, 30, 46, 0.05);
 }
 
 /* ---- Accent-by-favColour --------------------------------------------
@@ -389,6 +557,37 @@ body {
   transform: scale(1.2);
 }
 
+/* Light mode's version of the same two layers. DESIGN-TOKENS §3.3 called
+   the dark gradient "emissive, not subtractive" specifically because it
+   had to sit BRIGHTER than the ground to read as light pooling in a dark
+   room. On paper the opposite is true and was the original behaviour:
+   the washes sit a little DARKER/more saturated than Parchment, like
+   watercolour pooled on a page, so the same circles, positions, sizes and
+   blur radii are kept unchanged (that geometry is what makes the field
+   read as depth, not the colour) and only the colour treatment flips
+   back to subtractive. The near layer's single dark counter-mass becomes
+   a single warm cream highlight instead, for the same "not uniformly one
+   value" reason dark's version needed a mass of the opposite polarity. */
+:root[data-theme='light'] .app::before {
+  background:
+    radial-gradient(circle 190px at 10% 4%, rgba(91, 82, 232, 0.16) 0 58%, transparent 59%),
+    radial-gradient(circle 150px at 92% 13%, rgba(166, 84, 15, 0.13) 0 56%, transparent 57%),
+    radial-gradient(circle 210px at 82% 41%, rgba(91, 82, 232, 0.1) 0 60%, transparent 61%),
+    radial-gradient(circle 170px at 6% 62%, rgba(196, 63, 104, 0.09) 0 58%, transparent 59%),
+    radial-gradient(circle 230px at 60% 86%, rgba(91, 82, 232, 0.09) 0 60%, transparent 61%),
+    radial-gradient(circle 160px at 4% 96%, rgba(166, 84, 15, 0.08) 0 56%, transparent 57%);
+}
+
+:root[data-theme='light'] .app::after {
+  background:
+    radial-gradient(circle 84px at 24% 11%, rgba(74, 63, 212, 0.14) 0 54%, transparent 55%),
+    radial-gradient(circle 70px at 78% 24%, rgba(166, 84, 15, 0.1) 0 52%, transparent 53%),
+    radial-gradient(circle 96px at 12% 34%, rgba(91, 82, 232, 0.08) 0 56%, transparent 57%),
+    radial-gradient(circle 78px at 90% 57%, rgba(196, 63, 104, 0.08) 0 54%, transparent 55%),
+    radial-gradient(circle 88px at 30% 71%, rgba(74, 63, 212, 0.09) 0 56%, transparent 57%),
+    radial-gradient(circle 74px at 86% 92%, rgba(166, 84, 15, 0.07) 0 54%, transparent 55%),
+    radial-gradient(circle 150px at 18% 52%, rgba(255, 253, 249, 0.7) 0 58%, transparent 59%);
+}
 
 /* Role switches. Phase 2 puts .child-face on a game's child-facing
    phases and leaves everything else on the caregiver default. Nothing
@@ -990,7 +1189,7 @@ textarea::placeholder {
    value, as .dashboard-track-toggle. */
 .home-edit-button:active {
   transform: none;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-wash);
 }
 
 /* ---- Notes tab ------------------------------------------------------
@@ -1113,6 +1312,50 @@ textarea::placeholder {
   padding: 0 2px;
   font-size: 0.85rem;
   color: var(--color-ink-muted);
+}
+
+/* ---- Appearance -------------------------------------------------------
+   Same segmented-pill construction as .dashboard-length-row/-option (the
+   session-length picker), reused rather than invented fresh so a
+   caregiver meets one control language for "pick one of a few options"
+   across both screens. That control keeps the 88px floor on purpose
+   (its own comment explains why -- it is tapped while holding a child);
+   this one is ordinary settings chrome, tapped once during setup, so it
+   stays on the standard --touch-min (44px) floor every other Setup/
+   Dashboard control already uses. */
+.home-theme-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.home-theme-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-min);
+  padding: 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-wash);
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  font-weight: var(--weight-caregiver-strong);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transition: background 140ms var(--ease-out), border-color 140ms var(--ease-out);
+}
+
+.home-theme-option.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+}
+
+.home-theme-option:active {
+  transform: none;
+  background: var(--surface-wash-active);
 }
 
 /* ---- Log out --------------------------------------------------------
@@ -1431,7 +1674,7 @@ textarea::placeholder {
   padding: 8px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-wash);
   color: var(--color-ink);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -1446,7 +1689,7 @@ textarea::placeholder {
 
 .dashboard-length-option:active {
   transform: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-wash-active);
 }
 
 .dashboard-length-value {
@@ -1554,7 +1797,7 @@ textarea::placeholder {
   padding: 10px 12px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-wash);
 }
 
 .dashboard-track-toggle {
@@ -1568,7 +1811,7 @@ textarea::placeholder {
 
 .dashboard-track-toggle:active {
   transform: none;
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--surface-wash-active);
 }
 
 .dashboard-dot {
@@ -2180,7 +2423,7 @@ textarea::placeholder {
   background:
     repeating-linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.035) 0 8px,
+      var(--hatch-line) 0 8px,
       transparent 8px 16px
     ),
     var(--glass-bg);
