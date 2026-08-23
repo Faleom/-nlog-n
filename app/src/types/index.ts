@@ -32,6 +32,16 @@ export interface TaggedCrop {
   bbox: Region;
   /** Data URL or object URL for the cropped image. Never the full room photo. */
   image: string;
+  /**
+   * Set ONLY for crops that come from the bundled concept library
+   * (games/concepts/) rather than from a photo. When present, `image` is
+   * empty and consumers must draw <ConceptArt variantId={…}/> instead —
+   * the artwork is vector JSX, not a data URL, which is what lets a
+   * silhouette be exact rather than threshold-guessed.
+   *
+   * Optional so every existing photo-derived crop is unaffected.
+   */
+  conceptVariantId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +180,11 @@ export interface SessionLog {
   movementBreaks: number;
   longestFocusStretchSeconds: number;
   skillRecords: SkillRecord[];
-  endedBy: 'cap' | 'idle' | 'caregiver';
+  /** 'finished' = the child completed the session's planned activities.
+   * Distinct from 'cap' on purpose: a log that records "time ran out" for a
+   * child who worked through everything and stopped because there was
+   * nothing left tells the caregiver something untrue about their child. */
+  endedBy: 'cap' | 'idle' | 'caregiver' | 'finished';
 }
 
 // ---------------------------------------------------------------------------

@@ -40,6 +40,7 @@ import { NeutralNotePrompt } from './components/NeutralNotePrompt';
 import { Game1 } from './games/Game1';
 import { Game2 } from './games/Game2';
 import { Game3ShadowMatch } from './games/Game3ShadowMatch';
+import { TraceAndColour } from './games/TraceAndColour';
 import { getActiveProfile } from './engine/profileStore';
 import { installAvoidFilter } from './engine/avoidFilter';
 import type { Branch2FlowResult } from './engine/branch2';
@@ -58,6 +59,7 @@ type Screen =
   | { kind: 'game1' }
   | { kind: 'game2' }
   | { kind: 'game3' }
+  | { kind: 'trace' }
   | { kind: 'dashboard' }
   | { kind: 'branch2Milestones' }
   | { kind: 'branch2Card'; answers: ConcernAnswers; childAgeMonths: number }
@@ -66,6 +68,17 @@ type Screen =
 // The two flow names shown in every screen-header eyebrow -- this, plus
 // the back button and (during first-time setup) the step count, is the
 // whole answer to "where am I / where am I headed."
+/**
+ * Whether the activities hub offers Game 1 and Game 2 alongside Game 3.
+ *
+ * Currently false: the build is focused on Match the Picture, so the hub
+ * shows only that. Games 1 and 2 are NOT deleted — they still build, still
+ * pass their smoke suites, and their routes below still work — because
+ * hiding an entry point is reversible in one line and deleting working,
+ * tested features is not. Flip this to true to bring them back.
+ */
+const SHOW_ALL_GAMES = false;
+
 const SETUP_FLOW = 'Setting up your child’s profile';
 const MY_WORLD_FLOW = 'My World';
 const WORRY_FLOW = 'Thinking about development';
@@ -299,9 +312,21 @@ function App() {
   if (screen.kind === 'game3') {
     return (
       <div className="app" key={screen.kind}>
-        <GameChrome eyebrow={`${MY_WORLD_FLOW} · Shadow Match`} onBack={goToBranch1Home}>
+        <GameChrome eyebrow={`${MY_WORLD_FLOW} · Match the Picture`} onBack={goToBranch1Home}>
           {(onChildFacingChange) => (
             <Game3ShadowMatch profile={profile} onChildFacingChange={onChildFacingChange} />
+          )}
+        </GameChrome>
+      </div>
+    );
+  }
+
+  if (screen.kind === 'trace') {
+    return (
+      <div className="app" key={screen.kind}>
+        <GameChrome eyebrow={`${MY_WORLD_FLOW} · Trace and Colour`} onBack={goToBranch1Home}>
+          {(onChildFacingChange) => (
+            <TraceAndColour profile={profile} onChildFacingChange={onChildFacingChange} />
           )}
         </GameChrome>
       </div>
@@ -377,24 +402,28 @@ function App() {
           <div className="home-section">
             <p className="home-section-label">Play</p>
             <div className="home-play-grid">
-              <button
-                className="button-primary home-play-button"
-                onClick={() => setScreen({ kind: 'game1' })}
-              >
-                <span className="home-play-icon" aria-hidden="true">
-                  🔍
-                </span>
-                Find It In Your World
-              </button>
-              <button
-                className="button-primary home-play-button"
-                onClick={() => setScreen({ kind: 'game2' })}
-              >
-                <span className="home-play-icon" aria-hidden="true">
-                  🧸
-                </span>
-                Toy Story Sequencing
-              </button>
+              {SHOW_ALL_GAMES && (
+                <>
+                  <button
+                    className="button-primary home-play-button"
+                    onClick={() => setScreen({ kind: 'game1' })}
+                  >
+                    <span className="home-play-icon" aria-hidden="true">
+                      🔍
+                    </span>
+                    Find It In Your World
+                  </button>
+                  <button
+                    className="button-primary home-play-button"
+                    onClick={() => setScreen({ kind: 'game2' })}
+                  >
+                    <span className="home-play-icon" aria-hidden="true">
+                      🧸
+                    </span>
+                    Toy Story Sequencing
+                  </button>
+                </>
+              )}
               <button
                 className="button-primary home-play-button"
                 onClick={() => setScreen({ kind: 'game3' })}
@@ -402,7 +431,16 @@ function App() {
                 <span className="home-play-icon" aria-hidden="true">
                   🌓
                 </span>
-                Shadow Match
+                Match the Picture
+              </button>
+              <button
+                className="button-primary home-play-button"
+                onClick={() => setScreen({ kind: 'trace' })}
+              >
+                <span className="home-play-icon" aria-hidden="true">
+                  ✏️
+                </span>
+                Trace and Colour
               </button>
             </div>
           </div>

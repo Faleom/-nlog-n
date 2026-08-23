@@ -5,16 +5,23 @@
 // failure point, not the content. This file is the app designed around
 // that finding: it gets SHORTER over time and ends ITSELF, on purpose.
 //
-// Three ways in, one ending: cap reached, 90s total idle (detected by
-// F.009's InteractionMachine.tick(), not duplicated here), or the
-// caregiver deliberately ends it. All three converge on endSessionNow().
+// Four ways in, one ending: cap reached, 90s total idle (detected by
+// F.009's InteractionMachine.tick(), not duplicated here), the caregiver
+// deliberately ends it, or the child finishes the activities the session
+// planned. All four converge on endSessionNow().
+//
+// 'finished' arrived with Trace and Colour, which runs a fixed number of
+// shapes rather than going until the clock stops it. It is a separate
+// reason rather than being folded into 'cap' because the recap shows this
+// to a parent, and "we ran out of time" and "your child worked through
+// everything" are not the same sentence.
 
 import { sessionCapMinutes } from '../config/interaction';
 import { endSession as persistEndSession, getSessionsForChild } from './profileStore';
 import { renderLine, slotValuesFromProfile } from './slots';
 import type { ChildProfile, SessionLog } from '../types';
 
-export type SessionEndReason = 'cap' | 'idle' | 'caregiver';
+export type SessionEndReason = 'cap' | 'idle' | 'caregiver' | 'finished';
 
 export interface SessionEndResult {
   reason: SessionEndReason;

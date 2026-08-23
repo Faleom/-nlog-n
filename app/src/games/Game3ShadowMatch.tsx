@@ -39,11 +39,14 @@ import {
   ALTERED_SAMPLE_TRANSFORM,
   buildLevel1Pool,
   buildShadowMatchOptions,
+  levelDescription,
   requiresFetchingTheRealObject,
   sampleKindForLevel,
   type SampleKind,
 } from './game3ShadowMatchLogic';
 import { generateSilhouetteDataUrl } from './silhouetteCanvas';
+import { ConceptArt } from './concepts/conceptArt';
+import { buildConceptRound } from './concepts/conceptPool';
 import type { ChildProfile, SupportTier, TaggedCrop } from '../types';
 
 type Phase =
@@ -143,7 +146,72 @@ function OptionButton({
       aria-label={crop.name}
       disabled={dead || disabled}
       onClick={onTap}
-      style={{ minWidth: 88, minHeight: 88, backgroundImage: crop.image ? `url(${crop.image})` : undefined, backgroundColor: '#ccc' }}
+      style={
+        crop.conceptVariantId
+          ? {
+              width: 104, height: 104, padding: 8, borderRadius: 18,
+              border: '2px solid rgba(33,31,46,0.14)', background: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }
+          : { minWidth: 88, minHeight: 88, backgroundImage: crop.image ? `url(${crop.image})` : undefined, backgroundColor: '#ccc' }
+      }
+    >
+      {crop.conceptVariantId && <ConceptArt variantId={crop.conceptVariantId} />}
+    </button>
+  );
+}
+
+/**
+ * The sample the child matches TO. One component for both sources, so the
+ * three places that show a sample cannot drift apart.
+ *
+ * For a concept crop the silhouette is drawn by ConceptArt itself — exact,
+ * because the shape is known. For a photo crop it is still the canvas
+ * luminance threshold (silhouetteCanvas.ts), already baked into `image` by
+ * the caller.
+ */
+function SampleTile({
+  image,
+  conceptVariantId,
+  kind,
+  loading,
+  size = 120,
+}: {
+  image: string;
+  conceptVariantId?: string;
+  kind: SampleKind;
+  loading: boolean;
+  size?: number;
+}) {
+  const isShadow = kind === 'silhouette' || kind === 'silhouette-fetch';
+  if (conceptVariantId) {
+    return (
+      <div
+        aria-hidden
+        style={{
+          width: size, height: size, padding: 10, borderRadius: 18,
+          background: '#fff', border: '2px solid rgba(33,31,46,0.14)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          opacity: loading ? 0.4 : 1,
+          // Only the ALTERED level's transform applies; a concept
+          // silhouette is handled inside ConceptArt, not by a CSS filter.
+          ...(kind === 'altered' ? sampleVisualStyle(kind) : {}),
+        }}
+      >
+        <ConceptArt variantId={conceptVariantId} silhouette={isShadow} />
+      </div>
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      style={{
+        width: size, height: size, borderRadius: 16, backgroundColor: '#ddd',
+        backgroundImage: image ? `url(${image})` : undefined,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        opacity: loading ? 0.4 : 1,
+        ...sampleVisualStyle(kind),
+      }}
     />
   );
 }
@@ -154,6 +222,12 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
   const [level, setLevel] = useState<Game3Level>(1);
   const [target, setTarget] = useState<TaggedCrop | null>(null);
   const [sampleImage, setSampleImage] = useState<string>('');
+  /** Set instead of `sampleImage` when the round came from the bundled
+   * concept library — the artwork is vector JSX, not a data URL. */
+  const [sampleConceptId, setSampleConceptId] = useState<string | null>(null);
+  /** Which concept round we're on. Walks concepts first, then samples, so
+   * the child doesn't get five apples in a row (see buildConceptRound). */
+  const conceptRoundRef = useRef(0);
   const [sampleLoading, setSampleLoading] = useState(false);
   // §8.3 Level 2: "same object, different angle or lighting" — the sample
   // IMAGE itself never changes (see game3ShadowMatchLogic.ts's
@@ -281,6 +355,55 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
     return { target: picked, pool };
   }
 
+  /**
+   * A round from the bundled concept library — no photo, no camera, no API.
+   *
+   * Deliberately NOT routed through startTrialWith: that function's whole
+   * job is picking one crop out of a room pool and deriving a sample from
+   * it, whereas a concept round arrives with its sample and its answer
+   * already chosen (and chosen adversarially — see conceptLibrary's
+   * buildTrial). Everything after the setup is identical, because both
+   * paths hand off to the same InteractionMachine.
+   */
+  function startConceptRound(effectiveLevel: Game3Level = level) {
+    const kind = sampleKindForLevel(effectiveLevel);
+    // A silhouette sample asks a SHAPE question, and its answer has to be
+    // the very drawing the outline came from — see buildShapeTrial. A
+    // full-colour sample asks the generalization question, whose answer must
+    // be a different member of the concept. Same screen, opposite rules.
+    const shapeMatch = kind === 'silhouette' || kind === 'silhouette-fetch';
+
+    const round = buildConceptRound(conceptRoundRef.current, { shapeMatch });
+    if (!round) return;
+    conceptRoundRef.current += 1;
+
+    lastTargetIdRef.current = round.target.id;
+    setTarget(round.target);
+    setCrops(round.options);
+    setDeadIds(new Set());
+    setPromptTier(0);
+    machineRef.current.startTrial();
+
+    setSampleKind(kind);
+    setSampleLoading(false);
+    setSampleImage('');
+    setSampleConceptId(round.sample.conceptVariantId ?? null);
+
+    // Level 4 normally sends the child off to fetch the real object. A
+    // library picture is not in their room, so that cannot be asked
+    // honestly here — the shape question stays on screen instead.
+    setOptionsForNewTrial(round.options);
+    setPhase('presenting');
+
+    void adapters.speechOut.say(
+      renderLine(
+        shapeMatch ? 'Which one has this shape?' : 'Which one is the same kind of thing?',
+        slotValuesFromProfile(profile),
+        profile.context,
+      ),
+    );
+  }
+
   async function startTrialWith(pool: TaggedCrop[], effectiveLevel: Game3Level = level) {
     const { target: picked, pool: trialPool } = pickTargetAndPool(pool, effectiveLevel);
     lastTargetIdRef.current = picked.id;
@@ -293,6 +416,7 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
     setSampleKind(kind);
     setSampleLoading(kind === 'silhouette' || kind === 'silhouette-fetch');
     setSampleImage(picked.image);
+    setSampleConceptId(null);
 
     if (kind === 'silhouette' || kind === 'silhouette-fetch') {
       try {
@@ -382,7 +506,12 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
     setLastLoggedTier(tier);
     const suggestion = await getFadingSuggestion(profile.id, skillId, tier, profile.nickname ?? 'they');
     setFadingSuggestion(suggestion);
-    void startTrialWith(crops);
+    // Stay in whichever source this session started in. Switching a child
+    // mid-session from library pictures to their room photo (or back) is
+    // exactly the kind of unannounced change §5.2's `sameness` dimension
+    // exists to avoid.
+    if (sampleConceptId) startConceptRound();
+    else void startTrialWith(crops);
   }
 
   if (phase === 'sessionEnded') {
@@ -417,7 +546,7 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
     return (
       <div className="screen">
         <style>{GAME3_STYLES}</style>
-        <h2>Shadow Match</h2>
+        <h2>Match the Picture</h2>
         {sessionNumber && capSeconds && (
           <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>
             Session {sessionNumber} — cap {Math.round(capSeconds / 60)}min, elapsed {elapsedSeconds}s
@@ -446,8 +575,29 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
             </button>
           ))}
         </div>
+        {/* Without this the ladder is four unlabelled numbers, and nothing
+            tells a caregiver that the shape game is level 3. */}
+        <p style={{ fontSize: '0.8rem', opacity: 0.75, marginTop: -8 }}>
+          {levelDescription(level)}
+        </p>
+        {/* The picture-pack round is listed FIRST and framed as the normal
+            way in: it needs no photo, no camera and no network, so it
+            always works — including on a device with no camera, with the
+            camera declined (§4.4: "camera is an enhancement, not a gate"),
+            or with the API unreachable. The room-photo path below is the
+            same game played with the child's own things. */}
+        <button
+          style={{ minWidth: 88, minHeight: 88, fontWeight: 600 }}
+          onClick={() => startConceptRound()}
+        >
+          Play with pictures
+        </button>
+        <p style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: -6 }}>
+          Matching everyday things — apples, dogs, balls — across the many ways each one can look.
+          No photo needed.
+        </p>
         <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleCapturePress()}>
-          Choose a photo of the room
+          Play with a photo of your room
         </button>
         <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleEndSession('caregiver')}>
           End session
@@ -523,19 +673,11 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
         // CHILD-FACING (Levels 1-3): sample at top, real photos below,
         // zero text — the sample image itself communicates the prompt.
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-          <div
-            aria-hidden
-            style={{
-              width: 120,
-              height: 120,
-              borderRadius: 16,
-              backgroundColor: '#ddd',
-              backgroundImage: sampleImage ? `url(${sampleImage})` : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: sampleLoading ? 0.4 : 1,
-              ...sampleVisualStyle(sampleKind),
-            }}
+          <SampleTile
+            image={sampleImage}
+            conceptVariantId={sampleConceptId ?? undefined}
+            kind={sampleKind}
+            loading={sampleLoading}
           />
           {renderOptionsGrid()}
         </div>
@@ -548,20 +690,14 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
               child gets for what to go fetch. That is the entire purpose
               of Level 4 (§8.3). The text/instructions below are the
               separate CAREGIVER-facing half of this same screen. */}
-          <div
-            aria-hidden
-            style={{
-              width: 120,
-              height: 120,
-              borderRadius: 16,
-              backgroundColor: '#ddd',
-              backgroundImage: sampleImage ? `url(${sampleImage})` : undefined,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: sampleLoading ? 0.4 : 1,
-              margin: '0 auto 16px',
-            }}
-          />
+          <div style={{ margin: '0 auto 16px', width: 120 }}>
+            <SampleTile
+              image={sampleImage}
+              conceptVariantId={sampleConceptId ?? undefined}
+              kind={sampleKind}
+              loading={sampleLoading}
+            />
+          </div>
           <p>Caregiver view: Level 4 — the silhouette only, no options on screen. Support them fetching the real object.</p>
           <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
             Support tier {suggestedTierInfo.tier} — {suggestedTierInfo.name}: {suggestedTierInfo.instruction}
@@ -588,32 +724,64 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
             className="g3-crop g3-crop--celebrating"
             style={{ width: 120, height: 120, minWidth: 120, minHeight: 120, position: 'relative' }}
           >
-            <div
-              aria-label={target.name}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                borderRadius: 16,
-                backgroundImage: target.image ? `url(${target.image})` : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundColor: '#ccc',
-              }}
-            />
-            {sampleImage && (
+            {/* Underneath: the real thing. */}
+            {target.conceptVariantId ? (
               <div
-                aria-hidden
-                className="g3-dissolve-top"
+                aria-label={target.name}
+                style={{
+                  position: 'absolute', inset: 0, borderRadius: 16, padding: 10,
+                  background: '#fff', border: '2px solid rgba(33,31,46,0.14)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <ConceptArt variantId={target.conceptVariantId} />
+              </div>
+            ) : (
+              <div
+                aria-label={target.name}
                 style={{
                   position: 'absolute',
                   inset: 0,
                   borderRadius: 16,
-                  backgroundImage: `url(${sampleImage})`,
+                  backgroundImage: target.image ? `url(${target.image})` : undefined,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  ...sampleVisualStyle(sampleKind),
+                  backgroundColor: '#ccc',
                 }}
               />
+            )}
+            {/* On top: the sample, fading away to reveal it. */}
+            {sampleConceptId ? (
+              <div
+                aria-hidden
+                className="g3-dissolve-top"
+                style={{
+                  position: 'absolute', inset: 0, borderRadius: 16, padding: 10,
+                  background: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <ConceptArt
+                  variantId={sampleConceptId}
+                  silhouette={sampleKind === 'silhouette' || sampleKind === 'silhouette-fetch'}
+                />
+              </div>
+            ) : (
+              sampleImage && (
+                <div
+                  aria-hidden
+                  className="g3-dissolve-top"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: 16,
+                    backgroundImage: `url(${sampleImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    ...sampleVisualStyle(sampleKind),
+                  }}
+                />
+              )
             )}
           </div>
         </div>
