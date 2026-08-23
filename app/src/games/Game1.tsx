@@ -73,6 +73,12 @@ type Phase =
 
 interface Game1Props {
   profile: ChildProfile;
+  /** Fires whenever the screen crosses into or out of the CHILD's two
+   * phases (§8.0). The shell (App.tsx) uses this to hide its own chrome —
+   * the wayfinding header and back button — since any text there would
+   * violate the same zero-text rule this file already enforces on its own
+   * confirming/celebrating JSX. */
+  onChildFacingChange?: (isChildFacing: boolean) => void;
 }
 
 /** Loose common-colour-word → CSS colour mapping for the swatch fallback
@@ -168,7 +174,7 @@ const GAME1_STYLES = `
 }
 `;
 
-export function Game1({ profile }: Game1Props) {
+export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [crops, setCrops] = useState<TaggedCrop[]>([]);
   const [target, setTarget] = useState<TaggedCrop | null>(null);
@@ -217,6 +223,11 @@ export function Game1({ profile }: Game1Props) {
     },
     [sessionId, profile],
   );
+
+  useEffect(() => {
+    onChildFacingChange?.(phase === 'confirming' || phase === 'celebrating');
+    return () => onChildFacingChange?.(false);
+  }, [phase, onChildFacingChange]);
 
   useEffect(() => {
     void (async () => {
@@ -583,7 +594,7 @@ export function Game1({ profile }: Game1Props) {
           ))}
         </div>
         <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleCapturePress()}>
-          Take a photo of the room
+          Choose a photo of the room
         </button>
         <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleEndSession('caregiver')}>
           End session

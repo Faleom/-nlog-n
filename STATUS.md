@@ -57,6 +57,90 @@ Both are recorded in detail in the git log if you want the full reasoning
 
 ---
 
+## Session 2 — UI/UX pass, and a real laptop-testing bug (post-handoff)
+
+After the state above was written, the same human came back and used the
+running app for the first time — which immediately surfaced things no
+automated check could: the navigation gave no sense of where you were, the
+visual design was unstyled prototype chrome, and the capture flow was
+**completely broken when testing on a laptop**, not just ugly. All of the
+below is done, verified (`tsc`/`oxlint`/full smoke/build all clean), and
+merged — but still carries the same caveat as everything else in this file:
+self-verified, not yet human-click-tested end to end.
+
+**Navigation & wayfinding.** `app/src/components/ScreenHeader.tsx` (new) —
+every screen except the two true roots now shows which flow it's in (eyebrow
+text), a consistent back affordance, and — during the one-time four-screen
+setup chain — a step counter ("Step 2 of 4") with a progress bar. Previously
+there was no header at all on most screens and a bare `← Back` on the rest.
+
+**A real design pass.** `app/src/App.css` now has an actual design system —
+color/spacing/radius tokens, a typography scale, and Apple "Liquid Glass"
+styled buttons (`backdrop-filter: blur/saturate`, bright edge highlight, soft
+shadow, with an `@supports` fallback to solid surfaces where unsupported).
+The app shell has a real static gradient background instead of flat
+off-white, and `app/src/components/AppHeader.tsx` (new) is a persistent
+top identity bar — deliberately using a placeholder name
+(`APP_NAME_PLACEHOLDER`, one line to edit) since "Project name" is still an
+open decision (see below) and a UI pass shouldn't lock one in. No web fonts,
+no UI/animation dependency added — the app's "runs fully offline" claim and
+its zero-dependency-CSS convention both held.
+
+**A real, previously-unfixed bug: capture was silently broken on a laptop.**
+`app/src/adapters/capture/deviceCamera.ts` tried `getUserMedia` (a live
+camera) first, and its fallback to a file picker called `.click()` from
+inside an async `catch` block — by then, several ticks after the original
+tap, the browser's user-activation window had expired, so the file dialog
+silently never opened. No error, no dialog — `capturePhoto()` just hung
+forever, leaving a caregiver on a "please wait" screen with nothing to press.
+This is exactly the "laptop build, file upload not live camera" decision
+from Session 1 that never actually got carried into this file. Fixed: the
+file picker is now the default, synchronous, primary path (`.click()` fires
+in the same call stack as the tap, so activation can't expire first), with
+graceful handling if the dialog is cancelled. The old live-camera code is
+preserved and swappable back in later (one line in `registry.ts`) for a real
+tablet/phone deployment — see the comment in `deviceCamera.ts`. Button copy
+in `Game1.tsx`/`Game3ShadowMatch.tsx` changed from "Take a photo" to "Choose
+a photo of the room" to match what it actually does now.
+`plan/engineering/TECH-DECISIONS.md` and `plan/features/F.006.md` were
+updated to state this as the actual current decision (a build-environment
+call) rather than still contradicting the code — `app-guide-v3-FINAL.md`'s
+own product vision (camera-native, tablet/phone, no file picker) was left
+untouched, since that describes the eventual shipped product, not this dev
+build.
+
+**A second real bug, found while doing the visual pass, not looking for
+it: Game 2 (`F.022`) still violated "zero text in the child's view."** Its
+own header comment admitted "WALKING SKELETON, same maturity as Game1.tsx
+[used to be]" — the child's tap-in-order turn was rendering visible crop
+name labels on every button plus caregiver instruction text on the same
+screen. Fixed to match Game 1/3's already-correct pattern: photo/colour
+tiles, zero text, progress shown by dimming rather than a label. Also fixed:
+the new `ScreenHeader`/`AppHeader` chrome would itself have leaked text
+into the child's view during Game 1/3's confirming/celebrating phases —
+each game now reports its own child-facing state up to `App.tsx` via an
+`onChildFacingChange` callback, and the shell hides its chrome entirely
+(not just visually) during that window. This is a real, non-hypothetical
+compliance rule (`plan/engineering/UI-STANDARDS.md`), not a style choice.
+
+**A design-tips skill was installed**, at `.claude/skills/` (from
+[emilkowalski/skills](https://github.com/emilkowalski/skills) —
+`emil-design-eng`, `animate`, `review-animations`, `pick-ui-library`, and a
+few others). It's local to this Claude Code project config, not part of the
+app itself, and governed the easing/timing/press-feedback choices above.
+
+**How this was actually built**: two parallel background agents (one for
+the visual pass, one for the capture-bug root-cause + fix), spawned via the
+`Agent` tool without git-worktree isolation this time — deliberately, since
+they were briefed onto disjoint file sets (visual agent: `App.css`,
+`App.tsx`, `ScreenHeader.tsx`; bug-fix agent: `deviceCamera.ts`, the two
+docs, and one button-text line each in `Game1.tsx`/`Game3ShadowMatch.tsx`)
+and there was uncommitted work in the tree that worktree isolation would
+have forked away from. Both were re-verified together (not just trusted
+individually) after both landed.
+
+---
+
 ## Run it
 
 ```bash
@@ -117,12 +201,12 @@ Short version:
 | Area | Files | State |
 |---|---|---|
 | Engine core (store, slots, interaction state machine, support ladder, fading, session lifecycle) | F.001, F.005, F.009, F.010, F.011, F.013 | Done, tested |
-| Camera pipeline, Game 1 | F.006, F.008, F.012, F.017 | Done, tested — F.006 is the real capture→blur→recognize pipeline, not a stub |
-| Game 2 (sequencing) | F.022 | Done, tested |
+| Camera pipeline, Game 1 | F.006, F.008, F.012, F.017 | Done, tested — real capture→blur→recognize pipeline, not a stub. Capture default is now file-picker (laptop-build decision), not live camera — see Session 2 below |
+| Game 2 (sequencing) | F.022 | Done, tested — zero-text child turn fixed in Session 2 (was showing text labels) |
 | Game 3, Mode A (Shadow Match) | F.021 | Done, tested |
 | Lookup table, Branch 2, branch handoff | F.007, F.014, F.015, F.020 | Done, tested — F.015 includes real adversarial guardrail testing against live API calls |
 | Onboarding, Companion, preferences, avoid list, dashboard | F.002, F.003, F.004, F.016, F.018, F.019 | Done, tested |
-| **Central routing** — every screen above wired into one real app | `app/src/App.tsx` | Done. Type-checked and build-verified; **not yet click-tested by a human** |
+| **Central routing + navigation chrome** — every screen wired in, with real wayfinding (`ScreenHeader`) and app identity (`AppHeader`) | `app/src/App.tsx`, `components/ScreenHeader.tsx`, `components/AppHeader.tsx` | Done. Type-checked and build-verified; **not yet click-tested by a human** |
 
 **Not built, on purpose:**
 - **F.023** (Game 3's other two modes — Trace, Puzzle): genuine stretch,

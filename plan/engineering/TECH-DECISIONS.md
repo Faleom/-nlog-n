@@ -60,17 +60,37 @@ who needs predictability.
 
 ## Camera
 
-**Decision: `getUserMedia` in-app viewfinder**, with
-`<input type="file" accept="image/*" capture="environment">` as fallback.
+**Decision (this build): plain `<input type="file" accept="image/*">` file
+picker is the default and only wired-in path.** The `getUserMedia` in-app
+viewfinder implementation still exists in `deviceCamera.ts`, fully intact and
+exported (`captureViaGetUserMedia`), but is not called by
+`createDeviceCamera()`.
 
-**Why:** §4.2 requires a native camera, not a file picker — the parent points
-the device at the room and shoots. On mobile the `capture` attribute opens the
-device camera directly, so the fallback is still "native camera", not a file
-browser. Requires HTTPS, which the host provides.
+**Why the change:** §4.2's requirement — native camera, no file picker, the
+parent points the device at the room and shoots — is a real, standing decision
+for the eventual tablet/phone product, and this section isn't reversing it.
+It's a **build-environment** call: this build runs and is demoed on laptops,
+which generally have no rear/environment-facing camera to satisfy
+`facingMode: 'environment'` at all, and whose webcam sits behind a permission
+prompt a developer can miss. A `getUserMedia`-first flow on that hardware was
+observed to hang indefinitely — worse, a same-tick-adjacent file-input
+fallback silently failed to open too, because `.click()` on a file input only
+opens the OS dialog while the original tap's user-activation is still live,
+and by the time the `getUserMedia` attempt had failed and control reached the
+fallback, that activation had already expired. Net effect: a screen with
+nothing to press, ever. The fix wires the file picker in as the **primary**
+path, invoked synchronously (no `await` beforehand) in the same call stack as
+the button press, so user-activation can never lapse first.
 
-**Denied permission is not a failure state** (§4.4): both branches stay fully
-usable and Branch 1 falls back to generic activities. Camera is an enhancement,
-not a gate.
+**Denied permission / cancelled picker is not a failure state** (§4.4): both
+branches stay fully usable and Branch 1 falls back to generic activities.
+Camera is an enhancement, not a gate.
+
+**Bringing the live viewfinder back for a real device:** swap
+`adapters/registry.ts`'s `capture:` line to a factory built on
+`captureViaGetUserMedia` (see that function's doc comment in
+`deviceCamera.ts`) — one line, per `ARCHITECTURE-RULES.md`'s "selection is
+configuration."
 
 ---
 

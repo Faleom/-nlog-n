@@ -16,8 +16,15 @@ Nothing. **Start immediately, in parallel with F.001.** Blocks F.007, F.008 —
 and therefore the Tier 0 gate.
 
 ## Done when
-- **Native camera** — the parent shoots from inside the app. No file picker
-  (§4.2).
+- **Capture path (this build): file picker.** §4.2's product vision is still
+  "native camera, no file picker" for the eventual tablet/phone product — that
+  is unchanged. But this build runs on laptops, which generally have no
+  environment-facing camera to satisfy that vision at all, so the
+  `getUserMedia` in-app viewfinder is kept in `deviceCamera.ts` (exported,
+  unwired) for that future device and a plain `<input type="file"
+  accept="image/*">` picker is the default, reliably-invoked path here — see
+  `TECH-DECISIONS.md` § Camera for the full reasoning and the one-line swap
+  back.
 - **Face blur, on device, before transmission** (§4.4): downscale to ≤1024px
   long edge → detect on the downscaled image → map boxes back → blur at full
   res → then send.

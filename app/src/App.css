@@ -1,27 +1,469 @@
-/* Minimal shell styling. Real UI standards live in
-   plan/engineering/UI-STANDARDS.md — 88x88pt targets, no hover states,
-   portrait lock on phone, cap-the-grid-not-the-target responsive rule. */
+/* Design system. Hard constraints from plan/engineering/UI-STANDARDS.md
+   still govern everything below: 88x88pt minimum targets (no exceptions),
+   no hover states, zero text in the child's view, immediate press feedback,
+   nothing that reads as a score/timer/progress bar in the child's view.
+
+   No web fonts — the app claims to run fully offline (see STATUS.md's "The
+   API key" section) and a font fetch would quietly break that the first
+   time it's opened without a connection. Typographic character comes from
+   weight/size/spacing on the system stack instead.
+
+   Motion follows .claude/skills/emil-design-eng: ease-out on entry,
+   transitions (not keyframes) on anything interactive, nothing past 300ms
+   except the one-time screen change. */
+
+:root {
+  --color-bg: #f6f3ee;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f0ede6;
+  --color-ink: #211f2e;
+  --color-ink-muted: #6b6878;
+  --color-border: #e6e1d6;
+
+  --color-primary: #5b52e8;
+  --color-primary-ink: #ffffff;
+  --color-primary-soft: #edebfd;
+  --color-accent: #ff9d5c;
+  --color-accent-soft: #fff1e3;
+
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 11px;
+
+  --shadow-sm: 0 1px 2px rgba(33, 31, 46, 0.06), 0 1px 1px rgba(33, 31, 46, 0.04);
+  --shadow-md: 0 10px 24px rgba(33, 31, 46, 0.1), 0 2px 6px rgba(33, 31, 46, 0.06);
+
+  /* Liquid-glass material: translucent frosted surfaces with a bright
+     thin edge and a soft outer shadow. Used by the base button rule (and
+     the app header) so the effect applies everywhere for free instead of
+     per-screen. Falls back to a solid surface below where backdrop-filter
+     isn't supported -- see the @supports block near the button rule. */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-strong: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --glass-blur: 20px;
+  --glass-saturate: 170%;
+  --glass-shadow: 0 8px 22px rgba(33, 31, 46, 0.12), 0 1px 2px rgba(33, 31, 46, 0.05);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-surface-sunken);
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
 
 .app {
+  width: 100%;
   max-width: 480px;
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 16px;
-  font-family: system-ui, sans-serif;
+  padding: 20px 20px 40px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif;
+  /* Static, muted mesh gradient -- not a flashy consumer-app background.
+     Low-opacity washes of the existing primary/accent tones over the base
+     cream, calm enough not to read as attention-grabbing. No motion: this
+     audience needs low sensory load, so the gradient never animates. */
+  background:
+    radial-gradient(ellipse 820px 520px at 12% -8%, rgba(91, 82, 232, 0.1), transparent 60%),
+    radial-gradient(ellipse 720px 520px at 104% 4%, rgba(255, 157, 92, 0.08), transparent 55%),
+    radial-gradient(ellipse 900px 700px at 50% 108%, rgba(91, 82, 232, 0.06), transparent 60%),
+    var(--color-bg);
+  color: var(--color-ink);
+  animation: screen-in 220ms var(--ease-out);
+}
+
+/* On anything wider than a phone, read the app as a floating device rather
+   than a page stretched edge to edge. */
+@media (min-width: 520px) {
+  .app {
+    min-height: calc(100vh - 48px);
+    margin: 24px auto;
+    border-radius: 32px;
+    box-shadow: var(--shadow-md);
+  }
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app {
+    animation: none;
+  }
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 4px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.2rem;
+}
+
+p {
+  margin: 0;
+  line-height: 1.5;
 }
 
 .screen {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
 }
 
+/* Base button: every plain <button> in the codebase gets this, which is
+   most of them. Interactive elements that render in the child's view
+   inherit it too — the soft shadow and radius read as a real target
+   without adding a single character of text. */
 button {
   min-width: 88px;
   min-height: 88px;
+  padding: 12px 18px;
   font-size: 1rem;
-  border-radius: 12px;
-  border: 1px solid #ccc;
-  background: white;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--color-ink);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
   cursor: pointer;
+  transition:
+    transform 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out),
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+/* Browsers without backdrop-filter support: degrade to a solid surface
+   rather than a translucent panel that looks muddy over the gradient. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  button {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+  }
+}
+
+button:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button:disabled:active {
+  transform: none;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+}
+
+input,
+textarea {
+  min-height: 48px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-ink-muted);
+}
+
+/* Primary CTA — used sparingly, for the one action a screen most wants
+   pressed (Home's three game buttons, the "thinking about development"
+   entry point). Everything else stays the neutral surface button above;
+   too many primary buttons on one screen defeats the hierarchy. */
+.button-primary {
+  background: linear-gradient(180deg, rgba(91, 82, 232, 0.86), rgba(91, 82, 232, 0.74));
+  border-color: rgba(255, 255, 255, 0.4);
+  color: var(--color-primary-ink);
+  box-shadow: 0 10px 26px rgba(91, 82, 232, 0.32), var(--glass-highlight);
+}
+
+.button-accent {
+  background: linear-gradient(180deg, rgba(255, 157, 92, 0.55), rgba(255, 157, 92, 0.36));
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #7c2d12;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .button-primary {
+    background: var(--color-primary);
+  }
+
+  .button-accent {
+    background: var(--color-accent-soft);
+    color: #92400e;
+  }
+}
+
+/* Persistent app identity bar — sits above the per-screen ScreenHeader on
+   (almost) every screen, the "what app is this" strip a real installed
+   app has. Same liquid-glass material as buttons, at the stronger tint so
+   it reads as a fixture rather than a control. Not interactive, so it
+   carries none of the 88x88 touch-target rules. Suppressed during a
+   game's child-facing phase by the exact same `childFacing` flag that
+   suppresses ScreenHeader — see GameChrome in App.tsx. */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 16px;
+  margin: -4px -4px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-header {
+    background: var(--color-surface);
+  }
+}
+
+.app-header-mark {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.app-header-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+}
+
+/* Screen-header wayfinding chrome — the answer to "where am I / where can
+   I go" that every screen but the two true roots (onboarding, branch1Home)
+   renders above its own content. Never present during a game's
+   child-facing phases — App.tsx suppresses it there entirely, this isn't
+   a display:none fallback. */
+
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.header-back {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.1;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--color-ink-muted);
+}
+
+.header-back-arrow {
+  font-size: 1.3rem;
+  color: var(--color-ink);
+}
+
+.header-back-label {
+  max-width: 76px;
+  text-align: center;
+  white-space: normal;
+}
+
+.header-back-spacer {
+  width: 88px;
+  height: 1px;
+  flex-shrink: 0;
+}
+
+.header-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.header-eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.header-step {
+  margin: 2px 0 6px;
+  font-size: 0.78rem;
+  color: var(--color-ink-muted);
+}
+
+.header-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.header-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-primary);
+  transition: width 220ms var(--ease-out);
+}
+
+/* Home hub */
+
+.home-greeting {
+  padding: 4px 2px 0;
+}
+
+.home-greeting p {
+  color: var(--color-ink-muted);
+  font-size: 0.9rem;
+}
+
+.home-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-section-label {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  padding: 0 2px;
+}
+
+.home-play-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-play-button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 88px;
+  text-align: left;
+  justify-content: flex-start;
+  font-size: 1.05rem;
+}
+
+.home-play-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.home-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.home-edit-button {
+  min-height: 64px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  background: var(--color-surface-sunken);
+  box-shadow: none;
+}
+
+.home-card {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent-soft);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-card p {
+  color: #7c2d12;
+  font-size: 0.85rem;
+}
+
+.home-divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 4px 0;
 }

@@ -44,8 +44,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   if (step === 'age') {
     return (
       <div className="screen">
-        <h2>Let&rsquo;s get started</h2>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <h1>Let&rsquo;s get started</h1>
+        <p style={{ color: 'var(--color-ink-muted)' }}>
+          Just enough to tailor things to your child — nothing else, yet.
+        </p>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           Child&rsquo;s age, in months
           <input
             type="number"
@@ -53,20 +56,22 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             value={ageInput}
             onChange={(e) => setAgeInput(e.target.value)}
             placeholder="e.g. 42"
-            style={{ minHeight: 44, fontSize: '1rem' }}
           />
         </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           Nickname (optional)
           <input
             type="text"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             placeholder="e.g. Maya"
-            style={{ minHeight: 44, fontSize: '1rem' }}
           />
         </label>
-        <button disabled={ageMonths === null} onClick={() => setStep('doors')}>
+        <button
+          className="button-primary"
+          disabled={ageMonths === null}
+          onClick={() => setStep('doors')}
+        >
           Continue
         </button>
       </div>
@@ -75,8 +80,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
   return (
     <div className="screen">
-      <h2>What brings you here?</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <h1>What brings you here?</h1>
+      <p style={{ color: 'var(--color-ink-muted)' }}>Either one is a good place to start.</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <button disabled={creating} onClick={() => void handleChooseBranch('my-world')}>
           I want activities for my child
         </button>

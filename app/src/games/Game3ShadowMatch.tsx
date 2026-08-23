@@ -58,6 +58,11 @@ type Phase =
 
 interface Game3ShadowMatchProps {
   profile: ChildProfile;
+  /** Same contract as Game1's onChildFacingChange: fires whenever the
+   * screen crosses into or out of a CHILD-FACING phase, so the shell can
+   * hide its own text chrome instead of leaving it visible during the
+   * zero-text phases this file already enforces internally. */
+  onChildFacingChange?: (isChildFacing: boolean) => void;
 }
 
 const GAME3_STYLES = `
@@ -143,7 +148,7 @@ function OptionButton({
   );
 }
 
-export function Game3ShadowMatch({ profile }: Game3ShadowMatchProps) {
+export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMatchProps) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [crops, setCrops] = useState<TaggedCrop[]>([]);
   const [level, setLevel] = useState<Game3Level>(1);
@@ -192,6 +197,13 @@ export function Game3ShadowMatch({ profile }: Game3ShadowMatchProps) {
     },
     [sessionId, profile],
   );
+
+  useEffect(() => {
+    onChildFacingChange?.(
+      phase === 'presenting' || phase === 'confirming' || phase === 'celebrating',
+    );
+    return () => onChildFacingChange?.(false);
+  }, [phase, onChildFacingChange]);
 
   useEffect(() => {
     void (async () => {
@@ -435,7 +447,7 @@ export function Game3ShadowMatch({ profile }: Game3ShadowMatchProps) {
           ))}
         </div>
         <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleCapturePress()}>
-          Take a photo of the room
+          Choose a photo of the room
         </button>
         <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleEndSession('caregiver')}>
           End session

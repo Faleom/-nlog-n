@@ -7,6 +7,13 @@
 // Step 3 (the real-world act-it-out) is where the learning happens -- the
 // screen is only the score (§8.2). Logs through the same F.010/F.011/F.013
 // engine as Game 1: support tier + fading + session lifecycle.
+//
+// Two audiences, one device (§8.0), same split as Game1.tsx: 'idle' /
+// 'modelling' / 'actItOut' / 'complete' / 'reportingSupport' are the
+// CAREGIVER's screen. 'ordering' -- the moment the child actually taps --
+// is the CHILD's screen and must be zero text (§7.7), which the crop
+// tiles below enforce the same way Game1's CropButton does: a photo or a
+// plain colour swatch, aria-label only, no visible caption.
 
 import { useEffect, useRef, useState } from 'react';
 import { adapters } from '../adapters/registry';
@@ -31,18 +38,85 @@ type Phase = 'idle' | 'modelling' | 'actItOut' | 'ordering' | 'complete' | 'repo
 
 interface Game2Props {
   profile: ChildProfile;
+  /** Same contract as Game1/Game3: fires whenever the screen crosses into
+   * or out of the CHILD-facing 'ordering' phase, so the shell can hide its
+   * own text chrome instead of leaving it visible during the zero-text
+   * phase this file enforces internally. */
+  onChildFacingChange?: (isChildFacing: boolean) => void;
 }
 
-export function Game2({ profile }: Game2Props) {
+/** Loose common-colour-word → CSS colour mapping for the swatch fallback
+ * shown when a crop has no `image`. Duplicated from Game1.tsx rather than
+ * shared -- each game owns how it renders a step (§12.2), and this is six
+ * lines, not a module. */
+function swatchColour(colour: string): string {
+  const known = new Set([
+    'red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'brown',
+    'black', 'white', 'grey', 'gray', 'gold', 'silver', 'teal', 'cyan',
+  ]);
+  return known.has(colour.toLowerCase()) ? colour.toLowerCase() : '#ccc';
+}
+
+/** One tile in the child-facing ordering strip. Zero text (§7.7) -- a
+ * photo if we have one, otherwise a colour swatch; aria-label carries the
+ * name for assistive tech only. `dead` means already placed correctly,
+ * `dimmed` means "not the correct next tap" after a second miss locks the
+ * UI to errorless mode -- both are visual-only, never a score or count. */
+function SequenceCropButton({
+  crop,
+  onTap,
+  dead,
+  dimmed,
+}: {
+  crop: TaggedCrop;
+  onTap: () => void;
+  dead: boolean;
+  dimmed: boolean;
+}) {
+  const classNames = ['g2-crop', dead && 'g2-crop--dead', dimmed && !dead && 'g2-crop--dimmed']
+    .filter(Boolean)
+    .join(' ');
+  return (
+    <button
+      type="button"
+      className={classNames}
+      aria-label={crop.name}
+      disabled={dead}
+      onClick={onTap}
+      style={{
+        minWidth: 88,
+        minHeight: 88,
+        borderRadius: 16,
+        border: 'none',
+        backgroundColor: swatchColour(crop.colour),
+        backgroundImage: crop.image ? `url(${crop.image})` : undefined,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    />
+  );
+}
+
+const GAME2_STYLES = `
+.g2-crop { transition: opacity 200ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); opacity: 1; }
+.g2-crop--dead { opacity: 0.35; }
+.g2-crop--dimmed { opacity: 0.55; }
+`;
+
+export function Game2({ profile, onChildFacingChange }: Game2Props) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [anchor, setAnchor] = useState<RoutineAnchor | null>(null);
   const [steps, setSteps] = useState<SequenceStep[]>([]);
   const [scrambled, setScrambled] = useState<TaggedCrop[]>([]);
-  const [placedNote, setPlacedNote] = useState<string | null>(null);
+  const [placedIds, setPlacedIds] = useState<Set<string>>(new Set());
   const [lockedToCorrect, setLockedToCorrect] = useState(false);
   const [modelPlaybacksLeft, setModelPlaybacksLeft] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<string[] | null>(null);
+  // Mirrors machineRef's currentSlotIndex in real state -- the ref itself
+  // must never be read during render (React refs aren't render inputs),
+  // so this is what the errorless-mode tile dimming below reads instead.
+  const [currentSlotIndex, setCurrentSlotIndex] = useState(0);
 
   const machineRef = useRef<SequencingMachine | null>(null);
   const wrongOnCurrentSlot = useRef(0);
@@ -50,6 +124,11 @@ export function Game2({ profile }: Game2Props) {
   useEffect(() => {
     void startSession(profile.id).then((s) => setSessionId(s.id));
   }, [profile.id]);
+
+  useEffect(() => {
+    onChildFacingChange?.(phase === 'ordering');
+    return () => onChildFacingChange?.(false);
+  }, [phase, onChildFacingChange]);
 
   async function startRound() {
     const anchors = getRoutineAnchors(profile);
@@ -95,8 +174,11 @@ export function Game2({ profile }: Game2Props) {
     wrongOnCurrentSlot.current = 0;
     setScrambled([...steps.map((s) => s.crop)].sort(() => Math.random() - 0.5));
     setLockedToCorrect(false);
-    setPlacedNote(null);
+    setPlacedIds(new Set());
+    setCurrentSlotIndex(0);
     setPhase('ordering');
+    // The instruction is audio, not on-screen text -- §8.0's "audio is the
+    // child's" applies here exactly like Game1's handoff line.
     void adapters.speechOut.say('Now you put them in order.');
   }
 
@@ -107,13 +189,15 @@ export function Game2({ profile }: Game2Props) {
     if (result.correct) {
       wrongOnCurrentSlot.current = 0;
       setLockedToCorrect(false);
-      setPlacedNote(`Placed: ${crop.name}`);
+      setPlacedIds((prev) => new Set(prev).add(crop.id));
+      setCurrentSlotIndex(machine.currentSlotIndex);
       if (result.complete) {
         void finishSequence();
       }
     } else {
       // Silent per §8.2 -- no sound, no colour flash, no mark. Only the
-      // lock state (second wrong -> correct-only) is surfaced.
+      // lock state (second wrong -> correct-only, shown as a dim rather
+      // than any text) is surfaced.
       setLockedToCorrect(result.onlyCorrectRemainsTappable);
     }
   }
@@ -145,8 +229,13 @@ export function Game2({ profile }: Game2Props) {
   if (phase === 'idle') {
     return (
       <div className="screen">
-        <h2>Game 2 — walking skeleton</h2>
-        <button onClick={() => void startRound()}>Start a routine (fixture)</button>
+        <h2>Toy Story Sequencing</h2>
+        <p style={{ color: 'var(--color-ink-muted)' }}>
+          A photo of the room, turned into a routine your child puts in order.
+        </p>
+        <button className="button-primary" onClick={() => void startRound()}>
+          Start a routine
+        </button>
       </div>
     );
   }
@@ -154,9 +243,12 @@ export function Game2({ profile }: Game2Props) {
   if (phase === 'modelling') {
     return (
       <div className="screen">
-        <p>Modelling "{anchor}" ({modelPlaybacksLeft} playback(s) left)</p>
-        <button style={{ minWidth: 88, minHeight: 88 }} onClick={playNextModel}>
-          Play
+        <h2 style={{ textTransform: 'capitalize' }}>{anchor}</h2>
+        <p style={{ color: 'var(--color-ink-muted)' }}>
+          {modelPlaybacksLeft} playback{modelPlaybacksLeft === 1 ? '' : 's'} left
+        </p>
+        <button className="button-primary" onClick={playNextModel}>
+          ▶ Play
         </button>
       </div>
     );
@@ -166,10 +258,10 @@ export function Game2({ profile }: Game2Props) {
     return (
       <div className="screen">
         <p>{actItOutLine(profile)}</p>
-        <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>
-          (off-screen — this is where the learning happens)
+        <p style={{ fontSize: '0.85rem', color: 'var(--color-ink-muted)' }}>
+          Off-screen — this is where the learning happens.
         </p>
-        <button style={{ minWidth: 88, minHeight: 88 }} onClick={proceedToOrdering}>
+        <button className="button-primary" onClick={proceedToOrdering}>
           They did it — now order it
         </button>
       </div>
@@ -177,24 +269,19 @@ export function Game2({ profile }: Game2Props) {
   }
 
   if (phase === 'ordering') {
+    const correctNextId = lockedToCorrect ? steps[currentSlotIndex]?.crop.id : undefined;
     return (
       <div className="screen">
-        <p>Now you put them in order.</p>
-        {placedNote && <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>{placedNote}</p>}
-        {lockedToCorrect && (
-          <p style={{ fontSize: '0.8rem', opacity: 0.6 }}>
-            (only the correct next one is tappable now — no penalty)
-          </p>
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <style>{GAME2_STYLES}</style>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {scrambled.map((crop) => (
-            <button
+            <SequenceCropButton
               key={crop.id}
-              style={{ minWidth: 88, minHeight: 88 }}
-              onClick={() => handleTap(crop)}
-            >
-              {crop.name}
-            </button>
+              crop={crop}
+              onTap={() => handleTap(crop)}
+              dead={placedIds.has(crop.id)}
+              dimmed={correctNextId !== undefined && crop.id !== correctNextId}
+            />
           ))}
         </div>
       </div>
@@ -204,9 +291,9 @@ export function Game2({ profile }: Game2Props) {
   if (phase === 'complete') {
     return (
       <div className="screen">
-        <p>🎉 That's your {anchor}!</p>
+        <h2>🎉 That's your {anchor}!</h2>
         {schedule && (
-          <div style={{ fontSize: '0.85rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.9rem' }}>
             {schedule.map((line, i) => (
               <p key={i}>{line}</p>
             ))}
@@ -223,7 +310,7 @@ export function Game2({ profile }: Game2Props) {
         {SUPPORT_TIERS.map((info) => (
           <button
             key={info.tier}
-            style={{ minWidth: 88, minHeight: 88, textAlign: 'left' }}
+            style={{ textAlign: 'left' }}
             onClick={() => void handleSupportTierReport(info.tier)}
           >
             {info.tier}. {info.name} — {info.instruction}

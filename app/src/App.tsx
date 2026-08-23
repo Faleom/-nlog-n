@@ -25,7 +25,9 @@
 // "Branch 2" affordance and Branch 2's own screens carry one back, with no
 // confirmation dialog anywhere in either direction.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { AppHeader } from './components/AppHeader';
+import { ScreenHeader } from './components/ScreenHeader';
 import { Onboarding } from './screens/Onboarding';
 import { ResponseProfileScreen } from './screens/ResponseProfile';
 import { CompanionCapture } from './screens/CompanionCapture';
@@ -60,6 +62,46 @@ type Screen =
   | { kind: 'branch2Milestones' }
   | { kind: 'branch2Card'; answers: ConcernAnswers; childAgeMonths: number }
   | { kind: 'branch2Ended' };
+
+// The two flow names shown in every screen-header eyebrow -- this, plus
+// the back button and (during first-time setup) the step count, is the
+// whole answer to "where am I / where am I headed."
+const SETUP_FLOW = 'Setting up your child’s profile';
+const MY_WORLD_FLOW = 'My World';
+const WORRY_FLOW = 'Thinking about development';
+
+// Wraps a game so its own child-facing state lives right next to the
+// header it controls, instead of a piece of App-level state that would
+// need an effect to reset between screens. Since the caller always
+// renders this under a div keyed on screen.kind, it remounts -- and its
+// useState(false) starts fresh -- on every navigation, for free.
+function GameChrome({
+  eyebrow,
+  onBack,
+  children,
+}: {
+  eyebrow: string;
+  onBack: () => void;
+  children: (onChildFacingChange: (isChildFacing: boolean) => void) => ReactNode;
+}) {
+  const [childFacing, setChildFacing] = useState(false);
+  return (
+    <>
+      {/* §8.0/UI-STANDARDS "zero text in the child's view": this chrome
+          must not render at all while the phone is in the child's hands,
+          not just fade or sit behind something. AppHeader is wired into
+          the exact same condition as ScreenHeader, not a second parallel
+          visibility system. */}
+      {!childFacing && (
+        <>
+          <AppHeader />
+          <ScreenHeader eyebrow={eyebrow} onBack={onBack} backLabel="Activities" />
+        </>
+      )}
+      {children(setChildFacing)}
+    </>
+  );
+}
 
 function App() {
   const [profile, setProfile] = useState<ChildProfile | null>(null);
@@ -97,6 +139,7 @@ function App() {
   if (screen.kind === 'loading') {
     return (
       <div className="app">
+        <AppHeader />
         <p>Loading…</p>
       </div>
     );
@@ -105,6 +148,7 @@ function App() {
   if (screen.kind === 'onboarding') {
     return (
       <div className="app">
+        <AppHeader />
         <Onboarding
           onComplete={(newProfile, branch) => {
             setProfile(newProfile);
@@ -126,6 +170,7 @@ function App() {
   if (!profile) {
     return (
       <div className="app">
+        <AppHeader />
         <p>Something went wrong loading the profile. Reload the page.</p>
       </div>
     );
@@ -133,7 +178,14 @@ function App() {
 
   if (screen.kind === 'responseProfile') {
     return (
-      <div className="app">
+      <div className="app" key={screen.kind}>
+        <AppHeader />
+        <ScreenHeader
+          eyebrow={screen.returnToHome ? MY_WORLD_FLOW : SETUP_FLOW}
+          step={screen.returnToHome ? undefined : { current: 1, total: 4 }}
+          onBack={screen.returnToHome ? goToBranch1Home : undefined}
+          backLabel="Activities"
+        />
         <ResponseProfileScreen
           profile={profile}
           onComplete={(next) => {
@@ -154,7 +206,14 @@ function App() {
       ? { kind: 'branch1Home' as const }
       : { kind: 'quickPreferences' as const, returnToHome: false };
     return (
-      <div className="app">
+      <div className="app" key={screen.kind}>
+        <AppHeader />
+        <ScreenHeader
+          eyebrow={screen.returnToHome ? MY_WORLD_FLOW : SETUP_FLOW}
+          step={screen.returnToHome ? undefined : { current: 2, total: 4 }}
+          onBack={screen.returnToHome ? goToBranch1Home : undefined}
+          backLabel="Activities"
+        />
         <CompanionCapture
           profile={profile}
           onComplete={(updated) => {
@@ -169,7 +228,14 @@ function App() {
 
   if (screen.kind === 'quickPreferences') {
     return (
-      <div className="app">
+      <div className="app" key={screen.kind}>
+        <AppHeader />
+        <ScreenHeader
+          eyebrow={screen.returnToHome ? MY_WORLD_FLOW : SETUP_FLOW}
+          step={screen.returnToHome ? undefined : { current: 3, total: 4 }}
+          onBack={screen.returnToHome ? goToBranch1Home : undefined}
+          backLabel="Activities"
+        />
         <QuickPreferencesScreen
           profile={profile}
           onComplete={(updated) => {
@@ -187,7 +253,14 @@ function App() {
 
   if (screen.kind === 'avoidList') {
     return (
-      <div className="app">
+      <div className="app" key={screen.kind}>
+        <AppHeader />
+        <ScreenHeader
+          eyebrow={screen.returnToHome ? MY_WORLD_FLOW : SETUP_FLOW}
+          step={screen.returnToHome ? undefined : { current: 4, total: 4 }}
+          onBack={screen.returnToHome ? goToBranch1Home : undefined}
+          backLabel="Activities"
+        />
         <AvoidListScreen
           profile={profile}
           onComplete={(updated) => {
@@ -201,35 +274,45 @@ function App() {
 
   if (screen.kind === 'game1') {
     return (
-      <div className="app">
-        <button onClick={goToBranch1Home}>← Back</button>
-        <Game1 profile={profile} />
+      <div className="app" key={screen.kind}>
+        <GameChrome eyebrow={`${MY_WORLD_FLOW} · Find It In Your World`} onBack={goToBranch1Home}>
+          {(onChildFacingChange) => (
+            <Game1 profile={profile} onChildFacingChange={onChildFacingChange} />
+          )}
+        </GameChrome>
       </div>
     );
   }
 
   if (screen.kind === 'game2') {
     return (
-      <div className="app">
-        <button onClick={goToBranch1Home}>← Back</button>
-        <Game2 profile={profile} />
+      <div className="app" key={screen.kind}>
+        <GameChrome eyebrow={`${MY_WORLD_FLOW} · Toy Story Sequencing`} onBack={goToBranch1Home}>
+          {(onChildFacingChange) => (
+            <Game2 profile={profile} onChildFacingChange={onChildFacingChange} />
+          )}
+        </GameChrome>
       </div>
     );
   }
 
   if (screen.kind === 'game3') {
     return (
-      <div className="app">
-        <button onClick={goToBranch1Home}>← Back</button>
-        <Game3ShadowMatch profile={profile} />
+      <div className="app" key={screen.kind}>
+        <GameChrome eyebrow={`${MY_WORLD_FLOW} · Shadow Match`} onBack={goToBranch1Home}>
+          {(onChildFacingChange) => (
+            <Game3ShadowMatch profile={profile} onChildFacingChange={onChildFacingChange} />
+          )}
+        </GameChrome>
       </div>
     );
   }
 
   if (screen.kind === 'dashboard') {
     return (
-      <div className="app">
-        <button onClick={goToBranch1Home}>← Back</button>
+      <div className="app" key={screen.kind}>
+        <AppHeader />
+        <ScreenHeader eyebrow={`${MY_WORLD_FLOW} · Caregiver dashboard`} onBack={goToBranch1Home} backLabel="Activities" />
         <CaregiverDashboard profile={profile} />
       </div>
     );
@@ -237,8 +320,9 @@ function App() {
 
   if (screen.kind === 'branch2Milestones') {
     return (
-      <div className="app">
-        <button onClick={goToBranch1Home}>← Back to activities</button>
+      <div className="app" key={screen.kind}>
+        <AppHeader />
+        <ScreenHeader eyebrow={WORRY_FLOW} onBack={goToBranch1Home} backLabel="Activities" />
         <Branch2Milestones
           childAgeMonths={profile.ageMonths}
           onDone={(result: Branch2FlowResult) => {
@@ -261,7 +345,9 @@ function App() {
 
   if (screen.kind === 'branch2Card') {
     return (
-      <div className="app">
+      <div className="app" key={screen.kind}>
+        <AppHeader />
+        <ScreenHeader eyebrow={`${WORRY_FLOW} · Your question`} />
         <Branch2Card
           answers={screen.answers}
           childAgeMonths={screen.childAgeMonths}
@@ -279,59 +365,95 @@ function App() {
 
   // branch1Home
   return (
-    <div className="app">
-      <header>
+    <div className="app" key={screen.kind}>
+      <AppHeader />
+      <ScreenHeader eyebrow={`${MY_WORLD_FLOW} · Home`} />
+      <header className="home-greeting">
         <h1>{profile.nickname ?? 'Your child'}'s activities</h1>
+        <p>Everything built from your child's own room and toys.</p>
       </header>
       <main>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => setScreen({ kind: 'game1' })}>
-            Play — Find It In Your World
-          </button>
-          <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => setScreen({ kind: 'game2' })}>
-            Play — Toy Story Sequencing
-          </button>
-          <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => setScreen({ kind: 'game3' })}>
-            Play — Shadow Match
-          </button>
-          <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => setScreen({ kind: 'dashboard' })}>
+        <div className="screen">
+          <div className="home-section">
+            <p className="home-section-label">Play</p>
+            <div className="home-play-grid">
+              <button
+                className="button-primary home-play-button"
+                onClick={() => setScreen({ kind: 'game1' })}
+              >
+                <span className="home-play-icon" aria-hidden="true">
+                  🔍
+                </span>
+                Find It In Your World
+              </button>
+              <button
+                className="button-primary home-play-button"
+                onClick={() => setScreen({ kind: 'game2' })}
+              >
+                <span className="home-play-icon" aria-hidden="true">
+                  🧸
+                </span>
+                Toy Story Sequencing
+              </button>
+              <button
+                className="button-primary home-play-button"
+                onClick={() => setScreen({ kind: 'game3' })}
+              >
+                <span className="home-play-icon" aria-hidden="true">
+                  🌓
+                </span>
+                Shadow Match
+              </button>
+            </div>
+          </div>
+
+          <button className="home-play-button" onClick={() => setScreen({ kind: 'dashboard' })}>
+            <span className="home-play-icon" aria-hidden="true">
+              📋
+            </span>
             Caregiver dashboard
           </button>
 
-          <hr />
+          <div className="home-section">
+            <p className="home-section-label">Set up</p>
+            <div className="home-edit-grid">
+              <button
+                className="home-edit-button"
+                onClick={() => setScreen({ kind: 'responseProfile', returnToHome: true })}
+              >
+                How {profile.nickname ?? 'they'} do best
+              </button>
+              <button
+                className="home-edit-button"
+                onClick={() => setScreen({ kind: 'companionCapture', returnToHome: true })}
+              >
+                Companion
+              </button>
+              <button
+                className="home-edit-button"
+                onClick={() => setScreen({ kind: 'quickPreferences', returnToHome: true })}
+              >
+                Favourites
+              </button>
+              <button
+                className="home-edit-button"
+                onClick={() => setScreen({ kind: 'avoidList', returnToHome: true })}
+              >
+                Things to avoid
+              </button>
+            </div>
+          </div>
 
-          <button
-            style={{ minWidth: 88, minHeight: 88 }}
-            onClick={() => setScreen({ kind: 'responseProfile', returnToHome: true })}
-          >
-            Edit: how {profile.nickname ?? 'they'} do best
-          </button>
-          <button
-            style={{ minWidth: 88, minHeight: 88 }}
-            onClick={() => setScreen({ kind: 'companionCapture', returnToHome: true })}
-          >
-            Edit: Companion
-          </button>
-          <button
-            style={{ minWidth: 88, minHeight: 88 }}
-            onClick={() => setScreen({ kind: 'quickPreferences', returnToHome: true })}
-          >
-            Edit: favourites
-          </button>
-          <button
-            style={{ minWidth: 88, minHeight: 88 }}
-            onClick={() => setScreen({ kind: 'avoidList', returnToHome: true })}
-          >
-            Edit: things to avoid
-          </button>
-
-          <hr />
+          <hr className="home-divider" />
 
           {/* §2's core rule: switching branches is unconditional, no
               confirmation, available from anywhere in Branch 1. */}
-          <button style={{ minWidth: 88, minHeight: 88 }} onClick={goToBranch2}>
-            I've been thinking about my child's development
-          </button>
+          <div className="home-card">
+            <p>Noticed something about how your child is developing?</p>
+            <button className="button-accent" onClick={goToBranch2}>
+              I've been thinking about my child's development
+            </button>
+          </div>
 
           {/* F.020: the same neutral prompt, identical regardless of
               activity history -- available here, not tied to any specific
