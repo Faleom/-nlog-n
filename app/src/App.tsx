@@ -193,11 +193,22 @@ function App() {
   // at all, so the confirmation grid's faded/dead crops (§7.7 — wrong tap
   // is silence, never a distinct sound) and the "Coming soon" tile stay
   // silent for free, not via special-casing here.
+  //
+  // `favSound` personalises the tone's pitch/timbre to whichever favourite
+  // sound QuickPreferences captured (profile.context.quickPreferences);
+  // undefined for a profile that hasn't done that screen yet, or has no
+  // profile at all, in which case webClickSound.ts falls back to the
+  // original default click. `quiet` is computed the same way it always
+  // was, first and independently of favSound, since the calm accommodation
+  // must win regardless of which tone would otherwise play.
   useEffect(() => {
     function handleClick(event: MouseEvent) {
       if (!(event.target instanceof Element)) return;
       if (!event.target.closest('button')) return;
-      adapters.sound.playClick({ quiet: profile?.responseProfile.soundMovement === 'calm' });
+      adapters.sound.playClick({
+        quiet: profile?.responseProfile.soundMovement === 'calm',
+        favSound: profile?.context.quickPreferences?.favSound,
+      });
     }
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
