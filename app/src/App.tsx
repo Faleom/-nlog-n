@@ -46,6 +46,8 @@ import { Game1 } from './games/Game1';
 import { Game2 } from './games/Game2';
 import { Game3ShadowMatch } from './games/Game3ShadowMatch';
 import { TraceAndColour } from './games/TraceAndColour';
+import { BlockStackMatch } from './games/BlockStackMatch';
+import { SortByRule } from './games/SortByRule';
 import { adapters } from './adapters/registry';
 import { clearActiveProfile, getActiveProfile } from './engine/profileStore';
 import { installAvoidFilter } from './engine/avoidFilter';
@@ -67,6 +69,8 @@ type Screen =
   | { kind: 'game2' }
   | { kind: 'game3' }
   | { kind: 'trace' }
+  | { kind: 'blockStack' }
+  | { kind: 'sortByRule' }
   | { kind: 'branch2Milestones' }
   | { kind: 'branch2Card'; answers: ConcernAnswers; childAgeMonths: number }
   | { kind: 'branch2Ended' };
@@ -82,6 +86,10 @@ const SETUP_FLOW = 'Setting up your child’s profile';
 // the only thing about it the caregiver still needs told.
 const SETUP_TAB_FLOW = 'Setup';
 const WORRY_FLOW = 'Thinking about development';
+// Block-stack match and Sort by rule's own flow name, distinct from "My
+// World" -- taken directly from the source branch's own naming for this
+// pair (`const LOGIC_FLOW = 'Looking and Sorting';`).
+const LOGIC_FLOW = 'Looking and Sorting';
 
 // The four places Branch 1 home is split into. This started as two (Play +
 // a single "Family" tab) and "Family" immediately became the dense dashboard
@@ -511,6 +519,30 @@ function App() {
     );
   }
 
+  if (screen.kind === 'blockStack') {
+    return (
+      <div className="app" key={screen.kind}>
+        <GameChrome eyebrow={`${LOGIC_FLOW} · Block-stack match`} onBack={goToBranch1Home}>
+          {(onChildFacingChange) => (
+            <BlockStackMatch profile={profile} onChildFacingChange={onChildFacingChange} />
+          )}
+        </GameChrome>
+      </div>
+    );
+  }
+
+  if (screen.kind === 'sortByRule') {
+    return (
+      <div className="app" key={screen.kind}>
+        <GameChrome eyebrow={`${LOGIC_FLOW} · Sort by rule`} onBack={goToBranch1Home}>
+          {(onChildFacingChange) => (
+            <SortByRule profile={profile} onChildFacingChange={onChildFacingChange} />
+          )}
+        </GameChrome>
+      </div>
+    );
+  }
+
   if (screen.kind === 'branch2Milestones') {
     return (
       <div className="app" key={screen.kind}>
@@ -718,6 +750,57 @@ function App() {
                   </span>
                 </span>
                 <span className="game-tile-title">Trace and Colour</span>
+              </button>
+
+              <button
+                className="game-tile game-tile--blockstack"
+                onClick={() => setScreen({ kind: 'blockStack' })}
+              >
+                <span className="game-tile-scene">
+                  <span className="game-tile-art" aria-hidden="true">
+                    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
+                      {/* two towers mid-build: the target on the left already
+                          three blocks tall, the child's on the right one
+                          block shy -- the same gap the game itself opens
+                          every round with */}
+                      <path d="M0 78 H160" stroke="currentColor" strokeOpacity="0.16" strokeWidth="2" />
+                      <rect x="34" y="58" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeOpacity="0.4" strokeWidth="2" />
+                      <rect x="34" y="36" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.26" stroke="currentColor" strokeOpacity="0.46" strokeWidth="2" />
+                      <rect x="34" y="14" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.32" stroke="currentColor" strokeOpacity="0.52" strokeWidth="2" />
+                      <rect x="100" y="58" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeOpacity="0.4" strokeWidth="2" />
+                      <rect x="100" y="36" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.26" stroke="currentColor" strokeOpacity="0.46" strokeWidth="2" />
+                    </svg>
+                  </span>
+                  <span className="game-tile-icon" aria-hidden="true">
+                    🧱
+                  </span>
+                </span>
+                <span className="game-tile-title">Block-stack match</span>
+              </button>
+
+              <button
+                className="game-tile game-tile--sortbyrule"
+                onClick={() => setScreen({ kind: 'sortByRule' })}
+              >
+                <span className="game-tile-scene">
+                  <span className="game-tile-art" aria-hidden="true">
+                    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
+                      {/* two baskets, one shape already resting in each --
+                          the rule, shown -- with the loose shapes still in
+                          the tray between them */}
+                      <path d="M10 52 L34 52 L30 78 L10 78 Z" stroke="currentColor" strokeOpacity="0.42" strokeWidth="2" strokeLinejoin="round" />
+                      <circle cx="22" cy="45" r="8" fill="currentColor" fillOpacity="0.3" />
+                      <path d="M126 52 L150 52 L146 78 L126 78 Z" stroke="currentColor" strokeOpacity="0.42" strokeWidth="2" strokeLinejoin="round" />
+                      <rect x="130" y="38" width="14" height="14" rx="3" fill="currentColor" fillOpacity="0.3" />
+                      <polygon points="70,26 82,48 58,48" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" strokeLinejoin="round" />
+                      <circle cx="98" cy="38" r="9" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" />
+                    </svg>
+                  </span>
+                  <span className="game-tile-icon" aria-hidden="true">
+                    🧺
+                  </span>
+                </span>
+                <span className="game-tile-title">Sort by rule</span>
               </button>
             </div>
           </div>

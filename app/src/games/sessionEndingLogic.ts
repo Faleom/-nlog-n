@@ -48,6 +48,8 @@ const NOUNS: Record<TrackId, { one: string; many: string; verb: string }> = {
   story: { one: 'story', many: 'stories', verb: 'put in order' },
   match: { one: 'picture', many: 'pictures', verb: 'matched' },
   trace: { one: 'shape', many: 'shapes', verb: 'traced and coloured' },
+  'block-stack': { one: 'tower', many: 'towers', verb: 'matched' },
+  'sort-by-rule': { one: 'round', many: 'rounds', verb: 'sorted' },
 };
 
 /**

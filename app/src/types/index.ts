@@ -180,7 +180,7 @@ export interface SkillRecord {
  * logs written before the field existed have no way to know -- see
  * dashboardSummary.ts, which leaves those sessions out of the by-track
  * breakdown rather than guessing a track for them. */
-export type TrackId = 'find-it' | 'story' | 'match' | 'trace';
+export type TrackId = 'find-it' | 'story' | 'match' | 'trace' | 'block-stack' | 'sort-by-rule';
 
 export interface SessionLog {
   id: string;

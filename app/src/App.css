@@ -2059,6 +2059,38 @@ textarea::placeholder {
   color: var(--color-accent);
 }
 
+/* Block-stack match — Periwink, the same hue the header comment above
+   already calls out for "the blocks" (Toy Story Sequencing's tile), but
+   composed as two glows rising under two towers instead of Toy Story's
+   single centred rise, so the pair still reads as different places at a
+   glance, the same way the two Ember tiles below it do. */
+.game-tile--blockstack .game-tile-scene {
+  background:
+    radial-gradient(circle 58px at 30% 100%, rgba(139, 123, 255, 0.32), transparent 72%),
+    radial-gradient(circle 58px at 76% 100%, rgba(139, 123, 255, 0.2), transparent 72%),
+    linear-gradient(180deg, rgba(139, 123, 255, 0.04), rgba(139, 123, 255, 0.12));
+}
+
+.game-tile--blockstack .game-tile-art {
+  color: var(--color-primary-bright);
+}
+
+/* Sort by rule — Moonmilk, the same hue Match the Picture's moonlight
+   uses, but scattered as a handful of small shape-glows instead of one
+   corner glow and one long shadow, so the two Moonmilk tiles still read
+   as different places at a glance. */
+.game-tile--sortbyrule .game-tile-scene {
+  background:
+    radial-gradient(circle 28px at 20% 22%, rgba(244, 239, 232, 0.22), transparent 75%),
+    radial-gradient(circle 20px at 58% 14%, rgba(244, 239, 232, 0.16), transparent 75%),
+    radial-gradient(circle 24px at 82% 30%, rgba(244, 239, 232, 0.18), transparent 75%),
+    linear-gradient(190deg, rgba(167, 156, 181, 0.14), rgba(14, 12, 19, 0.4));
+}
+
+.game-tile--sortbyrule .game-tile-art {
+  color: var(--color-ink);
+}
+
 /* The fourth box is a placeholder and must read as one at a glance: hatched
    fill, dashed rim, no glass shadow, muted ink, centred. It has no onClick,
    is genuinely `disabled`, and every press/transition affordance the base

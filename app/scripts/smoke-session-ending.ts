@@ -52,6 +52,8 @@ async function main() {
       story: '5 stories put in order!',
       match: '5 pictures matched!',
       trace: '5 shapes traced and coloured!',
+      'block-stack': '5 towers matched!',
+      'sort-by-rule': '5 rounds sorted!',
     };
     for (const [track, headline] of Object.entries(expected)) {
       assert.equal(describeAchievement(five, track as TrackId).headline, headline);
