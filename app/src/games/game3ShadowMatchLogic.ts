@@ -35,6 +35,28 @@ export function sampleKindForLevel(level: Game3Level): SampleKind {
   }
 }
 
+/**
+ * What the caregiver is choosing between, in one line.
+ *
+ * The level buttons used to be bare numbers, which told a caregiver nothing
+ * — including that the silhouette game lives at 3. Describing the SAMPLE
+ * (rather than the whole round) keeps each line true whichever source is in
+ * play, since only Level 4's fetch step differs between a room photo and a
+ * library picture.
+ */
+export function levelDescription(level: Game3Level): string {
+  switch (sampleKindForLevel(level)) {
+    case 'identical':
+      return 'Shows the picture as it is — find its twin.';
+    case 'altered':
+      return 'Shows the same thing, lit and angled differently.';
+    case 'silhouette':
+      return 'Shows the shape only, in black.';
+    case 'silhouette-fetch':
+      return 'Shape only — with a room photo, they go and fetch the real thing.';
+  }
+}
+
 /** Level 4 hands directly into Game 1's loop (§8.3) — same skill, a
  * different distance. Game3ShadowMatch.tsx checks this to switch from
  * "pick the matching photo from a small options grid" to "leave the
