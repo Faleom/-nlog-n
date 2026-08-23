@@ -203,6 +203,20 @@ function App() {
     return () => document.removeEventListener('click', handleClick);
   }, [profile]);
 
+  // Accent-by-favColour (see App.css's "Accent-by-favColour" block right
+  // after :root). The child's chosen favourite colour from QuickPreferences
+  // lives on profile.context.quickPreferences.favColour; mirroring it onto
+  // <html data-accent="..."> lets every var(--color-primary*) consumer in
+  // the app pick it up with no prop drilling. No profile, or a profile
+  // saved before this field existed, both fall through to 'purple' --
+  // which is also the :root default, so that is a no-op, not a real
+  // override. An unrecognised value (should not happen -- QuickPreferences
+  // only offers the seven COLOURS chips) simply matches no CSS rule and
+  // also falls through to the same default.
+  useEffect(() => {
+    document.documentElement.dataset.accent = profile?.context.quickPreferences?.favColour ?? 'purple';
+  }, [profile]);
+
   // Two-tap confirm for "Log out". Not a modal system -- one boolean and a
   // swapped-in row of buttons, which is all a single destructive-ish action
   // on a local-only app needs.
