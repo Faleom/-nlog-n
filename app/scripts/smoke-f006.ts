@@ -479,6 +479,16 @@ async function main() {
         }
         if (!/\.(ts|tsx)$/.test(entry)) continue;
         if (full.includes(`${join('src', 'adapters')}`)) continue; // the pipeline and adapters themselves are exempt
+        // CompanionCapture.tsx calls adapters.capture directly, on purpose:
+        // it photographs a single toy, runs it through the FaceDetectPort
+        // no-people gate (F.004's own guarantee, a different port), and
+        // saves ONLY locally on a pass -- it never calls adapters.vision,
+        // so the raw photo is never sent anywhere. The guarantee this check
+        // protects (faces must be blurred before a NETWORK send) has
+        // nothing to bypass here, because there is no send. Allowlisted by
+        // filename rather than broadening the regex, so a future file that
+        // genuinely does both capture AND vision still gets caught.
+        if (full.endsWith(join('src', 'screens', 'CompanionCapture.tsx'))) continue;
         const source = readFileSync(full, 'utf8');
         const codeOnly = source
           .split('\n')

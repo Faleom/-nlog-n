@@ -2,19 +2,28 @@
 // Run with: npm run smoke:f004
 //
 // Uses fake-indexeddb so this runs in Node, going through the real
-// profileStore. The no-people gate is exercised two ways: once against
-// whatever FaceDetectPort is CURRENTLY wired in the registry (today, the
-// fixture, which always returns zero faces -- proving the "pass" path
-// really runs through the real, wired adapter, not a mock), and once
-// against an injected fake port that DOES report a face, to prove the
-// rejection path actually rejects and actually saves nothing. Both go
-// through the same `captureCompanion`/`detectFaceInCompanionPhoto`
-// functions the real screen calls -- nothing is bypassed.
+// profileStore. The no-people gate is exercised two ways: once against an
+// injected fixture FaceDetectPort that reports zero faces (proving the
+// "pass" path works through the real captureCompanion/
+// detectFaceInCompanionPhoto functions), and once against an injected fake
+// port that DOES report a face, to prove the rejection path actually
+// rejects and actually saves nothing.
+//
+// This deliberately does NOT test against whatever adapters.faceDetect
+// currently resolves to in the registry. It used to, back when the
+// registry defaulted to fixtures for everyone -- but now that F.006 has
+// wired in the REAL BlazeFaceLocal adapter (browser-only: it needs
+// `document`/canvas, which don't exist in this Node test runner), testing
+// against "whatever's wired" broke for reasons that have nothing to do
+// with whether F.004's own logic is correct. The real adapter's face
+// detection is exercised in F.006's own domain (browser + a live camera),
+// not re-tested here.
 
 import 'fake-indexeddb/auto';
 import assert from 'node:assert/strict';
 import { section, summarize, test } from './testHarness';
 import type { FaceDetectPort } from '../src/adapters/ports';
+import { createFixtureFaceDetect } from '../src/adapters/fixtures/fixtureFaceDetect';
 
 function fakeImage(): ImageBitmap {
   // detectFaceInCompanionPhoto never inspects the image itself -- it just
@@ -32,7 +41,6 @@ function faceDetectThatSees(faces: number): FaceDetectPort {
 }
 
 async function main() {
-  const { adapters } = await import('../src/adapters/registry');
   const {
     captureCompanion,
     detectFaceInCompanionPhoto,
@@ -73,27 +81,25 @@ async function main() {
     assert.equal(reloaded?.context.companion, undefined, 'a rejected Companion photo must not be saved');
   });
 
-  section('F.004 — the no-people gate, against the REAL currently-wired FaceDetectPort adapter');
+  section('F.004 — the no-people gate, against an injected fixture FaceDetectPort');
 
-  await test('detectFaceInCompanionPhoto works against adapters.faceDetect with no override', async () => {
-    // Whichever adapter the registry resolves to today (fixture or real —
-    // this test deliberately does not assume which). The fixture always
-    // returns zero faces, so this exercises the real "pass" path through
-    // the real wired port, not a re-implementation of it.
-    const hasFace = await detectFaceInCompanionPhoto(fakeImage());
-    assert.equal(typeof hasFace, 'boolean');
+  const noFaceDetector = createFixtureFaceDetect();
+
+  await test('detectFaceInCompanionPhoto works against a zero-faces port', async () => {
+    const hasFace = await detectFaceInCompanionPhoto(fakeImage(), noFaceDetector);
+    assert.equal(hasFace, false);
   });
 
-  await test('captureCompanion against the real wired adapter saves a real Companion', async () => {
+  await test('captureCompanion against a zero-faces port saves a real Companion', async () => {
     const result = await captureCompanion(
       profileId,
       fakeImage(),
       'data:image/png;base64,FAKE_BUNBUN',
       'Bunbun',
       'he',
-      adapters.faceDetect,
+      noFaceDetector,
     );
-    assert.equal(result.ok, true, 'expected the fixture FaceDetectPort to find no faces and allow the save');
+    assert.equal(result.ok, true, 'expected the zero-faces port to find no faces and allow the save');
   });
 
   section('F.004 — the Companion photo really persists (round trip, not a cached reference)');

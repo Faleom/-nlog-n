@@ -199,6 +199,7 @@ async function main() {
     // of "within one attempt at one skill", never a cross-session concern
     'scripts/smoke-f022.ts', // F.022's own test, names that counter in prose
     'scripts/smoke-f019.ts', // F.019's own test, asserts the ABSENCE of "streak" etc. in the dashboard
+    'scripts/smoke-f008.ts', // F.008's own test, asserts the ABSENCE of "counter" etc. in Game1.tsx
   ]);
 
   await test('no counter/streak/threshold/tally construct exists outside the allowlist', () => {

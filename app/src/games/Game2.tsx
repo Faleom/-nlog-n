@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { adapters } from '../adapters/registry';
+import { captureRoomAndRecognize } from '../adapters/pipeline/myWorldPipeline';
 import {
   ROUTINE_ANCHOR_OPTIONS,
   buildSequence,
@@ -53,10 +54,18 @@ export function Game2({ profile }: Game2Props) {
   async function startRound() {
     const anchors = getRoutineAnchors(profile);
     const chosen = anchors[0] ?? ROUTINE_ANCHOR_OPTIONS[0];
-    const objects = await adapters.vision.recognizeObjects(
-      await adapters.capture.capturePhoto(),
-    );
-    const built = buildSequence(chosen, objects.slice(0, 3));
+    // Routed through the F.006 pipeline, never the raw adapters directly --
+    // this is what actually enforces "faces are blurred before anything is
+    // sent", not just a convention. See myWorldPipeline.ts's header and
+    // scripts/smoke-f006.ts's static check, which fixed exactly this
+    // shortcut when it was first written directly against adapters.vision.
+    const outcome = await captureRoomAndRecognize();
+    if (outcome.kind !== 'success') {
+      // §11: capture-unavailable / blur-failed / no-objects-found all
+      // degrade quietly here too -- no error screen, same as Game 1.
+      return;
+    }
+    const built = buildSequence(chosen, outcome.crops.slice(0, 3));
     if (built.length < 2) {
       // Not enough real crops for this anchor this session -- same
       // no-objects-found degrade pattern as F.006, not an error screen.
