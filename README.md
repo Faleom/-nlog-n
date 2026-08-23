@@ -38,9 +38,9 @@ assignment; it is **not a live status** — check
 All three games shipped. Branch 2's video/submission (Person 3's last item)
 has not — that's a human task, not a coding one, and remains open.
 
-Each person's full original brief — dependencies, build order, review
-responsibilities — is in [`plan/assignments/`](plan/assignments/), useful for
-the reasoning behind the split even though the work itself is now done.
+The per-person assignment briefs this table summarizes have been removed —
+the work they described is done, and the four-person split no longer
+reflects how this project is worked on.
 
 ## Where to start
 

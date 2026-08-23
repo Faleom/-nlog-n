@@ -11,22 +11,28 @@ moved since.
 ## What this is
 
 A photo-based early-learning app for pre-verbal preschoolers (autistic, ADHD,
-or undiagnosed), built for Melbourne Hack 2026. Full product spec:
-`app-guide-v3-FINAL.md`. Build plan: `plan/`. **The app itself is real,
-mostly built, and mostly working** — this is not a planning-stage repo.
+or undiagnosed), built for Melbourne Hack 2026. Product name: **"Hello
+World"** (settled in Session 3 below — was an open decision before that).
+Full product spec: `app-guide-v3-FINAL.md`. Build plan: `plan/`. **The app
+itself is real, built, wired, and verified by every automated check this
+repo has** — this is not a planning-stage repo.
 
 ---
 
 ## The one-paragraph version
 
-19 of 22 planned feature files are implemented, automatically tested, and
-merged into `main`. The whole thing is wired together into one real,
-click-through app (`app/src/App.tsx`) — onboarding, both branches, all three
-games, the dashboard. `tsc`, `oxlint`, all 22 automated test suites, and the
-production build are clean as of the last commit. **What has NOT happened:
-nobody has watched a human click through it start to finish and confirmed it
-actually works as a product, no real device testing, and it isn't deployed
-anywhere.** That's the actual next work, not more building.
+19 of 22 planned feature files are implemented and automatically tested.
+Session 3 (below) went further than "implemented": it found and fixed
+several features that were built and tested in isolation but never actually
+connected to a real screen (sensory-accommodation toggles, a skill-lookup
+table, session focus-stretch measurement), then did a full visual redesign
+on top. The whole thing is one real, click-through app
+(`app/src/App.tsx`) — onboarding, both branches, all three games, the
+dashboard. `tsc`, `oxlint`, every automated test suite, and the production
+build are clean as of the last commit. **What has still NOT happened:**
+nobody has watched a human click through it start to finish on a real
+device, and it isn't deployed anywhere. That's the actual next work, not
+more building.
 
 ---
 
@@ -35,15 +41,14 @@ anywhere.** That's the actual next work, not more building.
 This was built solo, overnight, by one Claude Code session working as
 "Person 1" and directing three parallel background agents as Persons 2, 3,
 and 4 (via the `Agent` tool, each in an isolated git worktree, merged back
-into `main` one at a time with full validation after every merge). The
-`plan/assignments/PERSON-N.md` files describe the *original* per-person
-briefs — useful for understanding the reasoning behind the split, but they
-describe what each person was asked to build, not a live status. **This
-file, and the Status column in `plan/overview/F.000-INDEX.md`, are the
-current truth.** The person briefs are historical.
+into `main` one at a time with full validation after every merge). That
+four-person framing is now retired — see "Who's actually working on this,
+now" below — but the code it produced is still the foundation everything
+else in this file sits on.
 
-Two real, non-trivial bugs were caught and fixed during integration — not
-hypothetical risks, actual things that would have shipped broken:
+Two real, non-trivial bugs were caught and fixed during that original
+integration — not hypothetical risks, actual things that would have shipped
+broken:
 - A game screen was sending a camera capture straight to object recognition
   with no face-blur step, bypassing the single most safety-critical
   guarantee in the app. Caught by an automated repo-wide check, fixed for
@@ -57,87 +62,164 @@ Both are recorded in detail in the git log if you want the full reasoning
 
 ---
 
+## Who's actually working on this, now
+
+Not a four-person hackathon team anymore. Two people:
+- **The product owner** (you, if you're reading this as a fresh session
+  picking the work back up) — drives every UI/product decision, runs this
+  repo via a series of Claude Code sessions.
+- **A friend**, working independently on their own machine, on their own
+  git branches. Confirmed active as of Session 3: a remote branch called
+  **`game3-match-and-draw`** exists on GitHub and is being pushed to right
+  now. This is very likely connected to a stated plan to add three more
+  games.
+
+**The established workflow for merging their work in** (used once already,
+for the original Game 1 branch, and explicitly requested again for
+whatever comes off `game3-match-and-draw` or future branches): fetch it
+locally, merge it into a real local branch (never blindly auto-merge),
+read both sides of any conflict carefully — a conflict is often two people
+having independently built the same or complementary thing, not an actual
+incompatibility — resolve by combining intent, run the full verification
+suite, and **wait for the product owner's explicit approval before pushing
+anything back to `origin/main`.** Do not push to `main` without that
+approval having been given for that specific push.
+
+**`app/src/games/Game3ShadowMatch.tsx` was deliberately never touched by
+Claude across the entire Session 3 redesign**, specifically because of the
+friend's active branch. If you're picking this up fresh and considering
+touching that file, or anything that file depends on, check with the
+product owner first — it may still be off-limits.
+
+---
+
 ## Session 2 — UI/UX pass, and a real laptop-testing bug (post-handoff)
 
 After the state above was written, the same human came back and used the
 running app for the first time — which immediately surfaced things no
 automated check could: the navigation gave no sense of where you were, the
 visual design was unstyled prototype chrome, and the capture flow was
-**completely broken when testing on a laptop**, not just ugly. All of the
-below is done, verified (`tsc`/`oxlint`/full smoke/build all clean), and
-merged — but still carries the same caveat as everything else in this file:
-self-verified, not yet human-click-tested end to end.
+**completely broken when testing on a laptop**, not just ugly.
 
 **Navigation & wayfinding.** `app/src/components/ScreenHeader.tsx` (new) —
 every screen except the two true roots now shows which flow it's in (eyebrow
-text), a consistent back affordance, and — during the one-time four-screen
-setup chain — a step counter ("Step 2 of 4") with a progress bar. Previously
-there was no header at all on most screens and a bare `← Back` on the rest.
+text) and a consistent back affordance.
 
-**A real design pass.** `app/src/App.css` now has an actual design system —
-color/spacing/radius tokens, a typography scale, and Apple "Liquid Glass"
-styled buttons (`backdrop-filter: blur/saturate`, bright edge highlight, soft
-shadow, with an `@supports` fallback to solid surfaces where unsupported).
-The app shell has a real static gradient background instead of flat
-off-white, and `app/src/components/AppHeader.tsx` (new) is a persistent
-top identity bar — deliberately using a placeholder name
-(`APP_NAME_PLACEHOLDER`, one line to edit) since "Project name" is still an
-open decision (see below) and a UI pass shouldn't lock one in. No web fonts,
-no UI/animation dependency added — the app's "runs fully offline" claim and
-its zero-dependency-CSS convention both held.
+**A real design pass** (superseded by Session 3's full redesign below, but
+this is what it replaced): `app/src/App.css` got its first actual design
+system — color/spacing/radius tokens, a typography scale, glass-styled
+buttons.
 
 **A real, previously-unfixed bug: capture was silently broken on a laptop.**
 `app/src/adapters/capture/deviceCamera.ts` tried `getUserMedia` (a live
 camera) first, and its fallback to a file picker called `.click()` from
 inside an async `catch` block — by then, several ticks after the original
 tap, the browser's user-activation window had expired, so the file dialog
-silently never opened. No error, no dialog — `capturePhoto()` just hung
-forever, leaving a caregiver on a "please wait" screen with nothing to press.
-This is exactly the "laptop build, file upload not live camera" decision
-from Session 1 that never actually got carried into this file. Fixed: the
-file picker is now the default, synchronous, primary path (`.click()` fires
-in the same call stack as the tap, so activation can't expire first), with
-graceful handling if the dialog is cancelled. The old live-camera code is
-preserved and swappable back in later (one line in `registry.ts`) for a real
-tablet/phone deployment — see the comment in `deviceCamera.ts`. Button copy
-in `Game1.tsx`/`Game3ShadowMatch.tsx` changed from "Take a photo" to "Choose
-a photo of the room" to match what it actually does now.
-`plan/engineering/TECH-DECISIONS.md` and `plan/features/F.006.md` were
-updated to state this as the actual current decision (a build-environment
-call) rather than still contradicting the code — `app-guide-v3-FINAL.md`'s
-own product vision (camera-native, tablet/phone, no file picker) was left
-untouched, since that describes the eventual shipped product, not this dev
-build.
+silently never opened. Fixed: the file picker is now the default,
+synchronous, primary path. The old live-camera code is preserved and
+swappable back in later (one line in `registry.ts`) for a real tablet/phone
+deployment.
 
-**A second real bug, found while doing the visual pass, not looking for
-it: Game 2 (`F.022`) still violated "zero text in the child's view."** Its
-own header comment admitted "WALKING SKELETON, same maturity as Game1.tsx
-[used to be]" — the child's tap-in-order turn was rendering visible crop
-name labels on every button plus caregiver instruction text on the same
-screen. Fixed to match Game 1/3's already-correct pattern: photo/colour
-tiles, zero text, progress shown by dimming rather than a label. Also fixed:
-the new `ScreenHeader`/`AppHeader` chrome would itself have leaked text
-into the child's view during Game 1/3's confirming/celebrating phases —
-each game now reports its own child-facing state up to `App.tsx` via an
-`onChildFacingChange` callback, and the shell hides its chrome entirely
-(not just visually) during that window. This is a real, non-hypothetical
-compliance rule (`plan/engineering/UI-STANDARDS.md`), not a style choice.
+**A second real bug: Game 2 (`F.022`) still violated "zero text in the
+child's view."** The child's tap-in-order turn was rendering visible crop
+name labels plus caregiver instruction text on the same screen. Fixed to
+match Game 1/3's already-correct pattern.
 
-**A design-tips skill was installed**, at `.claude/skills/` (from
-[emilkowalski/skills](https://github.com/emilkowalski/skills) —
-`emil-design-eng`, `animate`, `review-animations`, `pick-ui-library`, and a
-few others). It's local to this Claude Code project config, not part of the
-app itself, and governed the easing/timing/press-feedback choices above.
+---
 
-**How this was actually built**: two parallel background agents (one for
-the visual pass, one for the capture-bug root-cause + fix), spawned via the
-`Agent` tool without git-worktree isolation this time — deliberately, since
-they were briefed onto disjoint file sets (visual agent: `App.css`,
-`App.tsx`, `ScreenHeader.tsx`; bug-fix agent: `deviceCamera.ts`, the two
-docs, and one button-text line each in `Game1.tsx`/`Game3ShadowMatch.tsx`)
-and there was uncommitted work in the tree that worktree isolation would
-have forked away from. Both were re-verified together (not just trusted
-individually) after both landed.
+## Session 3 — "Hello World" redesign, real engine wiring, and a bug hunt
+
+The largest single pass on this repo since the original overnight build.
+Spans many separate requests across one long working session; grouped here
+by theme, not chronology. Everything below is committed to `main` and
+passed `tsc`/`oxlint`/full smoke/build after every change, most of it
+independently re-verified rather than just trusted from a subagent's own
+report.
+
+**The app has a real name and a real design system now.**
+`APP_NAME_PLACEHOLDER` is gone — the product is called **"Hello World"**,
+set in exactly one place (`app/src/components/AppHeader.tsx`) and mirrored
+in `index.html`'s `<title>` and the PWA manifest. The entire visual system
+was rebuilt dark-first (not light-mode-inverted) as a "liquid glass"
+material — **`app/src/design/DESIGN-TOKENS.md` is the locked reference for
+the palette, both fonts, and the glass-tuning rules; read it before
+touching `App.css`'s `:root` block.** One self-hosted font (Nunito) now
+covers the whole app — the original two-face child/caregiver split was
+retired because the child's own screens never actually render text, so it
+had no real footprint.
+
+**Navigation was restructured.** A new local-device-recognition welcome
+screen (no accounts, no passwords — this app has neither). The home hub
+split from one long scroll into four tabs (Play / Dashboard / Setup /
+Notes) behind a full-width tab bar. Caregiver Dashboard, Setup, and Notes
+all moved onto the same glass-card system as everything else.
+
+**Several features were found built, tested, and never actually wired
+in — now fixed.** This is the most consequential category, and worth
+reading `git log` for the exact commit if you need the full reasoning:
+- **F.018's sensory-accommodation toggles** (reduce animation, swap the
+  success chime for a visual pulse, announce changes before they happen) —
+  `shouldReduceAnimation`/`shouldUseVisualPulseInsteadOfChime`/
+  `shouldAnnounceChangesInAdvance` in `engine/avoidFilter.ts` had zero
+  callers outside their own smoke test. Now consulted by both Game 1 and
+  Game 2.
+- **F.007's object → skill → steps lookup table** — described in its own
+  header comment as "the hardest engineering problem in the app," and
+  Game 1 was bypassing it entirely with a throwaway `find-${category}`
+  string. Now drives what actually gets logged, faded, and tracked toward
+  generalization.
+- **Session focus-stretch measurement** — `updateFocusStretch()` in
+  `engine/profileStore.ts` had zero callers anywhere. The caregiver
+  dashboard's "Focus-stretch trend" panel — real UI, real aggregation
+  logic — was reading 0 minutes for every session, on every device, always.
+  Now actually measured in both games.
+- **The response-profile quiz's `attentionSpan`/`communication` answers**
+  had zero downstream consumers (confirmed by grep, not assumed). Now flow
+  into Game 2's AI-generated story (sentence complexity, preferred length),
+  phrased as plain behavioural notes through the API prompt, never
+  diagnostic language — same rule the pre-existing `sameness` field already
+  followed (§5.2: tuning keys off response dimensions, never a condition
+  label).
+
+**A real, root-cause bug fix, not a workaround.** Game 2's AI story
+generator could produce two steps referencing the same real detected
+object (e.g. two steps both about "the cushion"). The second reference
+would resolve fine individually but collide at render time — its photo was
+already claimed by the first step — and silently fall back to an unrelated
+generic-coloured swatch (a flat red or blue square with no connection to
+that step's sentence). Root cause: `parseStoryResponse` validated that
+every object mentioned was real, but never that the same object wasn't
+mentioned twice. Fixed at the validation layer (a duplicate objectRef now
+fails validation and falls back to the deterministic template generator,
+which can't produce this by construction), reinforced in the prompt itself,
+and given a client-side defense-in-depth fallback too. Two new smoke tests
+cover it.
+
+**Other fixes, each real:**
+- Speech synthesis now actually stops on navigation or backgrounding —
+  previously nothing ever called `SpeechOutPort.stop()` (it didn't exist),
+  so narration kept playing after leaving whatever screen started it.
+- Two on-screen privacy claims were factually wrong — "everything stays on
+  this device" / "nothing is sent anywhere" — when object recognition and
+  story generation both genuinely call the Claude API. Fixed to say what's
+  actually true: no account exists, and nothing is *stored* anywhere but
+  the device. (`plan/README.md` had already flagged this exact overclaim
+  as the thing never to say, in its original planning notes — Session 3
+  just found where the code had drifted from that rule.)
+- An app-wide button-tap sound was added — synthesised with the Web Audio
+  API, no asset file, respects the avoid-list's sound-sensitivity flag.
+- The caregiver-UI touch-target floor was deliberately lowered from 88px to
+  44px (`--touch-min` in `App.css`) — a knowing, disclosed departure from
+  `plan/engineering/UI-STANDARDS.md`'s "no exceptions" text, scoped to
+  caregiver-facing chrome only. **Every game's own child-facing tap target
+  is a hardcoded pixel value in that game's own file, not this token — none
+  of them were touched by this change.**
+- An editorial pass removed em dashes from all user-facing and spoken text
+  (not from code comments, which still have plenty).
+
+**Explicitly out of scope, on purpose, throughout all of Session 3:**
+`Game3ShadowMatch.tsx` was never opened for editing, for the reason
+described in "Who's actually working on this, now" above.
 
 ---
 
@@ -147,7 +229,7 @@ individually) after both landed.
 cd app
 npm install
 cp .env.example .env   # then edit .env — see "The API key" below
-npm run dev             # http://localhost:5173
+npm run dev             # http://localhost:5173 (or the next free port)
 ```
 
 Other useful commands, all run from `app/`:
@@ -155,7 +237,7 @@ Other useful commands, all run from `app/`:
 ```bash
 npx tsc -b        # typecheck the whole tree, including test scripts
 npx oxlint        # lint, should be zero warnings
-npm run smoke      # all 22 automated test suites (fast, no browser needed)
+npm run smoke      # every automated test suite (fast, no browser needed)
 npm run build      # production build
 ```
 
@@ -170,8 +252,9 @@ this document.
 **`app/.env` is gitignored and does not exist in a fresh clone.** A real
 Anthropic API key was configured during the build and used for genuine
 verification (not mocked) — real vision calls, real card-generation calls,
-with adversarial testing. That key lived only in this machine's local
-`.env`; it does not travel with the repo.
+real story-generation calls, with adversarial testing on the guardrail
+paths. That key lived only in this machine's local `.env`; it does not
+travel with the repo.
 
 **If this project moves to a new Claude Code account/machine, someone needs
 to either**:
@@ -183,82 +266,78 @@ to either**:
 cap.** This was flagged repeatedly during the build and its status was never
 independently confirmed — check it before assuming it's handled.
 
-Two capabilities cost real money when exercised: object recognition
-(`claude-sonnet-5`, fires when a game's capture button is pressed) and
-Branch 2's question-card generation (`claude-haiku-4-5`, fires after
-submitting the three guided prompts). Both show visible in-app loading text
-while the call is in flight — see `app/src/games/Game1.tsx` (the pipeline)
-and `app/src/screens/Branch2Card.tsx`. Everything else in the app costs
+Three capabilities cost real money when exercised: object recognition
+(`claude-sonnet-5`, fires when a game's capture button is pressed), Game 2's
+story generation (`claude-haiku-4-5`, fires when a room photo is confirmed),
+and Branch 2's question-card generation (`claude-haiku-4-5`, fires after
+submitting the three guided prompts). Everything else in the app costs
 nothing and runs fully offline.
 
 ---
 
 ## What's actually built (19 of 22 feature files)
 
-Full detail, owner, and dependency graph: `plan/overview/F.000-INDEX.md`.
-Short version:
+Full detail, owner, and dependency graph: `plan/overview/F.000-INDEX.md`
+(the "owner"/tier columns there still reflect the original four-person
+split historically — see "Who's actually working on this, now" above for
+current reality). Short version:
 
 | Area | Files | State |
 |---|---|---|
 | Engine core (store, slots, interaction state machine, support ladder, fading, session lifecycle) | F.001, F.005, F.009, F.010, F.011, F.013 | Done, tested |
-| Camera pipeline, Game 1 | F.006, F.008, F.012, F.017 | Done, tested — real capture→blur→recognize pipeline, not a stub. Capture default is now file-picker (laptop-build decision), not live camera — see Session 2 below |
-| Game 2 (sequencing) | F.022 | Done, tested — zero-text child turn fixed in Session 2 (was showing text labels) |
-| Game 3, Mode A (Shadow Match) | F.021 | Done, tested |
-| Lookup table, Branch 2, branch handoff | F.007, F.014, F.015, F.020 | Done, tested — F.015 includes real adversarial guardrail testing against live API calls |
-| Onboarding, Companion, preferences, avoid list, dashboard | F.002, F.003, F.004, F.016, F.018, F.019 | Done, tested |
-| **Central routing + navigation chrome** — every screen wired in, with real wayfinding (`ScreenHeader`) and app identity (`AppHeader`) | `app/src/App.tsx`, `components/ScreenHeader.tsx`, `components/AppHeader.tsx` | Done. Type-checked and build-verified; **not yet click-tested by a human** |
+| Camera pipeline, Game 1 | F.006, F.008, F.012, F.017 | Done, tested — real capture→blur→recognize pipeline. Capture default is file-picker (laptop-build decision), not live camera |
+| Game 2 (sequencing) | F.022 | Done, tested — real AI-generated stories, not a template stub; a real duplicate-object bug found and fixed in Session 3 |
+| Game 3, Mode A (Shadow Match) | F.021 | Done, tested. **Untouched since Session 2** — a teammate's active domain, see above |
+| Lookup table, Branch 2, branch handoff | F.007, F.014, F.015, F.020 | Done, tested — **F.007 was dead code until Session 3** (see above), now actually consulted by Game 1 |
+| Onboarding, Companion, preferences, avoid list, dashboard | F.002, F.003, F.004, F.016, F.018, F.019 | Done, tested — **F.018's sensory toggles were dead code until Session 3**, now actually consulted by Game 1 and Game 2 |
+| **Central routing + navigation chrome + design system** | `app/src/App.tsx`, `App.css`, `src/design/`, `components/` | Done, fully redesigned in Session 3. Type-checked and build-verified; **not yet click-tested by a human** |
 
 **Not built, on purpose:**
 - **F.023** (Game 3's other two modes — Trace, Puzzle): genuine stretch,
-  always the correct first thing to cut, still correct to leave cut unless
-  there's real spare time.
+  still correctly cut. (Possibly superseded by whatever the friend's
+  `game3-match-and-draw` branch turns out to be — check before assuming
+  this is still the plan.)
 - **F.024, F.025** (generalization re-testing, social story): spec-only by
   original design, never meant to be built for the hackathon.
 - **F.026** (demo video + Devpost submission): a human task, not a coding
   one. Hasn't started.
 
-Every implemented file's status line reads `Implemented, self-verified —
-needs fresh-context review` — deliberately never `Done`. The team's own
-stated rule all along: self-review by the same context that wrote the code
-doesn't count. **No file has had that review yet.** If a fresh session or a
-human is looking for something useful to do, reviewing a file against its
-own `plan/features/F.0XX.md` Review checklist and marking it `Done` (or
-finding a real problem) is exactly the kind of task that's still open and
-valuable.
-
 ---
 
 ## What genuinely has NOT been verified, and needs a human + real hardware
 
-These cannot be checked by any Claude Code session, background agent, or
-automated test — they need eyes and a physical device:
+Still true, unchanged by Session 3 — these cannot be checked by any Claude
+Code session, background agent, or automated test:
 
-1. **An actual click-through of the whole app in a browser.** Every check
-   run tonight was `tsc`/lint/automated-test/build — none of them execute
-   the real React component tree the way a human clicking through it does.
-2. **Real device testing** — touch target sizing on an actual phone, the
-   camera permission flow, iOS Safari's audio-unlock-needs-a-gesture quirk.
-   Flagged throughout `plan/engineering/UI-STANDARDS.md` as impossible to
-   verify without real hardware, and that's still true.
+1. **An actual click-through of the whole app in a browser**, on a real
+   device. Every check run this whole project has been `tsc`/lint/
+   automated-test/build — none of them execute the real React component
+   tree, or play real audio, the way a human clicking through it does.
+   This matters more after Session 3 than before it: the click sound, the
+   sensory-toggle behavior (does the visual pulse actually read clearly?),
+   and the AI story-generation fix all have real audio/AI-output components
+   that no automated check can fully confirm sound or read right.
+2. **Real device testing** — touch target sizing on an actual phone
+   (including the newly-lowered 44px caregiver floor), the camera
+   permission flow, iOS Safari's audio-unlock-needs-a-gesture quirk.
 3. **Deployment.** The app only runs via `npm run dev` on whatever machine
-   has this checkout. It is not hosted anywhere. `plan/engineering/
-   TECH-DECISIONS.md` has the original hosting reasoning (Vercel was the
-   working recommendation, deliberately deferred as a final decision).
+   has this checkout. It is not hosted anywhere.
 
 ---
 
 ## Decisions still open (product, not code)
 
-From `plan/overview/F.000-INDEX.md`'s own "Open decisions" section,
-unchanged:
-- **Project name.**
 - **Branch 2's regional framing** (§15 of the guide) — Indonesian context /
   Australian / locale-configurable. Affects the referral-service data shown
-  in the question-card flow and the pitch's Impact framing.
+  in the question-card flow and the pitch's Impact framing. Untouched all
+  session.
 - **Branch 2 referral data** — real, verifiable local service info, or
   clearly-marked placeholder. If placeholder, it must say so in the UI —
   this was a hard requirement, check `plan/features/F.019.md` and the
-  Branch2Card screen before assuming either way.
+  Branch2Card screen before assuming either way. Untouched all session.
+
+(**"Project name" is resolved** — it's "Hello World," as of Session 3. No
+longer an open decision.)
 
 ---
 
@@ -266,14 +345,22 @@ unchanged:
 
 Read, in order:
 1. This file.
-2. `app-guide-v3-FINAL.md` — the actual product spec, if you need to verify
+2. `app/src/design/DESIGN-TOKENS.md` — the visual system's source of truth.
+   Skip this only if you're doing pure logic/engine work with no UI at all.
+3. `app-guide-v3-FINAL.md` — the actual product spec, if you need to verify
    any behavior against source of truth.
-3. `plan/overview/F.000-INDEX.md` — the live status table and dependency
-   graph.
-4. `plan/engineering/ARCHITECTURE-RULES.md` — the ports/adapters pattern
+4. `plan/overview/F.000-INDEX.md` — the live status table and dependency
+   graph (owner columns are historical, see "Who's actually working on this,
+   now" above).
+5. `plan/engineering/ARCHITECTURE-RULES.md` — the ports/adapters pattern
    every piece of the codebase follows. Understanding this before touching
    any adapter file will save you from re-deriving it the hard way.
 
 Then run the four commands under "Run it" above. If they're all clean, you
 have an accurate picture of where things stand without needing anything from
 whoever was here before you.
+
+**Two things worth internalizing before you touch anything:** don't edit
+`Game3ShadowMatch.tsx`, and don't push to `origin/main` without the product
+owner's explicit go-ahead for that specific push — both are explained above,
+under "Who's actually working on this, now."

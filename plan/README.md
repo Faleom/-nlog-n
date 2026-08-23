@@ -11,8 +11,6 @@ plan/
 │
 ├── features/ .............. F.001 … F.026
 │
-├── assignments/ ........... PERSON-1 … PERSON-4, self-contained
-│
 └── engineering/
     ├── ARCHITECTURE-RULES.md ... ports and adapters — read before coding
     ├── UI-STANDARDS.md ......... §4 rules every screen obeys
@@ -27,11 +25,10 @@ plan/
 
 1. `engineering/SETUP.md` — get your machine and a **real tablet and phone**
    running
-2. `assignments/PERSON-<your number>.md` — yours, and only yours
-3. `overview/BUILD-ORDER.md` — **Wave 0 first.** Nothing fans out safely until
+2. `overview/BUILD-ORDER.md` — **Wave 0 first.** Nothing fans out safely until
    those contracts exist
-4. `engineering/ARCHITECTURE-RULES.md` and `engineering/UI-STANDARDS.md` — short
-5. §13 of the guide — one page, all four of you
+3. `engineering/ARCHITECTURE-RULES.md` and `engineering/UI-STANDARDS.md` — short
+4. §13 of the guide — one page
 
 Then: **P1 opens F.001, P2 opens F.006.** They're the only two files with zero
 dependencies.
@@ -63,7 +60,6 @@ this timescale, compress by cutting **Tier 3, not the loop.**
 |---|---|
 | What's done? Who owns what? | `overview/F.000-INDEX.md` |
 | What can start right now? | `overview/BUILD-ORDER.md` |
-| What am *I* building? | `assignments/PERSON-<n>.md` |
 | What library for X? | `engineering/TECH-DECISIONS.md` |
 | Touch targets, phone layout, sensory settings | `engineering/UI-STANDARDS.md` |
 | Can I run agents in parallel on this? | `engineering/SUBAGENT-STRATEGY.md` |
