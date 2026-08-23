@@ -667,6 +667,63 @@ textarea::placeholder {
   min-width: 0;
 }
 
+/* Shared quiet-action hit-slop pair, same technique as .header-back /
+   .header-back-chip above: the button stays at its full min-width/
+   min-height: var(--touch-min) touch floor and draws nothing itself;
+   every visible pixel lives on the inner chip, sized to its label. This
+   is what an "End session" button (or anything similarly secondary --
+   present, reachable, but never competing with the screen's one real
+   action) should look like everywhere in the app. Promoted here from a
+   copy that used to live only in Game3ShadowMatch.tsx's own embedded
+   styles -- consumed by every game now instead of redefined per game,
+   so they can't drift out of sync with each other again. */
+.quiet-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: fit-content;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+  background: none;
+  border: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  color: var(--color-ink-muted);
+}
+
+.quiet-action-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: var(--weight-caregiver-strong);
+  line-height: 1.15;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .quiet-action {
+    background: none;
+  }
+
+  .quiet-action-chip {
+    background: var(--color-surface);
+    border-color: var(--color-border-strong);
+  }
+}
+
+.quiet-action:active .quiet-action-chip {
+  box-shadow: none;
+}
+
 /* Onboarding's step counter only (see ScreenHeader.tsx) — centers the
    eyebrow + "Step N of 4" text as one block. .header-progress stays a
    plain block element so it keeps spanning the full width of this
@@ -1703,6 +1760,21 @@ textarea::placeholder {
 
 .game-tile--shadow .game-tile-art {
   color: var(--color-ink);
+}
+
+/* Trace and Colour — a scatter of warm crayon-tip dots rather than one
+   lamp-pool (that composition already belongs to Find It In Your World),
+   so the two Ember-hued tiles still read as different places at a glance. */
+.game-tile--trace .game-tile-scene {
+  background:
+    radial-gradient(circle 26px at 78% 20%, rgba(255, 176, 103, 0.34), transparent 75%),
+    radial-gradient(circle 20px at 90% 46%, rgba(255, 176, 103, 0.24), transparent 75%),
+    radial-gradient(circle 34px at 68% 78%, rgba(255, 176, 103, 0.2), transparent 75%),
+    linear-gradient(160deg, rgba(255, 176, 103, 0.1), rgba(255, 176, 103, 0.02));
+}
+
+.game-tile--trace .game-tile-art {
+  color: var(--color-accent);
 }
 
 /* The fourth box is a placeholder and must read as one at a glance: hatched

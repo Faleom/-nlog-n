@@ -45,6 +45,7 @@ import { NeutralNotePrompt } from './components/NeutralNotePrompt';
 import { Game1 } from './games/Game1';
 import { Game2 } from './games/Game2';
 import { Game3ShadowMatch } from './games/Game3ShadowMatch';
+import { TraceAndColour } from './games/TraceAndColour';
 import { adapters } from './adapters/registry';
 import { clearActiveProfile, getActiveProfile } from './engine/profileStore';
 import { installAvoidFilter } from './engine/avoidFilter';
@@ -65,6 +66,7 @@ type Screen =
   | { kind: 'game1' }
   | { kind: 'game2' }
   | { kind: 'game3' }
+  | { kind: 'trace' }
   | { kind: 'branch2Milestones' }
   | { kind: 'branch2Card'; answers: ConcernAnswers; childAgeMonths: number }
   | { kind: 'branch2Ended' };
@@ -482,9 +484,27 @@ function App() {
   if (screen.kind === 'game3') {
     return (
       <div className="app" key={screen.kind}>
-        <GameChrome eyebrow="Shadow Match" onBack={goToBranch1Home}>
+        {/* Renamed from "Shadow Match": the game gained a real
+            concept-generalization trial system (a bundled library of
+            distinct-drawing concepts, adversarial distractor selection) on
+            top of its original silhouette levels -- "Match the Picture" is
+            what it actually asks the child to do now, silhouette matching
+            included. */}
+        <GameChrome eyebrow="Match the Picture" onBack={goToBranch1Home}>
           {(onChildFacingChange) => (
             <Game3ShadowMatch profile={profile} onChildFacingChange={onChildFacingChange} />
+          )}
+        </GameChrome>
+      </div>
+    );
+  }
+
+  if (screen.kind === 'trace') {
+    return (
+      <div className="app" key={screen.kind}>
+        <GameChrome eyebrow="Trace and Colour" onBack={goToBranch1Home}>
+          {(onChildFacingChange) => (
+            <TraceAndColour profile={profile} onChildFacingChange={onChildFacingChange} />
           )}
         </GameChrome>
       </div>
@@ -663,14 +683,41 @@ function App() {
                     🌓
                   </span>
                 </span>
-                <span className="game-tile-title">Shadow Match</span>
+                <span className="game-tile-title">Match the Picture</span>
               </button>
 
-              {/* Placeholder, and it has to LOOK like one: no onClick, a real
-                  `disabled`, a dashed rim, hatched fill, muted ink and no
-                  press feedback. Nothing here should invite a tap. */}
-              <button className="game-tile game-tile--soon" type="button" disabled>
-                <span className="game-tile-soon-label">Coming soon</span>
+              <button
+                className="game-tile game-tile--trace"
+                onClick={() => setScreen({ kind: 'trace' })}
+              >
+                <span className="game-tile-scene">
+                  <span className="game-tile-art" aria-hidden="true">
+                    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
+                      {/* a dashed outline (the thing to trace) with a solid
+                          crayon stroke cutting across part of it (the thing
+                          already coloured in) */}
+                      <path
+                        d="M46 66 C30 66 22 52 22 40 C22 24 36 14 52 14 C68 14 82 24 84 40 C86 54 76 66 60 66 Z"
+                        stroke="currentColor"
+                        strokeOpacity="0.55"
+                        strokeWidth="3"
+                        strokeDasharray="1 7"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M96 60 C108 44 124 34 140 32"
+                        stroke="currentColor"
+                        strokeOpacity="0.7"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
+                  <span className="game-tile-icon" aria-hidden="true">
+                    🖍️
+                  </span>
+                </span>
+                <span className="game-tile-title">Trace and Colour</span>
               </button>
             </div>
           </div>
