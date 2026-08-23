@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "smoke:f001": "tsx scripts/smoke-f001.ts",
     "smoke:f005": "tsx scripts/smoke-f005.ts",
-    "smoke": "npm run smoke:f001 && npm run smoke:f005 && npm run smoke:f006 && npm run smoke:f008 && npm run smoke:f009 && npm run smoke:f010 && npm run smoke:f011 && npm run smoke:f012 && npm run smoke:f013 && npm run smoke:f017",
+    "smoke": "npm run smoke:f001 && npm run smoke:f005 && npm run smoke:f006 && npm run smoke:f008 && npm run smoke:f009 && npm run smoke:f010 && npm run smoke:f011 && npm run smoke:f012 && npm run smoke:f013 && npm run smoke:f017 && npm run smoke:f021",
     "smoke:f006": "tsx scripts/smoke-f006.ts",
     "smoke:f008": "tsx scripts/smoke-f008.ts",
     "smoke:f009": "tsx scripts/smoke-f009.ts",
@@ -18,7 +18,8 @@
     "smoke:f011": "tsx scripts/smoke-f011.ts",
     "smoke:f012": "tsx scripts/smoke-f012.ts",
     "smoke:f013": "tsx scripts/smoke-f013.ts",
-    "smoke:f017": "tsx scripts/smoke-f017.ts"
+    "smoke:f017": "tsx scripts/smoke-f017.ts",
+    "smoke:f021": "tsx scripts/smoke-f021.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
