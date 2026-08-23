@@ -19,7 +19,7 @@
 // adapters/pipeline/myWorldPipeline.ts's job, which calls this port first
 // and nothing else before it.
 
-import type { CapturePort } from '../ports';
+import { CaptureCancelledError, type CapturePort } from '../ports';
 
 /**
  * THE DEFAULT PATH. Opens the OS-native file-picker dialog and resolves
@@ -58,7 +58,7 @@ function captureViaFileInput(): Promise<ImageBitmap> {
       void (async () => {
         const file = input.files?.[0];
         if (!file) {
-          settle(() => reject(new Error('No photo selected')));
+          settle(() => reject(new CaptureCancelledError()));
           return;
         }
         try {
@@ -73,7 +73,7 @@ function captureViaFileInput(): Promise<ImageBitmap> {
     // Modern Chromium/Firefox fire this when the picker is dismissed with
     // no file chosen.
     function onCancel(): void {
-      settle(() => reject(new Error('Photo selection cancelled')));
+      settle(() => reject(new CaptureCancelledError()));
     }
 
     // Fallback for browsers that don't support the 'cancel' event (notably
@@ -87,7 +87,7 @@ function captureViaFileInput(): Promise<ImageBitmap> {
     function onWindowFocus(): void {
       setTimeout(() => {
         if (!settled && !input.files?.length) {
-          settle(() => reject(new Error('Photo selection cancelled')));
+          settle(() => reject(new CaptureCancelledError()));
         }
       }, 300);
     }

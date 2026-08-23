@@ -467,3 +467,10 @@ textarea::placeholder {
   border-top: 1px solid var(--color-border);
   margin: 4px 0;
 }
+
+@media print {
+  body * { visibility: hidden; }
+  #printable-card, #printable-card *,
+  #printable-schedule, #printable-schedule * { visibility: visible; }
+  #printable-card, #printable-schedule { position: absolute; left: 0; top: 0; width: 100%; }
+}

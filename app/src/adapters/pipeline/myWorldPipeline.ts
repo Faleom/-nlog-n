@@ -28,7 +28,7 @@
 //      brief: "make it a type error or an impossible code path."
 
 import { adapters } from '../registry';
-import type { AdapterRegistry } from '../ports';
+import { CaptureCancelledError, type AdapterRegistry } from '../ports';
 import type { Region, TaggedCrop } from '../../types';
 
 declare const REDACTED_BRAND: unique symbol;
@@ -86,8 +86,21 @@ export type CaptureRoomOutcome =
    * usable... camera is an enhancement, not a gate." Fires if capturePhoto
    * itself throws or never resolves with a photo (permission denied, no
    * hardware, file picker cancelled) — distinct from blur-failed, which
-   * means a photo WAS captured but couldn't be safely processed. */
-  | { kind: 'capture-unavailable' };
+   * means a photo WAS captured but couldn't be safely processed.
+   * `cancelled: true` specifically means the person closed the picker
+   * without choosing anything — a deliberate "not right now", not a
+   * technical failure. Callers that quietly degrade to generic content on
+   * every other capture-unavailable case may want to treat a cancellation
+   * differently (stop and wait, rather than proceed with placeholder
+   * content the person never asked for) — see Game2.tsx's startRound. */
+  | { kind: 'capture-unavailable'; cancelled?: true };
+
+/** The four real, sequential stages captureRoomAndRecognize actually goes
+ * through — for callers that want to show honest progress instead of a
+ * single static "please wait" (§11's "calm progress state", extended:
+ * calm doesn't have to mean uninformative). Fired at the START of each
+ * stage, synchronously, before that stage's own async work begins. */
+export type CaptureStage = 'capturing' | 'checking-faces' | 'blurring' | 'looking-at-objects';
 
 export interface CaptureRoomOptions {
   /** Fired once, at 4s (§11: "slow (>4s) → calm progress state showing
@@ -95,6 +108,9 @@ export interface CaptureRoomOptions {
    * hasn't resolved yet. The caller is responsible for rendering that
    * calm state; this function only tells it when to start. */
   onSlow?: () => void;
+  /** Fired at the start of each real stage -- see CaptureStage. Optional;
+   * a caller that doesn't care can ignore it and nothing changes. */
+  onStage?: (stage: CaptureStage) => void;
   /** Test-only escape hatch — inject fake ports instead of the real
    * registry so this function's control flow (fail-closed, no-objects
    * fallback, the ordering guarantee itself) can be exercised in Node
@@ -123,31 +139,53 @@ export async function captureRoomAndRecognize(
   const slowTimer = options.onSlow ? setTimeout(options.onSlow, 4000) : null;
   let raw: ImageBitmap | null = null;
   try {
+    options.onStage?.('capturing');
     try {
       raw = await ports.capture.capturePhoto();
-    } catch {
+    } catch (err) {
       // §4.4: "camera is an enhancement, not a gate." Permission denied,
       // no camera hardware, or the parent cancelled the picker — none of
-      // that should dead-end the app.
-      return { kind: 'capture-unavailable' };
+      // that should dead-end the app on its own; see the `cancelled` flag
+      // above for how a caller can still treat a deliberate cancel
+      // differently from an actual technical failure.
+      //
+      // The console.warn calls in this function are diagnostic only —
+      // never shown to a caregiver or child, never anything more than the
+      // technical error itself (never photo content, never anything §13
+      // would forbid). This app's own quiet-degrade design (§11: "never
+      // show an error") makes every failure mode here look IDENTICAL to
+      // every other one from the screen alone, which made a real bug
+      // (the dev proxy not existing) indistinguishable from a different
+      // real bug (this catch block) for a human clicking through it. This
+      // is what actually lets that distinction be made from the browser
+      // console instead of guessing blind.
+      console.warn('[myWorldPipeline] capture-unavailable:', err);
+      return {
+        kind: 'capture-unavailable',
+        cancelled: err instanceof CaptureCancelledError ? true : undefined,
+      };
     }
 
+    options.onStage?.('checking-faces');
     let faces: Region[];
     try {
       faces = await ports.faceDetect.findFaces(raw);
-    } catch {
+    } catch (err) {
       // Fail closed (§11, §4.4): detection threw, so we do not know
       // whether a face is present. Discard and stop — never redact-and-
       // send on an assumption. Nothing downstream of this branch ever
       // sees `raw`.
+      console.warn('[myWorldPipeline] blur-failed (face detection threw):', err);
       closeIfPossible(raw);
       return { kind: 'blur-failed' };
     }
 
+    options.onStage?.('blurring');
     let redacted: RedactedImage;
     try {
       redacted = await redact(ports, raw, faces);
-    } catch {
+    } catch (err) {
+      console.warn('[myWorldPipeline] blur-failed (redaction threw):', err);
       closeIfPossible(raw);
       return { kind: 'blur-failed' };
     }
@@ -160,13 +198,15 @@ export async function captureRoomAndRecognize(
     closeIfPossible(raw);
     raw = null;
 
+    options.onStage?.('looking-at-objects');
     let crops: TaggedCrop[];
     try {
       crops = await recognize(ports, redacted);
-    } catch {
+    } catch (err) {
       // §11 "demo-day API outage" row: a failed vision call degrades to
       // the same quiet generic-activities fallback as "found nothing" —
       // never an error screen, never a retry loop burning API calls.
+      console.warn('[myWorldPipeline] no-objects-found (vision call threw):', err);
       closeIfPossible(redacted);
       return { kind: 'no-objects-found' };
     }
@@ -174,6 +214,7 @@ export async function captureRoomAndRecognize(
 
     if (crops.length === 0) {
       // §11: no error shown, caller falls back to generic activities.
+      console.warn('[myWorldPipeline] no-objects-found (vision returned zero objects)');
       return { kind: 'no-objects-found' };
     }
     return { kind: 'success', crops };

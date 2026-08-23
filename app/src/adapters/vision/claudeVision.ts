@@ -121,6 +121,13 @@ export function createClaudeVision(): VisionPort {
       const content = (body as { content?: unknown }).content;
       const text = extractResponseText(content);
 
+      // Diagnostic only, never shown to a caregiver or child -- this is
+      // the actual model output, which the app's own quiet-degrade design
+      // (§11) deliberately never surfaces past this point. Logging it here
+      // is what makes "the JSON didn't parse" debuggable at all instead of
+      // a dead end past parseVisionResponse's generic error.
+      console.warn('[claudeVision] raw response text:', text);
+
       const rawObjects = parseVisionResponse(text);
       const imageSize = { width: sentCanvas.width, height: sentCanvas.height };
 

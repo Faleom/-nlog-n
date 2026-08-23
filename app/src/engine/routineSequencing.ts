@@ -1,90 +1,39 @@
-// Game 2 — Toy Story Sequencing (§8.2). F.022.
+// Game 2 — Toy Story Sequencing (§8.2, redesigned by F.022's generative
+// story pass — see CLAUDE_CODE_PROMPT_GAME2_REDESIGN.md). This file used to
+// own a small hand-written library of fixed routine "anchors" (bath time,
+// bedtime, ...) that a live model call has since replaced — see
+// engine/game2Story.ts (the new story-generation contract and
+// orchestration) and adapters/story/*.ts (the real generator + its
+// deterministic fallback). That anchor system also happened to paper over
+// a real gap: there was never actually a screen for a caregiver to set
+// real routine anchors, so it silently used a hardcoded default pair every
+// time. The object-driven design sidesteps that gap entirely rather than
+// fixing it, since the story is now built from whatever objects were
+// actually detected, not from a caregiver-picked anchor.
 //
-// A thin layer on the shared engine, per §12.2 — this file owns only what's
-// specific to sequencing: routine anchors, step ordering, the tap-to-place
-// state machine, and the printable visual-schedule text. Support tier
-// logging, fading, session lifecycle and slot rendering all come from
-// Person 1's existing engine (activityLogging.ts, fading.ts,
-// sessionLifecycle.ts, slots.ts) — nothing is duplicated here.
-//
-// No model call at runtime. Templates and slots only (§8.2's own words).
+// What's left here, unchanged: the tap-to-place interaction state machine
+// (reused as-is for the new fill-in-the-blank interaction — a different
+// display shape, same underlying "place items in order" mechanics) and the
+// sameness-helps playback-count rule. `formatVisualSchedule` is adapted to
+// a simpler signature that no longer knows about anchors or SequenceStep,
+// since the caller now renders each generated step's sentence itself (via
+// engine/game2Story.ts's renderStorySentence) before handing the already-
+// rendered lines here.
 
 import { renderLine, slotValuesFromProfile } from './slots';
 import type { ChildProfile, SamenessAnswer, TaggedCrop } from '../types';
 
-// ---------------------------------------------------------------------------
-// Routine anchors (§6.2 Layer 3) — no dedicated capture screen exists yet
-// (Layer 3 wasn't part of anyone's assigned files this pass), so this file
-// reads whatever is saved and falls back to a sensible default pair rather
-// than blocking on a screen that doesn't exist. saveRoutineAnchors() is
-// provided so a future onboarding step can set real ones through the same
-// path -- additive to the already-frozen PeopleAndRoutine type, no type
-// change needed.
-// ---------------------------------------------------------------------------
-
-export const ROUTINE_ANCHOR_OPTIONS = [
-  'bath time',
-  'bedtime',
-  'snack',
-  'getting dressed',
-  'going out',
-] as const;
-
-export type RoutineAnchor = (typeof ROUTINE_ANCHOR_OPTIONS)[number];
-
-const DEFAULT_ROUTINE_ANCHORS: RoutineAnchor[] = ['bath time', 'bedtime'];
-
-export function getRoutineAnchors(profile: ChildProfile): RoutineAnchor[] {
-  const saved = profile.context.peopleAndRoutine?.routineAnchors;
-  if (saved && saved.length > 0) {
-    return saved.filter((a): a is RoutineAnchor =>
-      (ROUTINE_ANCHOR_OPTIONS as readonly string[]).includes(a),
-    );
-  }
-  return DEFAULT_ROUTINE_ANCHORS;
-}
-
-export async function saveRoutineAnchors(
-  profileId: string,
-  anchors: RoutineAnchor[],
-): Promise<void> {
-  const { updateProfile } = await import('./profileStore');
-  await updateProfile(profileId, { context: { peopleAndRoutine: { routineAnchors: anchors } } });
-}
-
-// ---------------------------------------------------------------------------
-// Sequence building — a simple, rules-based step template per anchor,
-// filled with whatever real crops are available. No semantic object
-// matching beyond "does the crop exist" -- consistent with F.007's own
-// admittedly simple rules-based lookup, not model improvisation.
-// ---------------------------------------------------------------------------
-
-const ANCHOR_STEP_LABELS: Record<RoutineAnchor, string[]> = {
-  'bath time': ['gets in the bath', 'washes up', 'gets dried off'],
-  bedtime: ['puts on pyjamas', 'brushes teeth', 'gets into bed'],
-  snack: ['picks a snack', 'sits down to eat', 'cleans up after'],
-  'getting dressed': ['puts on a top', 'puts on bottoms', 'puts on shoes'],
-  'going out': ['puts on shoes', 'grabs a bag', 'goes out the door'],
-};
-
+/** One placed step in the tap-to-place interaction: a real detected-object
+ * crop, its correct position in the sequence, and a short label describing
+ * what happens at that step (used for the printable schedule / any on-screen
+ * caption the caller wants). Callers now build this list themselves from a
+ * generated story's steps + the matching TaggedCrop for each `objectRef`
+ * (see engine/game2Story.ts's resolveStoryStepObject), rather than from the
+ * old buildSequence()/anchor system this file used to own. */
 export interface SequenceStep {
   crop: TaggedCrop;
   position: number;
   label: string;
-}
-
-/**
- * Builds a 2-4 step sequence for the given anchor from whatever crops are
- * actually available this session. Never invents an object that isn't
- * really there -- if fewer crops exist than step labels, the sequence is
- * simply shorter (2 steps minimum per §8.2's difficulty axis; below that,
- * the caller should fall back to a different anchor or generic activities,
- * same pattern as F.006's own no-objects-found fallback).
- */
-export function buildSequence(anchor: RoutineAnchor, crops: TaggedCrop[]): SequenceStep[] {
-  const labels = ANCHOR_STEP_LABELS[anchor];
-  const usableCrops = crops.slice(0, labels.length);
-  return usableCrops.map((crop, i) => ({ crop, position: i, label: labels[i] }));
 }
 
 /** §7.7 profile tuning applied to Game 2's modelling step: sameness-helps
@@ -155,23 +104,25 @@ export function actItOutLine(profile: ChildProfile): string {
 }
 
 /**
- * The saved strip -- a real clinical artefact (a visual schedule), not
- * just a game outcome (§8.2). Returns plain lines a screen renders and
- * hands to the browser's native print, per TECH-DECISIONS.md's own
- * "Print & export" guidance elsewhere in this app -- no PDF library, no
- * new persistence type invented here.
+ * The saved strip -- a real clinical artefact (a visual schedule), not just
+ * a game outcome (§8.2). Returns plain lines a screen renders and hands to
+ * the browser's native print, per TECH-DECISIONS.md's own "Print & export"
+ * guidance elsewhere in this app -- no PDF library, no new persistence type
+ * invented here.
+ *
+ * `title` still carries unfilled slot tokens (e.g. "{child}'s bedtime
+ * schedule") and is rendered here via the same renderLine/slotValuesFromProfile
+ * pattern this file always used. `renderedLines` are ALREADY fully rendered
+ * step sentences (the caller renders each StoryStepTemplate via
+ * engine/game2Story.ts's renderStorySentence first) — this function just
+ * prepends the rendered title and returns the combined array.
  */
 export function formatVisualSchedule(
-  anchor: RoutineAnchor,
-  steps: SequenceStep[],
   profile: ChildProfile,
+  title: string,
+  renderedLines: string[],
 ): string[] {
   const values = slotValuesFromProfile(profile);
-  const title = renderLine(`{child}'s ${anchor} schedule`, values, profile.context);
-  const ordinal = ['First', 'Then', 'Last', 'And then'];
-  const lines = steps.map((step, i) => {
-    const position = ordinal[i] ?? `Step ${i + 1}`;
-    return renderLine(`${position} — {companion} ${step.label}.`, values, profile.context);
-  });
-  return [title, ...lines];
+  const renderedTitle = renderLine(title, values, profile.context);
+  return [renderedTitle, ...renderedLines];
 }

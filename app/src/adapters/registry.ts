@@ -16,7 +16,8 @@ import { createBlazeFaceLocal } from './face/blazeFaceLocal';
 import { createCanvasMosaic } from './redaction/canvasMosaic';
 import { createClaudeVision } from './vision/claudeVision';
 import { createHaikuCard } from './textgen/haikuCard';
-import { createFixtureSpeechOut } from './fixtures/fixtureSpeechOut';
+import { createClaudeStory } from './story/claudeStory';
+import { createWebSpeechOut } from './speech/webSpeechOut';
 import { createIndexedDbStorage } from './storage/indexedDbStorage';
 import type { AdapterRegistry } from './ports';
 
@@ -34,6 +35,7 @@ export const adapters: AdapterRegistry = {
   redaction: createCanvasMosaic(), // F.006 — done. Destructive mosaic + blur on the actual pixel buffer.
   vision: createClaudeVision(), // F.006 — done. claude-sonnet-5 via the serverless proxy, redacted image only.
   textGen: createHaikuCard(), // F.015 — done. Real Haiku call behind the §9.4 guardrail; see adapters/textgen/haikuCard.ts and rawTextCard.ts (the guardrail-failure fallback).
-  speechOut: createFixtureSpeechOut(), // TODO(F.010): swap for WebSpeechOut
+  story: createClaudeStory(), // F.022 redesign — done. Real Haiku call behind strict validation; see adapters/story/claudeStory.ts and templateStory.ts (the validation-failure fallback, wired directly in engine/game2Story.ts, not through this registry — see that file's comment).
+  speechOut: createWebSpeechOut(), // Web Speech API -- see adapters/speech/webSpeechOut.ts
   storage: createIndexedDbStorage(), // F.001 — done. Real, on-device, persists across restarts.
 };
