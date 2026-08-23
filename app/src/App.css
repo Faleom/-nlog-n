@@ -441,6 +441,62 @@
   --color-primary-soft: rgba(255, 51, 170, 0.24);
 }
 
+/* Accent-by-favColour, light-theme pitch. The seven blocks above were
+   tuned for contrast against a BLACK ground (Nightshade) and read as
+   near-invisible on Parchment -- e.g. the dark-pitch yellow #ccbb00 drops
+   to 1.75:1 against Parchment, well under the 4.5:1 floor every other
+   token here holds itself to. These compound selectors give each hue a
+   second, darker/more saturated pitch for when data-theme='light' is
+   also set, using the same method as the light theme's own
+   --color-primary (#5b52e8, 4.89:1 on Parchment): same hue angle as the
+   dark-pitch version above, lightness lowered until the fill clears
+   4.5:1 on Parchment AND the light theme's composited glass surfaces,
+   with -bright pushed further for the small-text-on-strong-glass case.
+   A compound [data-theme='light'][data-accent='x'] selector has the same
+   specificity as the plain :root[data-theme='light'] block above, but
+   wins because it is declared later and is more specific in practice
+   (two attributes vs one) -- so light mode never inherits an accent hue
+   tuned for the wrong background. */
+:root[data-theme='light'][data-accent='red'] {
+  --color-primary: #de0011;
+  --color-primary-bright: #c4000f;
+  --color-primary-ink: #faf7ff;
+  --color-primary-soft: rgba(222, 0, 17, 0.16);
+}
+:root[data-theme='light'][data-accent='orange'] {
+  --color-primary: #ad5700;
+  --color-primary-bright: #964b00;
+  --color-primary-ink: #faf7ff;
+  --color-primary-soft: rgba(173, 87, 0, 0.16);
+}
+:root[data-theme='light'][data-accent='yellow'] {
+  --color-primary: #786e00;
+  --color-primary-bright: #6b6200;
+  --color-primary-ink: #faf7ff;
+  --color-primary-soft: rgba(120, 110, 0, 0.16);
+}
+:root[data-theme='light'][data-accent='green'] {
+  --color-primary: #007f2b;
+  --color-primary-bright: #007026;
+  --color-primary-ink: #faf7ff;
+  --color-primary-soft: rgba(0, 127, 43, 0.16);
+}
+:root[data-theme='light'][data-accent='blue'] {
+  --color-primary: #0065f2;
+  --color-primary-bright: #0058d4;
+  --color-primary-ink: #faf7ff;
+  --color-primary-soft: rgba(0, 101, 242, 0.16);
+}
+:root[data-theme='light'][data-accent='pink'] {
+  --color-primary: #d4007b;
+  --color-primary-bright: #bd006e;
+  --color-primary-ink: #faf7ff;
+  --color-primary-soft: rgba(212, 0, 123, 0.16);
+}
+/* No light-theme override for 'purple': the light theme's own default
+   --color-primary (#5b52e8) already IS the light pitch of Periwink, so
+   the plain :root[data-theme='light'] block already covers it. */
+
 * {
   box-sizing: border-box;
 }
