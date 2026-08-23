@@ -154,6 +154,10 @@ async function main() {
     'scripts/smoke-f011.ts', // F.011's own test, reads history to set up fixtures
     'scripts/smoke-f013.ts', // F.013's own test, same reason
     'scripts/smoke-f019.ts', // F.019's own test, reads history to set up real fixtures for the dashboard
+    'scripts/smoke-dashboard.ts', // the rebuilt dashboard's own test, same
+    // reason as smoke-f019.ts: it reads back the sessions it just wrote to
+    // prove the store round-trips a track and a skill record. The screen it
+    // tests is already on this allowlist for DISPLAYING that history.
   ]);
 
   await test('no file outside the allowlist reads activity history', () => {
@@ -199,6 +203,11 @@ async function main() {
     // of "within one attempt at one skill", never a cross-session concern
     'scripts/smoke-f022.ts', // F.022's own test, names that counter in prose
     'scripts/smoke-f019.ts', // F.019's own test, asserts the ABSENCE of "streak" etc. in the dashboard
+    'scripts/smoke-dashboard.ts', // the rebuilt dashboard's own test, same
+    // reason: it asserts the ABSENCE of a streak/counter mechanic in the
+    // dashboard's three files, so the words appear only inside that
+    // assertion. src/engine/dashboardSummary.ts is deliberately NOT here --
+    // it sums and buckets, and holds no counter over outcomes at all.
     'scripts/smoke-f008.ts', // F.008's own test, asserts the ABSENCE of "counter" etc. in Game1.tsx
     'src/games/silhouette.ts', // an image-processing luminance THRESHOLD for
     // generating a silhouette from a crop -- a pixel-brightness cutoff, unrelated

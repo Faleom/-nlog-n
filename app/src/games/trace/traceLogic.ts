@@ -16,6 +16,7 @@
 // id below is built from the tracing, never from the colour.
 
 import { TRACE_OBJECTS, type TraceObject } from './tracePaths';
+import { INTERACTION_CONFIG } from '../../config/interaction';
 
 export interface TracePoint {
   x: number;
@@ -128,7 +129,7 @@ export const CRAYON_WIDTH = 34;
  * The session cap and the idle timeout still apply underneath; whichever
  * comes first wins. This is the expected ending, not the only one.
  */
-export const ROUNDS_PER_SESSION = 5;
+export const ROUNDS_PER_SESSION = INTERACTION_CONFIG.ROUNDS_PER_SESSION;
 
 /** Whether every planned shape has been done. `completed` is how many
  * rounds have been finished, not the index of the current one. */

@@ -29,6 +29,9 @@ import { renderLine, slotValuesFromProfile } from '../engine/slots';
 import { InteractionMachine, type PromptTier } from '../engine/interactionMachine';
 import { startSession, updateFocusStretch } from '../engine/profileStore';
 import { logActivityOutcome } from '../engine/activityLogging';
+import { INTERACTION_CONFIG } from '../config/interaction';
+import { SessionCelebration } from './SessionCelebration';
+import { usualSessionMinutes } from '../engine/dashboardSummary';
 import { getFadingSuggestion, type FadingSuggestion } from '../engine/fading';
 import {
   shouldAnnounceChangesInAdvance,
@@ -38,12 +41,9 @@ import {
 import { getSkillTemplatesForCrop, getSkillTemplatesForObject } from '../engine/skillLookup';
 import {
   childFacingHandoffLine,
-  describeSessionRecap,
-  distinctSkillsThisSession,
   endSessionNow,
   getSessionNumber,
   hasCapBeenReached,
-  sessionCapSeconds,
   type SessionEndResult,
 } from '../engine/sessionLifecycle';
 import { SUPPORT_TIERS, DEFAULT_STARTING_SUPPORT_TIER } from '../config/supportLadder';
@@ -598,7 +598,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const [lastLoggedTier, setLastLoggedTier] = useState<SupportTier | null>(null);
   const [fadingSuggestion, setFadingSuggestion] = useState<FadingSuggestion | null>(null);
   const [sessionEndResult, setSessionEndResult] = useState<SessionEndResult | null>(null);
-  const [showCaregiverRecap, setShowCaregiverRecap] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const machineRef = useRef<InteractionMachine>(new InteractionMachine());
@@ -615,8 +614,13 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   // sessions the way the level itself is.
   const trialCountRef = useRef<number>(0);
 
+  // The caregiver's usual sitting length (dashboard), which is where
+  // this session's cap starts. Read once here so the session poller can
+  // depend on the number rather than on the whole profile object.
+  const capFirstMinutes = usualSessionMinutes(profile);
+
   const handleEndSession = useCallback(
-    async (reason: 'cap' | 'idle' | 'caregiver') => {
+    async (reason: 'cap' | 'idle' | 'caregiver' | 'finished') => {
       if (!sessionId) return;
       setPhase('sessionEnded');
       const result = await endSessionNow(sessionId, reason, lastObjectNameRef.current);
@@ -634,7 +638,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   useEffect(() => {
     void (async () => {
       const [session, number, savedLevel] = await Promise.all([
-        startSession(profile.id),
+        startSession(profile.id, 'find-it'),
         getSessionNumber(profile.id),
         getGame1Level(profile.id),
       ]);
@@ -727,12 +731,12 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
         return;
       }
       const elapsed = Math.floor((now - sessionStartedAtRef.current) / 1000);
-      if (hasCapBeenReached(sessionNumber, elapsed)) {
+      if (hasCapBeenReached(sessionNumber, elapsed, capFirstMinutes)) {
         void handleEndSession('cap');
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [sessionId, sessionNumber, phase, handleEndSession]);
+  }, [sessionId, sessionNumber, phase, handleEndSession, capFirstMinutes]);
 
   /**
    * Starts a new trial from the session's existing crop pool. `effectiveLevel`
@@ -1012,6 +1016,16 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       return;
     }
 
+    // The session has a planned length. Reaching it is the ordinary way
+    // this game ends -- not the cap, not a child drifting off -- and it is
+    // what puts a completed session, with its time and its support
+    // records, into the log the caregiver dashboard reads. Checked after
+    // the movement break so a break never swallows the ending.
+    if (trialCountRef.current >= INTERACTION_CONFIG.ROUNDS_PER_SESSION) {
+      void handleEndSession('finished');
+      return;
+    }
+
     // §8.1: "one photo per session, not per trial" — the NEXT trial reuses
     // the same crop set rather than re-prompting for a capture. Only the
     // pre-capture 'idle' screen (before crops exist) shows the capture
@@ -1029,67 +1043,33 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   }
 
   if (phase === 'sessionEnded') {
-    return (
-      <div className="screen">
-        {!showCaregiverRecap ? (
-          <>
-            <p style={{ fontSize: '1.2rem' }}>
-              {sessionEndResult && childFacingHandoffLine(profile, sessionEndResult.handoffObjectName)}
-            </p>
-            <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>
-              Session over ({sessionEndResult?.reason}). No play-again button.
-              This is deliberate (F.013).
-            </p>
-            <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => setShowCaregiverRecap(true)}>
-              Caregiver recap
-            </button>
-          </>
-        ) : (
-          sessionEndResult && (
-            <>
-              <h3>Session recap</h3>
-              {/* The room they actually played in, with everything the app
-                  found marked in place. Only ever rendered from a real
-                  capture — with fixtures or the fallback set there is no
-                  scene, and a map over someone else's room would be a lie. */}
-              {scene && (
-                <>
-                  <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: 4 }}>
-                    Everything we found in your room:
-                  </p>
-                  <RoomMap scene={scene} crops={crops} />
-                  <ObjectLegend crops={crops} />
-                </>
-              )}
-              <p>{describeSessionRecap(sessionEndResult.session)}</p>
-              <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-                Objects recognised: {distinctSkillsThisSession(sessionEndResult.session).join(', ') || 'none'}
-              </p>
-              <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-                Offline suggestion: {childFacingHandoffLine(profile, sessionEndResult.handoffObjectName)}
-              </p>
-              <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>
-                This is an activity log, not a clinical assessment.
-              </p>
-            </>
-          )
-        )}
-      </div>
+    // Game 1 keeps childFacingHandoffLine: unlike the other three games,
+    // its targets ARE real objects in the child's own room, so sending
+    // them off to go and find one with their grown-up names something
+    // that is actually there. The caregiver recap that used to sit behind
+    // a button here is gone -- the room map, the session figures and the
+    // support tiers all live on the dashboard now, where a caregiver can
+    // read them without a child waiting on the screen.
+    return sessionEndResult ? (
+      <SessionCelebration
+        session={sessionEndResult.session}
+        track="find-it"
+        handoffLine={childFacingHandoffLine(profile, sessionEndResult.handoffObjectName)}
+      />
+    ) : (
+      <div className="screen" />
     );
   }
 
   if (phase === 'idle') {
-    const capSeconds = sessionNumber ? sessionCapSeconds(sessionNumber) : null;
     return (
       <div className="screen" style={accentStyle}>
         <style>{GAME1_STYLES}</style>
         <h2>Find It In Your World</h2>
-        {sessionNumber && capSeconds && (
-          <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>
-            Session {sessionNumber}, cap {Math.round(capSeconds / 60)}min, elapsed{' '}
-            {elapsedSeconds}s
-          </p>
-        )}
+        {/* The session/cap/elapsed readout that used to sit here is gone.
+            It was plumbing on a screen a child is usually looking at too,
+            and every figure in it now lands on the caregiver dashboard
+            instead, where it can be read without a child waiting. */}
         {captureNotice === 'blur-failed' && (
           <p style={{ fontSize: '0.85rem', color: 'var(--color-danger)' }}>
             That photo couldn't be processed. Let's try again.

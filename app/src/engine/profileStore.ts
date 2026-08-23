@@ -10,7 +10,7 @@
 // already prevents all three — see src/types/index.ts.
 
 import { adapters } from '../adapters/registry';
-import type { ChildProfile, QuestionCard, SessionLog, SkillRecord } from '../types';
+import type { ChildProfile, QuestionCard, SessionLog, SkillRecord, TrackId } from '../types';
 
 const PROFILES_KEY = 'profiles';
 const ACTIVE_PROFILE_KEY = 'activeProfileId';
@@ -139,7 +139,7 @@ export async function updateProfile(
 // Sessions & skill records (§7.6, §7.7, §7.9)
 // ---------------------------------------------------------------------------
 
-export async function startSession(childId: string): Promise<SessionLog> {
+export async function startSession(childId: string, track?: TrackId): Promise<SessionLog> {
   const sessions = (await adapters.storage.get<SessionsMap>(SESSIONS_KEY)) ?? {};
   const id = newId();
   const session: SessionLog = {
@@ -152,6 +152,9 @@ export async function startSession(childId: string): Promise<SessionLog> {
     longestFocusStretchSeconds: 0,
     skillRecords: [],
     endedBy: 'caregiver', // placeholder; endSession() sets the real value
+    // Which activity this is. Recorded at the start, not the end, so a
+    // session that is never ended cleanly still knows what it was.
+    ...(track ? { track } : {}),
   };
   sessions[id] = session;
   await adapters.storage.set(SESSIONS_KEY, sessions);

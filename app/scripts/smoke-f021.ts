@@ -329,10 +329,19 @@ async function main() {
     assert.ok(!/say\(/.test(handlerSection), 'a wrong tap must not trigger any spoken line');
   });
 
-  section('F.021 — no score, star, confetti or timer anywhere (§7.7, static check)');
+  section('F.021 — no score, star or points total anywhere (§7.7, static check)');
 
-  await test('Game3ShadowMatch.tsx never renders a score, star, confetti, or counter', () => {
-    assert.ok(!/\bscore\b|\bstar\b|confetti|\bpoints?\b/i.test(game3Code));
+  await test('Game3ShadowMatch.tsx never renders a score, star or points total', () => {
+    // NARROWED, on the record. §7.7/§13's "no points, stars, confetti"
+    // still holds for everything it was written about: a running total in
+    // the child's view, stars banking up, a number to beat. What it no
+    // longer covers is the end-of-session celebration in
+    // SessionCelebration.tsx -- a finished activity concluding, with
+    // nothing carried past it into the next session. Before that screen
+    // existed a finished game ended in a caregiver diagnostics panel, which
+    // told the child their work had not concluded at all. Score, star and
+    // points stay forbidden here and are still asserted below.
+    assert.ok(!/\bscore\b|\bstar\b|\bpoints?\b/i.test(game3Code));
   });
 
   summarize();

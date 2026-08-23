@@ -69,6 +69,22 @@
   --color-companion: #ff7e9d; /* Blush */
   --color-companion-glow: rgba(255, 126, 157, 0.3);
 
+  /* ---- Activity track colours ----------------------------------------
+     One per track, used twice each: a segment of the dashboard's
+     time-by-track bar, and the dot beside that track's row. All four are
+     cool -- DESIGN-TOKENS §4.2/§4.3 keep Sunburst, Blush and Ember off
+     caregiver screens, and a red/amber/green data set on a screen about a
+     child in early intervention would read as a verdict no matter what
+     the legend said. They separate by lightness as well as hue, so they
+     survive a colour-blind reader, and each one measures at least 4:1
+     against the dashboard card's composited surface (WCAG 1.4.11 asks
+     3:1 for a graphic that carries meaning). The bar is never the only
+     carrier either: every segment is restated as a labelled row below it. */
+  --track-find-it: #8b7bff; /* Periwink        4.07:1 on the card */
+  --track-story: #6ed3c6; /* Sea glass      7.54:1 */
+  --track-match: #c9a2ff; /* Lilac          6.46:1 */
+  --track-trace: #7fa8e8; /* Slate blue     5.54:1 */
+
   /* ---- Utility surfaces --------------------------------------------
      Added so Phase 2 has somewhere to send the hardcoded light-mode
      literals still scattered through the games and screens (#a33, #eef,
@@ -792,7 +808,7 @@ textarea::placeholder {
 
 /* Now that each group below is a real panel, this is the panel's
    caption rather than a heading floating on the ground: it matches
-   .dashboard-meta-label's small-caps metrics (0.7-0.72rem / 700 /
+   .dashboard-metric-label's small-caps metrics (0.68-0.72rem / 700 /
    muted ink) so the two caregiver tabs share one label voice, and it
    is inset 4px -- level with where the panel's rounded corner leaves
    off -- instead of 2px off the screen edge. */
@@ -900,7 +916,7 @@ textarea::placeholder {
 
 /* No scale on press: shrinking a full-width row would visibly detach it
    from the panel it is cut into. A wash instead -- same call, and same
-   value, as .dashboard-card-toggle. */
+   value, as .dashboard-track-toggle. */
 .home-edit-button:active {
   transform: none;
   background: rgba(255, 255, 255, 0.06);
@@ -1130,16 +1146,26 @@ textarea::placeholder {
 
 /* ---------------------------------------------------------------------
    CAREGIVER DASHBOARD
-   The one screen in the app that is purely information, and the last one
-   still wearing browser defaults. DESIGN-TOKENS §4.2: caregiver surfaces
-   are DENSER than child ones, not different in kind -- same glass, but
-   --glass-bg-strong + --radius-md + --space-caregiver-gap, Periwink tint,
-   and no reserved hue anywhere (§4.3 forbids Sunburst/Blush/child tokens
-   on this side outright, which also keeps the trend from ever reading as
-   red/green judgement).
+   The one screen in the app that is purely information. DESIGN-TOKENS
+   §4.2: caregiver surfaces are DENSER than child ones, not different in
+   kind -- the same glass, at --glass-bg-strong + --radius-md +
+   --space-caregiver-gap, Periwink tint, muted secondary text.
 
-   Three cards, recap open by default -- the accordion shape UI-STANDARDS
-   already specifies. Each card header is a real 88x88 target.
+   §4.3's leak rule holds: no Sunburst, no Blush, no Ember, no child
+   tokens. That is also why the four track colours below are a violet-cool
+   family rather than the red/amber/green a chart usually reaches for --
+   nothing on a screen about a child in early intervention should be able
+   to read as a red/green verdict on them.
+
+   Six carded groups where §4.2 suggests three to five: a knowing
+   deviation to match the approved mockup, kept in hand by making every
+   card a flat list with one heading, never a nested panel.
+
+   NO HOVER STATES ANYWHERE in this block. Every control here is
+   touch-first, and a hover style on a tablet fires on tap and then
+   sticks. Press feedback is on press only -- a wash, not a transform, on
+   anything that spans the full width of its card, because shrinking a
+   full-width row visibly detaches it from the card it sits in.
    --------------------------------------------------------------------- */
 
 .dashboard {
@@ -1160,7 +1186,65 @@ textarea::placeholder {
   font-size: 0.78rem;
 }
 
+/* ---- Header: whose log this is -------------------------------------- */
+
+.dashboard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 4px;
+}
+
+.dashboard-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dashboard-head-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.dashboard-head-name {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: var(--weight-caregiver-strong);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+/* The Companion, at identity size rather than portrait size: this says
+   "this is their log", it is not a photo to look at. */
+.dashboard-avatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-avatar--empty {
+  display: grid;
+  place-items: center;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+}
+
+/* ---- The card ------------------------------------------------------- */
+
 .dashboard-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   /* The caregiver temperature: a Periwink wash laid over the stronger
@@ -1172,9 +1256,6 @@ textarea::placeholder {
   backdrop-filter: var(--glass-filter);
   -webkit-backdrop-filter: var(--glass-filter);
   box-shadow: var(--glass-shadow), var(--glass-highlight);
-  /* So the header's press wash and the body's divider both stop at the
-     card's rounded corners. */
-  overflow: hidden;
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -1184,91 +1265,127 @@ textarea::placeholder {
   }
 }
 
-/* The header IS the card's top edge, so it drops the base button's own
-   glass, rim and radius entirely and keeps only the 88px floor. */
-.dashboard-card-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-  min-height: var(--touch-min);
-  padding: 0 16px;
-  text-align: left;
-  color: var(--color-ink);
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-}
-
-/* No scale on press: this is a full-width panel edge, and shrinking it
-   would visibly detach it from the card it belongs to. A wash instead. */
-.dashboard-card-toggle:active {
-  transform: none;
-  background: rgba(255, 255, 255, 0.06);
-}
-
 .dashboard-card-title {
-  font-size: 1rem;
+  margin: 0;
+  font-size: 0.95rem;
   font-weight: var(--weight-caregiver-strong);
 }
 
-/* Was a bare "▾ / ▸" text glyph falling through to whatever the system
-   stack happened to supply. Drawn instead, so it is the same shape on
-   every device and can rotate rather than swap. */
-.dashboard-chevron {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--glass-border);
-  border-radius: 50%;
-  /* §3.5: Periwink as text/marks on --glass-bg-strong must step up to
-     Periwink Bright (4.03 -> 5.65). */
-  color: var(--color-primary-bright);
-  transition: transform 160ms var(--ease-out);
-}
-
-.dashboard-chevron.is-open {
-  transform: rotate(90deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-chevron {
-    transition: none;
-  }
-}
-
-.dashboard-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px 16px;
-  border-top: 1px solid var(--color-border);
-}
-
-.dashboard-recap-line {
-  font-size: 0.95rem;
-  color: var(--color-ink);
-}
-
-.dashboard-empty {
-  font-size: 0.88rem;
+.dashboard-caption {
+  margin: -2px 0 2px;
+  font-size: 0.78rem;
+  line-height: 1.5;
   color: var(--color-ink-muted);
 }
 
-.dashboard-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.dashboard-empty {
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
 }
 
-.dashboard-meta-label {
+/* ---- This week ------------------------------------------------------ */
+
+/* Seven cells, oldest to today. An unplayed day is an EMPTY OUTLINE and
+   nothing else: no red, no cross, no dimming, no gap language anywhere
+   near it. The only cell that is called out is today's, and it is called
+   out whether or not anything has been played in it -- so the accent
+   reads as "you are here", never as a verdict on the day. */
+.dashboard-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard-week-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dashboard-week-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.dashboard-week-box {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 9px;
+  color: transparent;
+}
+
+.dashboard-week-box.is-played {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+}
+
+/* After .is-played on purpose: on a day that is both, "today" is the
+   thing the eye needs to find first. */
+.dashboard-week-box.is-today {
+  border-color: var(--color-primary-bright);
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
+}
+
+/* ---- Usual session length ------------------------------------------- */
+
+.dashboard-length-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+/* The one place on this screen that keeps the original 88px floor rather
+   than --touch-min's 44px: these three are the only real touch targets on
+   a caregiver screen that a caregiver taps while holding a child, and the
+   number inside them wants the room anyway. */
+.dashboard-length-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 88px;
+  padding: 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-ink);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transition: background 140ms var(--ease-out), border-color 140ms var(--ease-out);
+}
+
+.dashboard-length-option.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.dashboard-length-option:active {
+  transform: none;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-length-value {
+  font-size: 1.5rem;
+  font-weight: var(--weight-caregiver-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.dashboard-length-unit {
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -1276,9 +1393,68 @@ textarea::placeholder {
   color: var(--color-ink-muted);
 }
 
-.dashboard-meta-value {
-  font-size: 0.88rem;
-  color: var(--color-ink);
+.dashboard-length-option.is-selected .dashboard-length-unit {
+  color: var(--color-primary-bright);
+}
+
+/* ---- Today's two figures -------------------------------------------- */
+
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-caregiver-gap);
+}
+
+.dashboard-metric {
+  gap: 4px;
+}
+
+.dashboard-metric-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* Tabular figures: these two sit side by side and change every session,
+   and proportional digits make them jitter against each other. */
+.dashboard-metric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 2rem;
+  font-weight: var(--weight-caregiver-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.dashboard-metric-unit {
+  font-size: 0.8rem;
+  font-weight: var(--weight-caregiver-body);
+  color: var(--color-ink-muted);
+}
+
+/* ---- Time by track --------------------------------------------------- */
+
+/* ONE bar, segmented -- not one bar per track. Three bars invite reading
+   them as three progress bars against three targets; one bar can only be
+   read as "this is how today divided up", which is all it is. */
+.dashboard-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.dashboard-bar-segment {
+  flex-basis: 0;
+  /* A track with no time today is not rendered at all (see
+     dashboardSummary.timeByTrackOn), so this floor only ever protects a
+     genuinely tiny slice from disappearing -- it can never manufacture a
+     sliver for a track that was not played. */
+  min-width: 10px;
 }
 
 .dashboard-list {
@@ -1290,97 +1466,203 @@ textarea::placeholder {
   list-style: none;
 }
 
-/* One inset row per session or skill -- a lighter step ON the card, not
-   another glass panel, so the card stays the only surface the eye has to
-   parse. Rows are not interactive, so the 88px floor does not apply. */
-.dashboard-trend-row,
-.dashboard-skill-row {
+.dashboard-track-row {
+  display: flex;
+  flex-direction: column;
+}
+
+/* An inset row ON the card, not a second glass panel -- the card stays
+   the only surface the eye has to parse. */
+.dashboard-track-toggle,
+.dashboard-skill-row,
+.dashboard-recent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.045);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.dashboard-trend-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px 12px;
+.dashboard-track-toggle {
+  min-height: var(--touch-min);
+  text-align: left;
+  color: var(--color-ink);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
-.dashboard-trend-session {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-primary-bright);
+.dashboard-track-toggle:active {
+  transform: none;
+  background: rgba(255, 255, 255, 0.09);
 }
 
-.dashboard-trend-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
+.dashboard-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
-/* Number over label, tabular figures, so a column of sessions lines up
-   digit-for-digit. Both figures get identical treatment on purpose:
-   neither is the "headline" one, and §7.9 does not let this screen
-   imply which direction is good. */
-.dashboard-figure {
+.dashboard-track-text,
+.dashboard-skill-text,
+.dashboard-recent-text {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-track-name,
+.dashboard-skill-name,
+.dashboard-recent-name {
+  font-size: 0.88rem;
+  font-weight: var(--weight-caregiver-strong);
+  overflow-wrap: anywhere;
+}
+
+/* Skill ids arrive kebab-cased and lowercase; capitalising the whole
+   phrase would Title Case A Sentence, so only the first letter moves. */
+.dashboard-skill-name::first-letter,
+.dashboard-track-detail::first-letter,
+.dashboard-recent-detail::first-letter {
+  text-transform: uppercase;
+}
+
+.dashboard-track-detail,
+.dashboard-skill-context,
+.dashboard-recent-detail {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
 }
 
 .dashboard-figure-value {
-  font-size: 1.05rem;
+  flex: none;
+  font-size: 0.85rem;
   font-weight: var(--weight-caregiver-strong);
   font-variant-numeric: tabular-nums;
   color: var(--color-ink);
 }
 
-.dashboard-figure-caption {
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
+/* Drawn, not a "▾" text glyph falling through to whatever the system
+   stack happens to supply -- same shape on every device, and it rotates
+   rather than swapping character. */
+.dashboard-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  /* §3.5: Periwink as a mark on --glass-bg-strong steps up to Bright. */
+  color: var(--color-primary-bright);
+  transition: transform 160ms var(--ease-out);
+}
+
+.dashboard-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.dashboard-track-expanded {
+  margin: 6px 0 0;
+  padding: 0 12px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--color-ink-muted);
+}
+
+/* ---- Skills and support ---------------------------------------------- */
+
+/* Two groups, both plain: what is being done alone, and what still has a
+   hand on it. Neither heading is coloured, sized or ordered to make one
+   the good half -- the ladder runs both ways and a tier that moved down
+   is information, not an event. */
+.dashboard-group-label {
+  margin: 4px 0 -2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--color-ink-muted);
 }
 
-.dashboard-skill-row {
+.dashboard-skill-meta {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.dashboard-skill-name {
-  font-size: 0.95rem;
-  font-weight: var(--weight-caregiver-strong);
-  color: var(--color-ink);
-}
-
-/* The contexts a skill reached independence in, one chip each rather
-   than a comma-joined run -- "kitchen, living-room" is two facts. */
-.dashboard-context-chips {
-  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 6px;
 }
 
-.dashboard-chip {
-  padding: 3px 9px;
-  font-size: 0.75rem;
-  color: var(--color-ink);
-  background: var(--color-surface);
+/* Five steps, filled up to the current tier: more filled means less help
+   needed, the direction the ladder itself runs. One hue at two weights --
+   a second colour here would invite reading the low end as a warning,
+   which is exactly what §10 keeps off this screen. The tier's name is
+   written out beside every meter, so the bars are never the only telling. */
+.dashboard-ladder {
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+
+.dashboard-ladder-step {
+  width: 13px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+.dashboard-ladder-step.is-filled {
+  background: var(--color-primary-bright);
+}
+
+/* ---- Skills ---------------------------------------------------------- */
+
+/* Filled with a tick, or an empty outline. The state is ALSO written out
+   in the row's context line ("2 of 2 places"), so nothing here is carried
+   by colour alone. */
+.dashboard-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
   border: 1px solid var(--color-border-strong);
-  border-radius: 999px;
+  border-radius: 50%;
+  color: transparent;
 }
 
-/* Sits under the whole dashboard in the Dashboard tab, so it needs the
-   caregiver rhythm the tab's own block layout does not provide. */
+.dashboard-mark.is-complete {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-chevron,
+  .dashboard-length-option {
+    transition: none;
+  }
+}
+
+/* Narrow phones: the two figures stack rather than squeezing a 2rem
+   number into half of a 320px screen. */
+@media (max-width: 359px) {
+  .dashboard-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The device-storage note under the tab, not part of any card. */
 .dashboard-footnote {
-  margin-top: var(--space-caregiver-gap);
+  margin-top: 4px;
 }
 
 /* ---------------------------------------------------------------------

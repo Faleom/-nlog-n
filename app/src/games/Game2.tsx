@@ -34,6 +34,7 @@ import {
 } from '../engine/game2Story';
 import { modelPlaybackCount, actItOutLine, formatVisualSchedule } from '../engine/routineSequencing';
 import { logActivityOutcome } from '../engine/activityLogging';
+import { SessionCelebration } from './SessionCelebration';
 import { startSession, endSession, updateFocusStretch } from '../engine/profileStore';
 import { SUPPORT_TIERS } from '../config/supportLadder';
 import { GENERIC_FALLBACK_CROPS } from './genericFallbackCrops';
@@ -45,10 +46,18 @@ import {
   shouldUseVisualPulseInsteadOfChime,
   shouldAnnounceChangesInAdvance,
 } from '../engine/avoidFilter';
-import type { ChildProfile, SupportTier, TaggedCrop } from '../types';
+import type { ChildProfile, SessionLog, SupportTier, TaggedCrop } from '../types';
 import type { GeneratedStoryTemplate } from '../adapters/ports';
 
-type Phase = 'idle' | 'capturing' | 'modelling' | 'actItOut' | 'blanks' | 'complete' | 'reportingSupport';
+type Phase =
+  | 'idle'
+  | 'capturing'
+  | 'modelling'
+  | 'actItOut'
+  | 'blanks'
+  | 'complete'
+  | 'reportingSupport'
+  | 'sessionEnded';
 
 interface Game2Props {
   profile: ChildProfile;
@@ -522,6 +531,7 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
   // stands in for the old lockedToCorrect signal when reporting the
   // default support tier (§4's "needed real help" proxy for a batch
   // interaction, where there's no single "second wrong" moment anymore).
+  const [endedSession, setEndedSession] = useState<SessionLog | null>(null);
   const [hadWrongSubmit, setHadWrongSubmit] = useState(false);
   const [stepCount, setStepCount] = useState<number>(3);
   // Who the story is about -- 'companion' (default) uses this app's usual
@@ -559,7 +569,7 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
   const styleSheet = reduceMotion ? `${GAME2_STYLES}\n${GAME2_REDUCED_MOTION_RULES}` : GAME2_STYLES;
 
   useEffect(() => {
-    void startSession(profile.id).then((s) => {
+    void startSession(profile.id, 'story').then((s) => {
       setSessionId(s.id);
       sessionStartedAtRef.current = new Date(s.startedAt).getTime();
     });
@@ -926,14 +936,49 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
       supportTier: tier,
       onScreenTier: hadWrongSubmit ? 3 : 0,
     });
-    await endSession(sessionId, 'caregiver');
-    setPhase('idle');
+    // 'finished' rather than 'caregiver': the child worked through the
+    // whole story and it ran out, which is a different thing from an adult
+    // stopping one early, and the log should not say otherwise.
+    const ended = await endSession(sessionId, 'finished');
+    setEndedSession(ended);
+    setPhase('sessionEnded');
     setSessionId(null);
     sessionStartedAtRef.current = null;
-    void startSession(profile.id).then((s) => {
+    // Deliberately NOT starting the next session here. Opening one the
+    // moment the last closed left a trail of empty zero-length sessions in
+    // the log for stories nobody played -- the next one starts when a
+    // caregiver actually begins another story.
+  }
+
+  function startAnotherStory() {
+    setEndedSession(null);
+    setPhase('idle');
+    void startSession(profile.id, 'story').then((s) => {
       setSessionId(s.id);
       sessionStartedAtRef.current = new Date(s.startedAt).getTime();
     });
+  }
+
+  if (phase === 'sessionEnded') {
+    // No handoff line: this game's story is acted out in the room but its
+    // pieces are photographed crops, not one real object to be sent off
+    // after. Game 1 owns that bookend.
+    return endedSession ? (
+      <>
+        <SessionCelebration session={endedSession} track="story" />
+        <div className="screen" style={{ paddingTop: 0 }}>
+          <button
+            className="button-primary"
+            style={{ minWidth: 88, minHeight: 88 }}
+            onClick={startAnotherStory}
+          >
+            Another story
+          </button>
+        </div>
+      </>
+    ) : (
+      <div className="screen" />
+    );
   }
 
   if (phase === 'idle') {

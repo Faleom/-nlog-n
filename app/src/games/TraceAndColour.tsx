@@ -24,20 +24,19 @@ import { adapters } from '../adapters/registry';
 import { renderLine, slotValuesFromProfile } from '../engine/slots';
 import { startSession } from '../engine/profileStore';
 import { logActivityOutcome } from '../engine/activityLogging';
+import { SessionCelebration } from './SessionCelebration';
+import { usualSessionMinutes } from '../engine/dashboardSummary';
 import { getFadingSuggestion, type FadingSuggestion } from '../engine/fading';
 import {
-  describeSessionRecap,
   endSessionNow,
   getSessionNumber,
   hasCapBeenReached,
-  sessionCapSeconds,
   type SessionEndResult,
 } from '../engine/sessionLifecycle';
 import { SUPPORT_TIERS, DEFAULT_STARTING_SUPPORT_TIER } from '../config/supportLadder';
 import { PALETTE, realColourOf, type TraceObject } from './trace/tracePaths';
 import {
   CRAYON_WIDTH,
-  ROUNDS_PER_SESSION,
   fixedBag,
   isSessionFinished,
   isTraceComplete,
@@ -322,7 +321,6 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
   const [lastLoggedTier, setLastLoggedTier] = useState<SupportTier | null>(null);
   const [fadingSuggestion, setFadingSuggestion] = useState<FadingSuggestion | null>(null);
   const [sessionEndResult, setSessionEndResult] = useState<SessionEndResult | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const pathRef = useRef<SVGPathElement | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -342,6 +340,11 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
    * id, so a hardcoded one would collide if this screen ever rendered
    * twice — and the crayon strokes would spill out of the wrong shape. */
   const clipId = `trace-clip-${useId().replace(/:/g, '')}`;
+
+  // The caregiver's usual sitting length (dashboard), which is where
+  // this session's cap starts. Read once here so the session poller can
+  // depend on the number rather than on the whole profile object.
+  const capFirstMinutes = usualSessionMinutes(profile);
 
   const handleEndSession = useCallback(
     async (reason: 'cap' | 'idle' | 'caregiver' | 'finished') => {
@@ -363,7 +366,7 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
 
   useEffect(() => {
     void (async () => {
-      const [session, number] = await Promise.all([startSession(profile.id), getSessionNumber(profile.id)]);
+      const [session, number] = await Promise.all([startSession(profile.id, 'trace'), getSessionNumber(profile.id)]);
       setSessionId(session.id);
       setSessionNumber(number);
       startedAtRef.current = Date.now();
@@ -381,9 +384,8 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
     const interval = setInterval(() => {
       const now = Date.now();
       const elapsed = Math.floor((now - startedAtRef.current) / 1000);
-      setElapsedSeconds(elapsed);
 
-      if (hasCapBeenReached(sessionNumber, elapsed)) {
+      if (hasCapBeenReached(sessionNumber, elapsed, capFirstMinutes)) {
         void handleEndSession('cap');
         return;
       }
@@ -396,7 +398,7 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [sessionId, sessionNumber, phase, handleEndSession]);
+  }, [sessionId, sessionNumber, phase, handleEndSession, capFirstMinutes]);
 
   /**
    * Samples the outline into checkpoints as soon as the path element
@@ -576,33 +578,22 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
   // ---------------------------------------------------------------- screens
 
   if (phase === 'sessionEnded') {
-    return (
+    // No child-facing "go find X with your grown-up" handoff line. That
+    // line is built around Game 1's premise: a REAL object photographed in
+    // the child's own room, which they can meaningfully be sent off to
+    // find. This game's shapes are traced on screen, not something in the
+    // room -- "go find your circle" does not mean anything to send a child
+    // off to do. Game 1 keeps that line; it is real there.
+    return sessionEndResult ? (
+      <SessionCelebration session={sessionEndResult.session} track="trace" />
+    ) : (
       <div className="screen t4-caregiver">
         <style>{STYLES}</style>
-        {/* Straight to the recap -- no child-facing "go find X with your
-            grown-up" handoff line. That line is built around Game 1's
-            premise: a REAL object photographed in the child's own room,
-            which they can meaningfully be sent off to go find. This game's
-            shapes are drawn/traced on screen, not something in the room --
-            "go find your circle" doesn't mean anything to send a child off
-            to do. Game 1 keeps this line; it's real there. */}
-        {sessionEndResult && (
-          <>
-            <h3>Session recap</h3>
-            <div className="t4-card">
-              <p className="t4-meta-strong">{describeSessionRecap(sessionEndResult.session)}</p>
-            </div>
-            <p className="t4-footnote">
-              This is an activity log, not a clinical assessment.
-            </p>
-          </>
-        )}
       </div>
     );
   }
 
   if (phase === 'idle') {
-    const capSeconds = sessionNumber ? sessionCapSeconds(sessionNumber) : null;
     return (
       <div className="screen t4-caregiver">
         <style>{STYLES}</style>
@@ -611,28 +602,19 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
           Follow the outline with a finger, then colour it in. Any colour is fine — this
           activity is about the tracing.
         </p>
-        {/* Session plumbing, as one card rather than a stack of asides.
-            All of it is CAREGIVER-only: the child never sees a count, since
-            "3 of 5" on their screen would be the running total §13 rules
-            out, and would turn a finished picture into a score. */}
-        <div className="t4-card">
-          {sessionNumber && capSeconds && (
-            <p className="t4-meta">
-              Session {sessionNumber} — cap {Math.round(capSeconds / 60)}min, elapsed {elapsedSeconds}s
-            </p>
-          )}
-          <p className="t4-meta">
-            {ROUNDS_PER_SESSION} shapes, then the session finishes on its own.
-            {roundRef.current > 0 &&
-              ` ${ROUNDS_PER_SESSION - roundRef.current} left.`}
-          </p>
-          {lastLoggedTier && (
+        {/* The caregiver's own content only. The session/cap/elapsed
+            readout that used to head this card is gone: it was plumbing on
+            a screen a child is usually looking at too, and every figure in
+            it now lands on the dashboard instead, where it can be read
+            without a child waiting. */}
+        {lastLoggedTier && (
+          <div className="t4-card">
             <p className="t4-meta">
               Last logged support tier: {lastLoggedTier} (
               {SUPPORT_TIERS.find((t) => t.tier === lastLoggedTier)?.name})
             </p>
-          )}
-        </div>
+          </div>
+        )}
         {fadingSuggestion && <p className="t4-note">{fadingSuggestion.message}</p>}
         <div className="t4-actions">
           <button className="t4-action button-primary" onClick={startRound}>

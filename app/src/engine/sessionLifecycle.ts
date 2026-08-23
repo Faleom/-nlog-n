@@ -38,16 +38,22 @@ export async function getSessionNumber(childId: string): Promise<number> {
   return past.length + 1;
 }
 
-/** The session cap, in seconds, for this session number. */
-export function sessionCapSeconds(sessionNumber: number): number {
-  return sessionCapMinutes(sessionNumber) * 60;
+/** The session cap, in seconds, for this session number. `firstMinutes`
+ * is the caregiver's usual sitting length (dashboard); omitted, the
+ * config default applies. */
+export function sessionCapSeconds(sessionNumber: number, firstMinutes?: number): number {
+  return sessionCapMinutes(sessionNumber, firstMinutes) * 60;
 }
 
 /** Pure: has the cap been reached, given elapsed seconds since this
  * session started? No internal timer -- the caller polls this, same
  * pattern as InteractionMachine.tick(). */
-export function hasCapBeenReached(sessionNumber: number, elapsedSeconds: number): boolean {
-  return elapsedSeconds >= sessionCapSeconds(sessionNumber);
+export function hasCapBeenReached(
+  sessionNumber: number,
+  elapsedSeconds: number,
+  firstMinutes?: number,
+): boolean {
+  return elapsedSeconds >= sessionCapSeconds(sessionNumber, firstMinutes);
 }
 
 /**

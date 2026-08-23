@@ -33,7 +33,9 @@
     "smoke:icons": "tsx scripts/smoke-icons.ts",
     "smoke:concepts": "tsx scripts/smoke-concepts.ts",
     "smoke:trace": "tsx scripts/smoke-trace.ts",
-    "smoke": "npm run smoke:f001 && npm run smoke:f002 && npm run smoke:f003 && npm run smoke:f004 && npm run smoke:f005 && npm run smoke:f006 && npm run smoke:f007 && npm run smoke:f008 && npm run smoke:f009 && npm run smoke:f010 && npm run smoke:f011 && npm run smoke:f012 && npm run smoke:f013 && npm run smoke:f014 && npm run smoke:f015 && npm run smoke:f016 && npm run smoke:f017 && npm run smoke:f018 && npm run smoke:f019 && npm run smoke:f020 && npm run smoke:f021 && npm run smoke:f022 && npm run smoke:icons && npm run smoke:concepts && npm run smoke:trace",
+    "smoke:dashboard": "tsx scripts/smoke-dashboard.ts",
+    "smoke:session-ending": "tsx scripts/smoke-session-ending.ts",
+    "smoke": "npm run smoke:f001 && npm run smoke:f002 && npm run smoke:f003 && npm run smoke:f004 && npm run smoke:f005 && npm run smoke:f006 && npm run smoke:f007 && npm run smoke:f008 && npm run smoke:f009 && npm run smoke:f010 && npm run smoke:f011 && npm run smoke:f012 && npm run smoke:f013 && npm run smoke:f014 && npm run smoke:f015 && npm run smoke:f016 && npm run smoke:f017 && npm run smoke:f018 && npm run smoke:f019 && npm run smoke:f020 && npm run smoke:f021 && npm run smoke:f022 && npm run smoke:icons && npm run smoke:concepts && npm run smoke:trace && npm run smoke:dashboard && npm run smoke:session-ending",
     "verify:f015": "tsx scripts/verify-f015-live.ts"
   },
   "dependencies": {

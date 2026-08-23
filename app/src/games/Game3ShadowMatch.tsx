@@ -19,14 +19,14 @@ import { renderLine, slotValuesFromProfile } from '../engine/slots';
 import { InteractionMachine, type PromptTier } from '../engine/interactionMachine';
 import { startSession } from '../engine/profileStore';
 import { logActivityOutcome } from '../engine/activityLogging';
+import { INTERACTION_CONFIG } from '../config/interaction';
+import { SessionCelebration } from './SessionCelebration';
+import { usualSessionMinutes } from '../engine/dashboardSummary';
 import { getFadingSuggestion, type FadingSuggestion } from '../engine/fading';
 import {
-  describeSessionRecap,
-  distinctSkillsThisSession,
   endSessionNow,
   getSessionNumber,
   hasCapBeenReached,
-  sessionCapSeconds,
   type SessionEndResult,
 } from '../engine/sessionLifecycle';
 import { SUPPORT_TIERS, DEFAULT_STARTING_SUPPORT_TIER } from '../config/supportLadder';
@@ -652,6 +652,10 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
   /** Which concept round we're on. Walks concepts first, then samples, so
    * the child doesn't get five apples in a row (see buildConceptRound). */
   const conceptRoundRef = useRef(0);
+  // Rounds the child actually RESOLVED, which is what ends the session --
+  // conceptRoundRef counts rounds started, and a round abandoned halfway
+  // is not one they finished.
+  const roundsDoneRef = useRef(0);
   const [sampleLoading, setSampleLoading] = useState(false);
   // §8.3 Level 2: "same object, different angle or lighting" — the sample
   // IMAGE itself never changes (see game3ShadowMatchLogic.ts's
@@ -677,15 +681,19 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
   const [lastLoggedTier, setLastLoggedTier] = useState<SupportTier | null>(null);
   const [fadingSuggestion, setFadingSuggestion] = useState<FadingSuggestion | null>(null);
   const [sessionEndResult, setSessionEndResult] = useState<SessionEndResult | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const machineRef = useRef<InteractionMachine>(new InteractionMachine());
   const sessionStartedAtRef = useRef<number>(0);
   const lastObjectNameRef = useRef<string | null>(null);
   const lastTargetIdRef = useRef<string | null>(null);
 
+  // The caregiver's usual sitting length (dashboard), which is where
+  // this session's cap starts. Read once here so the session poller can
+  // depend on the number rather than on the whole profile object.
+  const capFirstMinutes = usualSessionMinutes(profile);
+
   const handleEndSession = useCallback(
-    async (reason: 'cap' | 'idle' | 'caregiver') => {
+    async (reason: 'cap' | 'idle' | 'caregiver' | 'finished') => {
       if (!sessionId) return;
       setPhase('sessionEnded');
       const result = await endSessionNow(sessionId, reason, lastObjectNameRef.current);
@@ -704,7 +712,7 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
   useEffect(() => {
     void (async () => {
       const [session, number, savedLevel] = await Promise.all([
-        startSession(profile.id),
+        startSession(profile.id, 'match'),
         getSessionNumber(profile.id),
         getGame3Level(profile.id),
       ]);
@@ -719,7 +727,6 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
     if (!sessionId || sessionNumber === null || phase === 'sessionEnded') return;
     const interval = setInterval(() => {
       const now = Date.now();
-      setElapsedSeconds(Math.floor((now - sessionStartedAtRef.current) / 1000));
       const tick = machineRef.current.tick(now);
       if (phase === 'presenting' || phase === 'searching' || phase === 'confirming') {
         setPromptTier(tick.tier);
@@ -729,12 +736,12 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
         return;
       }
       const elapsed = Math.floor((now - sessionStartedAtRef.current) / 1000);
-      if (hasCapBeenReached(sessionNumber, elapsed)) {
+      if (hasCapBeenReached(sessionNumber, elapsed, capFirstMinutes)) {
         void handleEndSession('cap');
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [sessionId, sessionNumber, phase, handleEndSession]);
+  }, [sessionId, sessionNumber, phase, handleEndSession, capFirstMinutes]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -928,6 +935,17 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
     setLastLoggedTier(tier);
     const suggestion = await getFadingSuggestion(profile.id, skillId, tier, profile.nickname ?? 'they');
     setFadingSuggestion(suggestion);
+
+    // The session has a last round. Reaching it is the ordinary way this
+    // game ends -- not the cap, not the child drifting off -- which is
+    // also what puts a completed session, with its time and its support
+    // records, into the log the dashboard reads.
+    roundsDoneRef.current += 1;
+    if (roundsDoneRef.current >= INTERACTION_CONFIG.ROUNDS_PER_SESSION) {
+      void handleEndSession('finished');
+      return;
+    }
+
     // Stay in whichever source this session started in. Switching a child
     // mid-session from library pictures to their room photo (or back) is
     // exactly the kind of unannounced change §5.2's `sameness` dimension
@@ -937,45 +955,27 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
   }
 
   if (phase === 'sessionEnded') {
-    return (
+    // The child's ending, not a caregiver readout. No handoff line here:
+    // childFacingHandoffLine is built around Game 1's premise, a REAL
+    // object photographed in the child's own room that they can be sent
+    // off to go and find. This game's targets are illustrated concepts and
+    // silhouettes, so "go find your picture" would name something that was
+    // never in the room. The session's figures are on the dashboard.
+    return sessionEndResult ? (
+      <SessionCelebration session={sessionEndResult.session} track="match" />
+    ) : (
       <div className="screen g3-screen">
         <style>{GAME3_STYLES}</style>
-        {/* Straight to the recap -- no child-facing "go find X with your
-            grown-up" handoff line here. That line (childFacingHandoffLine)
-            is built around Game 1's premise: a REAL object photographed in
-            the child's own room, which they can meaningfully be sent off
-            to go find. Match the Picture has no equivalent -- its targets
-            are illustrated concepts or silhouettes, not something in the
-            room -- so the line either fell back to a generic "favourite
-            thing" filler or named a picture that was never physically
-            there, neither of which means anything to send a child off to
-            find. Game 1 keeps this line; it's real there. */}
-        {sessionEndResult && (
-          <>
-            <h3>Session recap</h3>
-            <div className="g3-card">
-              <p className="g3-card-body">{describeSessionRecap(sessionEndResult.session)}</p>
-              <p className="g3-card-hint">
-                Objects recognised: {distinctSkillsThisSession(sessionEndResult.session).join(', ') || 'none'}
-              </p>
-            </div>
-          </>
-        )}
       </div>
     );
   }
 
   if (phase === 'idle') {
-    const capSeconds = sessionNumber ? sessionCapSeconds(sessionNumber) : null;
     return (
       <div className="screen g3-screen">
         <style>{GAME3_STYLES}</style>
         <h2>Match the Picture</h2>
-        {sessionNumber && capSeconds && (
-          <p className="g3-meta">
-            Session {sessionNumber} — cap {Math.round(capSeconds / 60)}min, elapsed {elapsedSeconds}s
-          </p>
-        )}
+        
         {captureNotice === 'blur-failed' && (
           <p className="g3-note g3-note--alert">That photo couldn't be processed — let's try again.</p>
         )}

@@ -731,7 +731,7 @@ function App() {
             { kind: 'dashboard' } route is gone with it. */}
         {homeTab === 'dashboard' && (
           <>
-            <CaregiverDashboard profile={profile} />
+            <CaregiverDashboard profile={profile} onProfileChange={updateProfile} />
             <p className="home-tab-hint dashboard-footnote">
               Sessions and skills are stored on this device only.
             </p>

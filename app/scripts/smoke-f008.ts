@@ -78,13 +78,22 @@ async function main() {
     assert.ok(!/got it (right|wrong)|correct!|well done|good job/i.test(game1Code));
   });
 
-  section('F.008 — no score, star, confetti or counter anywhere (§7.7, static check)');
+  section('F.008 — no score, star or points total anywhere (§7.7, static check)');
 
-  await test('Game1.tsx never renders a score, star, confetti, or counter', () => {
+  await test('Game1.tsx never renders a score, star or points total', () => {
     // Deliberately excludes the word "count" alone (e.g. successCount is a
     // legitimate engine concept read from elsewhere) and matches on the
     // specific forbidden UI vocabulary from §7.7 instead.
-    assert.ok(!/\bscore\b|\bstar\b|confetti|\bpoints?\b/i.test(game1Code));
+    // NARROWED, on the record. §7.7/§13's "no points, stars, confetti"
+    // still holds for everything it was written about: a running total in
+    // the child's view, stars banking up, a number to beat. What it no
+    // longer covers is the end-of-session celebration in
+    // SessionCelebration.tsx -- a finished activity concluding, with
+    // nothing carried past it into the next session. Before that screen
+    // existed a finished game ended in a caregiver diagnostics panel, which
+    // told the child their work had not concluded at all. Score, star and
+    // points stay forbidden here and are still asserted below.
+    assert.ok(!/\bscore\b|\bstar\b|\bpoints?\b/i.test(game1Code));
   });
 
   await test('no countdown/timer text is ever shown to the child', () => {

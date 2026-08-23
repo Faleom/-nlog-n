@@ -31,6 +31,14 @@ export const INTERACTION_CONFIG = {
   // support ladder above, and a different threshold (3, not 2).
   DISENGAGEMENT_TIER3_STREAK: 3,
 
+  // How many rounds a session runs before it finishes on its own. Every
+  // game stops here rather than playing until the cap or until a child
+  // wanders off: an activity that never concludes never reaches its own
+  // ending, and the session it belongs to never lands in the log the
+  // caregiver dashboard reads. Five is Trace and Colour's original figure,
+  // now shared.
+  ROUNDS_PER_SESSION: 5,
+
   SESSION_CAP_FIRST_MINUTES: 12,
   SESSION_CAP_DECREMENT_MINUTES: 1,
   SESSION_CAP_FLOOR_MINUTES: 6,
@@ -47,10 +55,22 @@ export const INTERACTION_CONFIG = {
   COPLAY_PROMPT_EVERY_N_SUCCESSES: 3, // fires every 3rd-4th success only
 } as const;
 
-/** Session cap for a given session number (1-indexed), in minutes. */
-export function sessionCapMinutes(sessionNumber: number): number {
-  const { SESSION_CAP_FIRST_MINUTES, SESSION_CAP_DECREMENT_MINUTES, SESSION_CAP_FLOOR_MINUTES } =
-    INTERACTION_CONFIG;
-  const cap = SESSION_CAP_FIRST_MINUTES - (sessionNumber - 1) * SESSION_CAP_DECREMENT_MINUTES;
+/**
+ * Session cap for a given session number (1-indexed), in minutes.
+ *
+ * `firstMinutes` is where session 1 starts. It defaults to the config
+ * value, so calling this with one argument behaves exactly as it always
+ * has; the caregiver dashboard passes the child's own usual sitting length
+ * instead. What it does NOT change is the shape of the curve: every later
+ * session still steps down by SESSION_CAP_DECREMENT_MINUTES and still
+ * stops at SESSION_CAP_FLOOR_MINUTES. The caregiver moves the start of the
+ * fade, not whether it happens.
+ */
+export function sessionCapMinutes(
+  sessionNumber: number,
+  firstMinutes: number = INTERACTION_CONFIG.SESSION_CAP_FIRST_MINUTES,
+): number {
+  const { SESSION_CAP_DECREMENT_MINUTES, SESSION_CAP_FLOOR_MINUTES } = INTERACTION_CONFIG;
+  const cap = firstMinutes - (sessionNumber - 1) * SESSION_CAP_DECREMENT_MINUTES;
   return Math.max(cap, SESSION_CAP_FLOOR_MINUTES);
 }

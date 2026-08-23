@@ -1,5 +1,6 @@
 .DS_Store
 .claude/worktrees/
+.env
 
 # Local dev-machine helpers. Both hardcode absolute Windows paths (one of
 # them a home directory), so they are useless to anyone else and would only

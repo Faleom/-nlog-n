@@ -134,6 +134,12 @@ export interface ChildProfile {
   responseProfile: ResponseProfile;
   declaration?: OptionalDeclaration;
   context: ChildContextProfile;
+  /** Where the FIRST session's timer starts, in minutes -- the caregiver's
+   * own answer to "how long does a sitting usually last here", set on the
+   * dashboard. Not a target and never compared against: sessionCapMinutes
+   * still steps the cap down session by session from whatever this says.
+   * Unset means the config default (SESSION_CAP_FIRST_MINUTES). */
+  usualSessionMinutes?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -170,6 +176,12 @@ export interface SkillRecord {
 // Session logging (§7.7, §7.9)
 // ---------------------------------------------------------------------------
 
+/** Which activity a session was played in. Optional on SessionLog because
+ * logs written before the field existed have no way to know -- see
+ * dashboardSummary.ts, which leaves those sessions out of the by-track
+ * breakdown rather than guessing a track for them. */
+export type TrackId = 'find-it' | 'story' | 'match' | 'trace';
+
 export interface SessionLog {
   id: string;
   childId: string;
@@ -185,6 +197,8 @@ export interface SessionLog {
    * child who worked through everything and stopped because there was
    * nothing left tells the caregiver something untrue about their child. */
   endedBy: 'cap' | 'idle' | 'caregiver' | 'finished';
+  /** The activity this session was played in. Set by startSession. */
+  track?: TrackId;
 }
 
 // ---------------------------------------------------------------------------
