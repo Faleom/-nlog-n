@@ -1,5 +1,12 @@
 # Person 1 — Engine Core
 
+> **Status update (post-build): this brief is historical.** All six of
+> Person 1's files (F.001, F.005, F.009, F.010, F.011, F.013, F.022) are
+> implemented, tested, and merged. See `../../STATUS.md` for the current
+> picture and `../overview/F.000-INDEX.md` for live per-file status. The
+> content below is kept for the reasoning it captures, not as a live task
+> list.
+
 You own the machinery every game runs on. You start with no dependencies and
 end up on the critical path for most of the build.
 

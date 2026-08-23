@@ -1,5 +1,13 @@
 # Person 3 — Content, Branch 2, and the Video
 
+> **Status update (post-build): this brief is historical.** All of Person
+> 3's coding files (F.007, F.014, F.015, F.020) are implemented, tested
+> (including real adversarial testing of F.015's guardrail against the
+> live API), and merged. **F.026 — the video and submission — has NOT
+> started.** That's the one item from this brief still genuinely open,
+> and it needs a human. See `../../STATUS.md`. The content below is kept
+> for the reasoning it captures, not as a live task list.
+
 Your work moves through three distinct phases. The last one is the deliverable.
 
 ## Your files, in order

@@ -1,5 +1,12 @@
 # Build Order
 
+> **Status update (post-build): this document is historical.** Every wave
+> described below has completed — 19 of 22 planned feature files are
+> implemented, tested, and merged into `main`, and the app is wired
+> together end to end. See `../../STATUS.md` for the current picture and
+> `F.000-INDEX.md` for live per-file status. Kept below for the dependency
+> reasoning, which is still accurate even though the work itself is done.
+
 **Not a clock.** A dependency-ordered sequence: what can start now, what has to
 wait for what, and where the contracts have to freeze before work fans out.
 

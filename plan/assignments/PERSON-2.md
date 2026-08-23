@@ -1,5 +1,12 @@
 # Person 2 — Camera & Game 1
 
+> **Status update (post-build): this brief is historical.** All of Person
+> 2's files (F.006, F.008, F.012, F.017, F.021) are implemented, tested,
+> and merged — including F.021 (Shadow Match), completed by a background
+> agent after the first pass was cut off. F.023 (Trace/Puzzle) remains
+> unbuilt, on purpose — see `../../STATUS.md`. The content below is kept
+> for the reasoning it captures, not as a live task list.
+
 You own the pipeline everything is built from, and the game the demo is.
 
 ## Your files, in order

@@ -1,5 +1,12 @@
 # Person 4 — Onboarding, the Companion, and the Caregiver View
 
+> **Status update (post-build): this brief is historical.** All six of
+> Person 4's files (F.002, F.003, F.004, F.016, F.018, F.019) are
+> implemented, tested, and merged. See `../../STATUS.md` for the current
+> picture and `../overview/F.000-INDEX.md` for live per-file status. The
+> content below is kept for the reasoning it captures, not as a live task
+> list.
+
 You own everything the parent fills in — including the feature the guide calls
 the strongest in the product.
 
