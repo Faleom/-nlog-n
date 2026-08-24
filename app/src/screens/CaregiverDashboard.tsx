@@ -74,9 +74,10 @@ interface CaregiverDashboardProps {
  * session log). */
 const RECENT_GAMES_LIMIT = 3;
 
-/** The exact painted-scene motif each track's own Play-tab tile already
- * draws (App.tsx's home-play-grid) -- same paths, just cropped small, so
- * a Recently-played row shows the real game art rather than a second,
+/** The exact painted-scene motif each track's own Play-tab node once
+ * drew as a grid tile, before the Toki winding-path revamp replaced that
+ * grid -- same paths, just cropped small, so a Recently-played row shows
+ * the real game art rather than a second,
  * lower-fidelity icon language. Drawn in `currentColor`, which the row
  * sets to the track's own colour so the same legend the day-detail
  * bar/dot use still ties a game to its hue. The plate underneath is the

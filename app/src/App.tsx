@@ -606,178 +606,122 @@ function App() {
 
       <main className="toki-home-main">
         {homeTab === 'play' && (
-          <div className="screen">
-            {/* Four boxes on a 2x2 grid. Each real tile carries its own
-                CSS-drawn scene (see .game-tile--* in App.css) plus an inline
-                SVG motif — nothing is fetched, so the offline guarantee is
-                untouched. The reserved hues (Sunburst / Blush) are pointedly
-                absent: they mean "reward" and "Companion" everywhere else in
-                the app and spending them on chrome would flatten that. */}
-            <div className="home-play-grid">
-              <button
-                className="game-tile game-tile--find"
-                onClick={() => setScreen({ kind: 'game1' })}
-              >
-                {/* Zone 1: the art. The painted scene, its SVG motif and the
-                    icon badge all live inside this one element now, so the
-                    label below is a sibling ZONE of the card rather than a
-                    plate floating on top of the picture. */}
-                <span className="game-tile-scene">
-                  <span className="game-tile-art" aria-hidden="true">
-                    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-                      {/* a shelf in a room, three things sitting on it... */}
-                      <path d="M0 62 H160" stroke="currentColor" strokeOpacity="0.24" strokeWidth="2" />
-                      <path d="M0 78 L160 62" stroke="currentColor" strokeOpacity="0.12" strokeWidth="2" />
-                      <rect x="10" y="44" width="14" height="18" rx="3" stroke="currentColor" strokeOpacity="0.32" strokeWidth="2" />
-                      <circle cx="40" cy="53" r="9" stroke="currentColor" strokeOpacity="0.32" strokeWidth="2" />
-                      <path d="M58 62 L68 42 L78 62 Z" stroke="currentColor" strokeOpacity="0.32" strokeWidth="2" strokeLinejoin="round" />
-                      {/* ...and the magnifier hunting across it */}
-                      <circle cx="116" cy="32" r="20" stroke="currentColor" strokeOpacity="0.62" strokeWidth="3.5" />
-                      <path d="M130 46 L144 60" stroke="currentColor" strokeOpacity="0.62" strokeWidth="6" strokeLinecap="round" />
-                    </svg>
-                  </span>
-                  <span className="game-tile-icon" aria-hidden="true">
-                    🔍
-                  </span>
-                </span>
-                {/* Zone 2: the caption strip, fused to the art's bottom edge. */}
-                <span className="game-tile-title">Find It In Your World</span>
-              </button>
+          <div className="toki-path-container">
+            {/* Mockup screen 06's own winding path, unchanged in spirit:
+                "every node is open, none carries stars or a count" -- no
+                gating, matching this app's existing zero-score-in-the-
+                child's-view rule and the tab's own prior behaviour (all
+                six games always reachable). The curve is drawn once in a
+                fixed 330x470 viewBox; the six buttons below share that
+                same coordinate space via percentages (see the CSS), so
+                the path and the nodes scale together at any real width. */}
+            <svg
+              className="toki-path-svg"
+              viewBox="0 0 330 470"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M62 44 C150 44 238 60 238 120 S 86 150 86 200 S 250 230 250 278 S 74 304 74 354 S 244 380 244 428"
+                stroke="#ffffff"
+                strokeWidth="20"
+                strokeLinecap="round"
+                opacity="0.92"
+              />
+              <path
+                d="M62 44 C150 44 238 60 238 120 S 86 150 86 200 S 250 230 250 278 S 74 304 74 354 S 244 380 244 428"
+                stroke="#bcd9f2"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray="2 12"
+              />
+            </svg>
 
-              <button
-                className="game-tile game-tile--toy"
-                onClick={() => setScreen({ kind: 'game2' })}
-              >
-                <span className="game-tile-scene">
-                  <span className="game-tile-art" aria-hidden="true">
-                    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-                      {/* a stack of building blocks, mid-build */}
-                      <rect x="14" y="54" width="38" height="30" rx="8" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeOpacity="0.42" strokeWidth="2" />
-                      <rect x="58" y="54" width="38" height="30" rx="8" fill="currentColor" fillOpacity="0.12" stroke="currentColor" strokeOpacity="0.3" strokeWidth="2" />
-                      <rect x="36" y="20" width="38" height="30" rx="8" fill="currentColor" fillOpacity="0.28" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" />
-                      <path d="M126 38 L138 62 L114 62 Z" fill="currentColor" fillOpacity="0.16" stroke="currentColor" strokeOpacity="0.34" strokeWidth="2" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                  <span className="game-tile-icon" aria-hidden="true">
-                    🧸
-                  </span>
-                </span>
-                <span className="game-tile-title">Toy Story Sequencing</span>
-              </button>
+            <button
+              className="toki-path-node toki-path-node--find"
+              style={{ left: '1.8%', top: '0%' }}
+              onClick={() => setScreen({ kind: 'game1' })}
+            >
+              <span className="toki-path-icon" aria-hidden="true">
+                🔍
+              </span>
+              <span className="toki-path-label">
+                Find It In
+                <br />
+                Your World
+              </span>
+            </button>
 
-              <button
-                className="game-tile game-tile--shadow"
-                onClick={() => setScreen({ kind: 'game3' })}
-              >
-                <span className="game-tile-scene">
-                  <span className="game-tile-art" aria-hidden="true">
-                    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-                      <defs>
-                        {/* the crescent is a disc with a second disc masked out
-                            of it — no second fill colour needed, so it sits on
-                            whatever is behind the tile */}
-                        <mask id="game-tile-crescent">
-                          <rect width="160" height="88" fill="white" />
-                          <circle cx="112" cy="20" r="17" fill="black" />
-                        </mask>
-                      </defs>
-                      <circle cx="126" cy="28" r="20" fill="currentColor" fillOpacity="0.62" mask="url(#game-tile-crescent)" />
-                      <path d="M0 70 H160" stroke="currentColor" strokeOpacity="0.18" strokeWidth="2" />
-                      <rect x="58" y="42" width="26" height="28" rx="6" fill="currentColor" fillOpacity="0.3" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" />
-                    </svg>
-                  </span>
-                  <span className="game-tile-icon" aria-hidden="true">
-                    🌓
-                  </span>
-                </span>
-                <span className="game-tile-title">Match the Picture</span>
-              </button>
+            <button
+              className="toki-path-node toki-path-node--right toki-path-node--toy"
+              style={{ right: '1.8%', top: '14.9%' }}
+              onClick={() => setScreen({ kind: 'game2' })}
+            >
+              <span className="toki-path-icon" aria-hidden="true">
+                🧸
+              </span>
+              <span className="toki-path-label">
+                Toy Story
+                <br />
+                Sequencing
+              </span>
+            </button>
 
-              <button
-                className="game-tile game-tile--trace"
-                onClick={() => setScreen({ kind: 'trace' })}
-              >
-                <span className="game-tile-scene">
-                  <span className="game-tile-art" aria-hidden="true">
-                    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-                      {/* a dashed outline (the thing to trace) with a solid
-                          crayon stroke cutting across part of it (the thing
-                          already coloured in) */}
-                      <path
-                        d="M46 66 C30 66 22 52 22 40 C22 24 36 14 52 14 C68 14 82 24 84 40 C86 54 76 66 60 66 Z"
-                        stroke="currentColor"
-                        strokeOpacity="0.55"
-                        strokeWidth="3"
-                        strokeDasharray="1 7"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M96 60 C108 44 124 34 140 32"
-                        stroke="currentColor"
-                        strokeOpacity="0.7"
-                        strokeWidth="6"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </span>
-                  <span className="game-tile-icon" aria-hidden="true">
-                    🖍️
-                  </span>
-                </span>
-                <span className="game-tile-title">Trace and Colour</span>
-              </button>
+            <button
+              className="toki-path-node toki-path-node--match"
+              style={{ left: '6.7%', top: '32.3%' }}
+              onClick={() => setScreen({ kind: 'game3' })}
+            >
+              <span className="toki-path-icon" aria-hidden="true">
+                🌓
+              </span>
+              <span className="toki-path-label">
+                Match the
+                <br />
+                Picture
+              </span>
+            </button>
 
-              <button
-                className="game-tile game-tile--blockstack"
-                onClick={() => setScreen({ kind: 'blockStack' })}
-              >
-                <span className="game-tile-scene">
-                  <span className="game-tile-art" aria-hidden="true">
-                    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-                      {/* two towers mid-build: the target on the left already
-                          three blocks tall, the child's on the right one
-                          block shy -- the same gap the game itself opens
-                          every round with */}
-                      <path d="M0 78 H160" stroke="currentColor" strokeOpacity="0.16" strokeWidth="2" />
-                      <rect x="34" y="58" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeOpacity="0.4" strokeWidth="2" />
-                      <rect x="34" y="36" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.26" stroke="currentColor" strokeOpacity="0.46" strokeWidth="2" />
-                      <rect x="34" y="14" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.32" stroke="currentColor" strokeOpacity="0.52" strokeWidth="2" />
-                      <rect x="100" y="58" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeOpacity="0.4" strokeWidth="2" />
-                      <rect x="100" y="36" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.26" stroke="currentColor" strokeOpacity="0.46" strokeWidth="2" />
-                    </svg>
-                  </span>
-                  <span className="game-tile-icon" aria-hidden="true">
-                    🧱
-                  </span>
-                </span>
-                <span className="game-tile-title">Block-stack match</span>
-              </button>
+            <button
+              className="toki-path-node toki-path-node--right toki-path-node--trace"
+              style={{ right: '0.6%', top: '48.9%' }}
+              onClick={() => setScreen({ kind: 'trace' })}
+            >
+              <span className="toki-path-icon" aria-hidden="true">
+                🖍️
+              </span>
+              <span className="toki-path-label">
+                Trace and
+                <br />
+                Colour
+              </span>
+            </button>
 
-              <button
-                className="game-tile game-tile--sortbyrule"
-                onClick={() => setScreen({ kind: 'sortByRule' })}
-              >
-                <span className="game-tile-scene">
-                  <span className="game-tile-art" aria-hidden="true">
-                    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-                      {/* two baskets, one shape already resting in each --
-                          the rule, shown -- with the loose shapes still in
-                          the tray between them */}
-                      <path d="M10 52 L34 52 L30 78 L10 78 Z" stroke="currentColor" strokeOpacity="0.42" strokeWidth="2" strokeLinejoin="round" />
-                      <circle cx="22" cy="45" r="8" fill="currentColor" fillOpacity="0.3" />
-                      <path d="M126 52 L150 52 L146 78 L126 78 Z" stroke="currentColor" strokeOpacity="0.42" strokeWidth="2" strokeLinejoin="round" />
-                      <rect x="130" y="38" width="14" height="14" rx="3" fill="currentColor" fillOpacity="0.3" />
-                      <polygon points="70,26 82,48 58,48" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" strokeLinejoin="round" />
-                      <circle cx="98" cy="38" r="9" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" />
-                    </svg>
-                  </span>
-                  <span className="game-tile-icon" aria-hidden="true">
-                    🧺
-                  </span>
-                </span>
-                <span className="game-tile-title">Sort by rule</span>
-              </button>
-            </div>
+            <button
+              className="toki-path-node toki-path-node--blockstack"
+              style={{ left: '4.2%', top: '65.1%' }}
+              onClick={() => setScreen({ kind: 'blockStack' })}
+            >
+              <span className="toki-path-icon" aria-hidden="true">
+                🧱
+              </span>
+              <span className="toki-path-label">
+                Block-stack
+                <br />
+                match
+              </span>
+            </button>
+
+            <button
+              className="toki-path-node toki-path-node--right toki-path-node--sortbyrule"
+              style={{ right: '1.8%', top: '80.9%' }}
+              onClick={() => setScreen({ kind: 'sortByRule' })}
+            >
+              <span className="toki-path-icon" aria-hidden="true">
+                🧺
+              </span>
+              <span className="toki-path-label">Sort by rule</span>
+            </button>
           </div>
         )}
 

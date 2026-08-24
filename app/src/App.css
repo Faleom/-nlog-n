@@ -1232,12 +1232,6 @@ textarea::placeholder {
    World". The box IS the content; the label is the strip fused to its
    bottom edge. Grid items stretch, so two tiles side by side share a height
    and their caption strips line up even when one label wraps. */
-.home-play-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
 /* A vertical list -- one full-width row per item, top to bottom -- not a
    wrapping row of content-sized chips. With four items of very different
    label lengths, the wrap version put three on one row and stranded the
@@ -3359,6 +3353,111 @@ button.toki-week-cell {
   transform: scale(0.97);
 }
 
+/* ============================================================
+   TOKI REVAMP -- Play hub: the winding activity path.
+   Mockup screen 06's own caption is explicit about the one real
+   product question this raises ("what marks a node as done") and
+   answers it directly: "minus the gating -- every node is open,
+   none carries stars or a count." That matches this app's existing
+   rule (nothing score/streak-shaped in the child's view) and the
+   Play tab's own prior behaviour (all six games always reachable),
+   so this is a pure re-skin, not a new gating feature.
+
+   Node positions are the mockup's own hand-tuned pixel offsets
+   (left/right/top, inside a 330x470 box) converted to percentages
+   of this container, so the curve and the six buttons scale
+   together at any real screen width instead of only matching at
+   one fixed mockup size. The SVG's viewBox stays 330x470 unchanged
+   -- only the CSS container needs the conversion. */
+
+.toki-path-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 330 / 470;
+  margin-top: 6px;
+}
+
+.toki-path-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.toki-path-node {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  min-width: 0;
+  min-height: 0;
+  cursor: pointer;
+}
+.toki-path-node:active {
+  transform: scale(0.96);
+}
+/* Right-side nodes: icon trails the label instead of leading it, and
+   the label's own text lines up against the icon rather than the
+   screen edge. */
+.toki-path-node--right {
+  flex-direction: row-reverse;
+}
+.toki-path-node--right .toki-path-label {
+  text-align: right;
+}
+
+.toki-path-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  flex: none;
+  border-radius: 50%;
+  border: 5px solid #fff;
+  font-size: 29px;
+  line-height: 1;
+}
+.toki-path-label {
+  font-weight: 800;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  color: var(--toki-ink);
+  text-align: left;
+  max-width: 120px;
+}
+
+.toki-path-node--find .toki-path-icon {
+  background: linear-gradient(180deg, #69bcff, #1e93ee);
+  box-shadow: 0 10px 20px rgba(20, 110, 190, 0.3);
+}
+.toki-path-node--toy .toki-path-icon {
+  background: linear-gradient(180deg, #65dcdc, #2fc7c7);
+  box-shadow: 0 10px 20px rgba(20, 150, 150, 0.28);
+}
+.toki-path-node--match .toki-path-icon {
+  background: linear-gradient(180deg, #c9aef5, #a97bea);
+  box-shadow: 0 10px 20px rgba(120, 80, 190, 0.26);
+}
+.toki-path-node--trace .toki-path-icon {
+  background: linear-gradient(180deg, #a6c6f2, #7fa8e8);
+  box-shadow: 0 10px 20px rgba(70, 120, 200, 0.26);
+}
+.toki-path-node--blockstack .toki-path-icon {
+  background: linear-gradient(180deg, #7fdaf0, #46c6e8);
+  box-shadow: 0 10px 20px rgba(30, 150, 190, 0.26);
+}
+.toki-path-node--sortbyrule .toki-path-icon {
+  background: linear-gradient(180deg, #d9aff0, #c489e3);
+  box-shadow: 0 10px 20px rgba(150, 90, 190, 0.26);
+}
+
 /* Setup tab's own content column. flex:1 so the "This device" section can
    sit at the foot of the screen the way the mockup places it, with the
    list of things activities are built from staying at the top. */
@@ -3571,257 +3670,6 @@ button.toki-week-cell {
   font-size: 1.15rem;
   line-height: 1;
 }
-
-/* ---------------------------------------------------------------------
-   GAME TILES
-   Four boxes, 2x2. Each real tile is a slab of glass with its own scene
-   painted into it: CSS gradient washes for the light and the ground, an
-   inline <svg> in .game-tile-art for the motif. Nothing is fetched — this
-   app precaches its whole shell, and a background-image URL would be the
-   one thing in it that needs a network.
-
-   The palette here is deliberately narrow: Ember for the lamplit room,
-   Periwink for the blocks, Moonmilk for the moon. Sunburst and Blush are
-   NOT used — they mean "reward" and "Companion" everywhere else, and
-   spending them on a menu would blunt both.
-   --------------------------------------------------------------------- */
-
-.game-tile {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  /* TWO ZONES, ONE CARD. The tile is a flex column of exactly two children:
-     .game-tile-scene (the painted art + its icon, taking most of the height)
-     and .game-tile-title (a solid caption strip fused to the scene's bottom
-     edge). They share this one rounded rect and `overflow: hidden` clips the
-     strip to its bottom corners, so the pair reads as a photo with a caption
-     welded on -- not as two floating boxes with a gap between them, and not
-     as the old translucent plate floating ON the art.
-     The card itself carries no padding any more: each zone owns its own, and
-     that is what lets the caption strip run the full width of the card
-     instead of stopping 12px short of the rim. */
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  /* Fills its grid cell -- a uniform box, unlike every other button on this
-     screen. 132px gives the background scene (and the SVG's ~1.8:1 aspect)
-     real room to read as a place rather than a sliver of gradient behind a
-     label. --touch-min alone would be enough tap target but too shallow a
-     box for the art. */
-  width: 100%;
-  min-height: 132px;
-  padding: 0;
-  text-align: center;
-  border-radius: var(--radius-lg);
-}
-
-/* The art zone. Takes every pixel the caption strip does not, and is the
-   positioning context for .game-tile-art -- `isolation: isolate` here is
-   what keeps the art's z-index:-1 painting above the tile's own gradients
-   but below the icon, exactly as it did when the tile itself was the
-   context. The scene, not the card, now carries each tile's painted
-   background (see .game-tile--find/--toy/--shadow below) so the gradients
-   compose inside the art zone and are not half-hidden by the strip. */
-.game-tile-scene {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  flex: 1 1 auto;
-  min-height: 92px;
-  padding: 12px;
-}
-
-/* Negative z-index inside the ART ZONE's stacking context (.game-tile-scene
-   carries the `isolation: isolate` the tile used to): paints over the zone's
-   painted background layers, under the icon. It is clipped to the art zone,
-   so it never runs behind the caption strip. */
-.game-tile-art {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
-.game-tile-art svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.game-tile-icon {
-  font-size: 1.7rem;
-  line-height: 1;
-}
-
-/* The caption strip -- the tile's second zone, not a plate floating on the
-   first. It was a translucent rgba(14,12,19,.74) rectangle sitting over the
-   art with left-aligned text; two problems with that were that its contrast
-   depended on whichever pixels of art happened to be under it, and that it
-   read as a separate box stuck on the tile. Now it is a zone of the card in
-   its own right: Slate Plum (--color-surface), fully opaque, flush to the
-   card's left, right and bottom rims, separated from the art only by a
-   hairline. Opaque means the contrast is a property of the COMPONENT --
-   Moonmilk on Slate Plum is 11.9:1 on every tile and would stay that way
-   over any art added later. No backdrop-filter, so no @supports fallback is
-   needed for it any more either.
-   Centred, per the same request: the text is centred in the strip, and the
-   card's own `text-align: center` covers a label that wraps to two lines. */
-.game-tile-title {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  min-height: 40px;
-  padding: 8px 10px;
-  text-align: center;
-  border-top: 1px solid var(--glass-border);
-  background: var(--color-surface);
-  font-size: 0.88rem;
-  font-weight: var(--weight-caregiver-strong);
-  line-height: 1.2;
-  color: var(--color-ink);
-}
-
-/* Find It In Your World — a lamplit room. The hard-stopped diagonal is the
-   line where the floor meets the wall; the Ember radial is the lamp pooling
-   in from the top-right corner. */
-.game-tile--find .game-tile-scene {
-  background:
-    radial-gradient(circle 96px at 86% 6%, rgba(255, 176, 103, 0.3), transparent 70%),
-    linear-gradient(
-      163deg,
-      rgba(255, 176, 103, 0.11) 0%,
-      rgba(255, 176, 103, 0.03) 45.5%,
-      rgba(0, 0, 0, 0.24) 46%,
-      rgba(0, 0, 0, 0.34) 100%
-    );
-}
-
-.game-tile--find .game-tile-art {
-  color: var(--color-accent);
-}
-
-/* Toy Story Sequencing — a Periwink wash rising from the floor, as if the
-   block stack were lit from below by the toy box it came out of. */
-.game-tile--toy .game-tile-scene {
-  background:
-    radial-gradient(circle 108px at 24% 104%, rgba(139, 123, 255, 0.32), transparent 72%),
-    linear-gradient(180deg, rgba(139, 123, 255, 0.05), rgba(139, 123, 255, 0.15));
-}
-
-.game-tile--toy .game-tile-art {
-  color: var(--color-primary-bright);
-}
-
-/* Shadow Match — cold moonlight from the top-right, a long soft shadow
-   thrown low and to the left of the object the SVG draws. */
-.game-tile--shadow .game-tile-scene {
-  background:
-    radial-gradient(circle 74px at 80% 8%, rgba(244, 239, 232, 0.2), transparent 72%),
-    radial-gradient(ellipse 96px 22px at 30% 86%, rgba(0, 0, 0, 0.55), transparent 72%),
-    linear-gradient(202deg, rgba(167, 156, 181, 0.16), rgba(14, 12, 19, 0.46));
-}
-
-.game-tile--shadow .game-tile-art {
-  color: var(--color-ink);
-}
-
-/* Trace and Colour — a scatter of warm crayon-tip dots rather than one
-   lamp-pool (that composition already belongs to Find It In Your World),
-   so the two Ember-hued tiles still read as different places at a glance. */
-.game-tile--trace .game-tile-scene {
-  background:
-    radial-gradient(circle 26px at 78% 20%, rgba(255, 176, 103, 0.34), transparent 75%),
-    radial-gradient(circle 20px at 90% 46%, rgba(255, 176, 103, 0.24), transparent 75%),
-    radial-gradient(circle 34px at 68% 78%, rgba(255, 176, 103, 0.2), transparent 75%),
-    linear-gradient(160deg, rgba(255, 176, 103, 0.1), rgba(255, 176, 103, 0.02));
-}
-
-.game-tile--trace .game-tile-art {
-  color: var(--color-accent);
-}
-
-/* Block-stack match — Periwink, the same hue the header comment above
-   already calls out for "the blocks" (Toy Story Sequencing's tile), but
-   composed as two glows rising under two towers instead of Toy Story's
-   single centred rise, so the pair still reads as different places at a
-   glance, the same way the two Ember tiles below it do. */
-.game-tile--blockstack .game-tile-scene {
-  background:
-    radial-gradient(circle 58px at 30% 100%, rgba(139, 123, 255, 0.32), transparent 72%),
-    radial-gradient(circle 58px at 76% 100%, rgba(139, 123, 255, 0.2), transparent 72%),
-    linear-gradient(180deg, rgba(139, 123, 255, 0.04), rgba(139, 123, 255, 0.12));
-}
-
-.game-tile--blockstack .game-tile-art {
-  color: var(--color-primary-bright);
-}
-
-/* Sort by rule — Moonmilk, the same hue Match the Picture's moonlight
-   uses, but scattered as a handful of small shape-glows instead of one
-   corner glow and one long shadow, so the two Moonmilk tiles still read
-   as different places at a glance. */
-.game-tile--sortbyrule .game-tile-scene {
-  background:
-    radial-gradient(circle 28px at 20% 22%, rgba(244, 239, 232, 0.22), transparent 75%),
-    radial-gradient(circle 20px at 58% 14%, rgba(244, 239, 232, 0.16), transparent 75%),
-    radial-gradient(circle 24px at 82% 30%, rgba(244, 239, 232, 0.18), transparent 75%),
-    linear-gradient(190deg, rgba(167, 156, 181, 0.14), rgba(14, 12, 19, 0.4));
-}
-
-.game-tile--sortbyrule .game-tile-art {
-  color: var(--color-ink);
-}
-
-/* The fourth box is a placeholder and must read as one at a glance: hatched
-   fill, dashed rim, no glass shadow, muted ink, centred. It has no onClick,
-   is genuinely `disabled`, and every press/transition affordance the base
-   button rule gives it is switched back off below.
-   It has no art to split against, so it deliberately stays ONE zone rather
-   than growing a caption strip with nothing above it -- a hatched empty
-   card with a centred label reads as "nothing here yet", which is the
-   point. It is still consistent with the new tiles: same card, same radius,
-   same centred label. It does need the padding back that the two-zone card
-   handed to its zones. */
-.game-tile--soon {
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  text-align: center;
-  background:
-    repeating-linear-gradient(
-      135deg,
-      var(--hatch-line) 0 8px,
-      transparent 8px 16px
-    ),
-    var(--glass-bg);
-  border: 1px dashed var(--color-border);
-  box-shadow: none;
-  transition: none;
-}
-
-/* The base rule dims every :disabled button to 0.5. Stacked on top of the
-   already-muted ink here that would put the label under 4.5:1, so the
-   dimming is done with colour instead and the blanket opacity is undone. */
-.game-tile--soon:disabled {
-  opacity: 1;
-}
-
-.game-tile--soon:active {
-  transform: none;
-  box-shadow: none;
-}
-
-.game-tile-soon-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-ink-muted); /* 7.09:1 on the ground */
-}
-
 /* ---------------------------------------------------------------------
    SIGNATURE ELEMENT — the Room Frame.
    A real photograph of the child's own object, matted in a slab of
