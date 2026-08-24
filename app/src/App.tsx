@@ -48,7 +48,6 @@ import { BlockStackMatch } from './games/BlockStackMatch';
 import { SortByRule } from './games/SortByRule';
 import { adapters } from './adapters/registry';
 import { clearActiveProfile, getActiveProfile } from './engine/profileStore';
-import { getThemePreference, setThemePreference, type ThemeChoice } from './engine/themePreference';
 import type { Branch2FlowResult } from './engine/branch2';
 import type { ChildProfile, TrackId } from './types';
 import type { ConcernAnswers } from './types';
@@ -230,36 +229,12 @@ function App() {
   // on a local-only app needs.
   const [confirmLogout, setConfirmLogout] = useState(false);
 
-  // Light/dark. Starts 'dark' -- the same value App.css itself renders with
-  // no [data-theme] attribute set -- so there is no flash of the wrong
-  // theme while the stored preference loads; a caregiver who chose light
-  // sees one dark frame for a moment on cold load, never the reverse.
-  // Device-level, not profile-level (see themePreference.ts), so it is
-  // loaded once here rather than as part of the profile.
-  const [theme, setTheme] = useState<ThemeChoice>('dark');
-
-  // Mirrors `theme` onto <html data-theme>, per App.css's own
-  // `:root[data-theme='light']` selector. Dark stays whatever "unset"
-  // renders as -- the attribute is only ever written for light, never
-  // written as "dark" -- matching the default/unset-state pattern the
-  // requirements ask for and the one src/index.css's color-scheme rule
-  // also keys off.
-  useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-    }
-  }, [theme]);
-
-  function chooseTheme(next: ThemeChoice) {
-    setTheme(next);
-    void setThemePreference(next);
-  }
+  // The light/dark toggle that used to live in Setup is gone. Toki
+  // replaces both themes screen by screen rather than sitting beside
+  // them, so there is no second theme left to switch to and nothing
+  // writes [data-theme] any more.
 
   useEffect(() => {
-    void getThemePreference().then(setTheme);
-
     // Both paths now land on the SAME welcome screen; it is the presence or
     // absence of a locally-stored profile that decides which of its two
     // faces is shown, not which screen is mounted. Deliberately still just
@@ -821,91 +796,84 @@ function App() {
         )}
 
         {homeTab === 'setup' && (
-          <div className="screen">
-            <div className="home-section">
-              <p className="home-section-label">What we build activities from</p>
-              <div className="home-edit-grid">
+          <div className="toki-setup-screen">
+            {/* The mockup's own Setup screen shows a third row here, "The
+                room photo". There is no room-photo management anywhere in
+                this app -- Game 1 captures and re-captures the room inside
+                its own flow -- so the row would lead nowhere. Two real
+                rows, matching the two screens that actually exist. */}
+            <div className="toki-setup-section">
+              <span className="toki-setup-label">What we build activities from</span>
+              <div className="toki-setup-list">
                 <button
-                  className="home-edit-button"
+                  type="button"
+                  className="toki-setup-row"
                   onClick={() => setScreen({ kind: 'responseProfile', returnToHome: true })}
                 >
                   How {profile.nickname ?? 'they'} do best
+                  <span className="toki-setup-row-chevron" aria-hidden="true">
+                    &rsaquo;
+                  </span>
                 </button>
                 <button
-                  className="home-edit-button"
+                  type="button"
+                  className="toki-setup-row"
                   onClick={() => setScreen({ kind: 'quickPreferences', returnToHome: true })}
                 >
                   Favourites
+                  <span className="toki-setup-row-chevron" aria-hidden="true">
+                    &rsaquo;
+                  </span>
                 </button>
               </div>
             </div>
 
-            <hr className="home-divider" />
-
-            {/* Appearance. Device-level, same as Log out below it, not
-                profile-level -- switching child profiles on this device
-                should not silently switch the theme too. Dark is this
-                app's deliberate default identity (see App.css's own
-                header comment), so this is presented as a genuine choice
-                between two designed themes, not a "restore default"
-                escape hatch. */}
-            <div className="home-section">
-              <p className="home-section-label" id="home-theme-title">
-                Appearance
-              </p>
-              <div
-                className="home-theme-row"
-                role="group"
-                aria-labelledby="home-theme-title"
-              >
-                <button
-                  type="button"
-                  className={theme === 'dark' ? 'home-theme-option is-selected' : 'home-theme-option'}
-                  aria-pressed={theme === 'dark'}
-                  onClick={() => chooseTheme('dark')}
-                >
-                  Dark
-                </button>
-                <button
-                  type="button"
-                  className={theme === 'light' ? 'home-theme-option is-selected' : 'home-theme-option'}
-                  aria-pressed={theme === 'light'}
-                  onClick={() => chooseTheme('light')}
-                >
-                  Light
-                </button>
-              </div>
-            </div>
+            {/* The mockup also shows an "Appearance" (Light/Dark) and a
+                "Movement" (Normal/Low animation) section. Neither is here
+                on purpose. Toki replaces the dark theme rather than sitting
+                beside it, so there is nothing left to choose between and
+                the toggle is retired; motion reduction is read from the
+                OS via prefers-reduced-motion, so a second, manual copy of
+                that setting would only be able to disagree with it. */}
 
             {/* Log out. There is no account and no password in this app, so
                 this clears the "who is active on this device" pointer and
-                nothing else — the profile itself stays on the device. Still
+                nothing else -- the profile itself stays on the device. Still
                 a real state change (onboarding has to be redone to get back
-                in), so it is behind a two-tap confirm and painted in
-                --color-danger so it never reads as another destination. */}
-            <div className="home-section">
-              <p className="home-section-label">This device</p>
+                in), so it is behind a two-tap confirm and painted in the
+                danger skin so it never reads as another destination. */}
+            <div className="toki-setup-section toki-setup-section--device">
+              <span className="toki-setup-label">This device</span>
               {confirmLogout ? (
-                <div className="home-logout-confirm">
-                  <p className="home-logout-note">
+                <div className="toki-setup-confirm">
+                  <p className="toki-lede">
                     Log out of {profile.nickname ?? 'this profile'}? Nothing saved is deleted, but
                     you would set the profile up again to come back.
                   </p>
-                  <div className="home-logout-actions">
-                    <button className="home-logout-button" onClick={logOut}>
-                      Yes, log out
-                    </button>
-                    <button className="home-secondary-button" onClick={() => setConfirmLogout(false)}>
+                  <div className="toki-footer-row">
+                    <button
+                      type="button"
+                      className="toki-secondary-btn"
+                      onClick={() => setConfirmLogout(false)}
+                    >
                       Cancel
+                    </button>
+                    <button type="button" className="toki-danger-btn" onClick={logOut}>
+                      Yes, log out
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="home-logout-actions">
-                  <button className="home-logout-button" onClick={() => setConfirmLogout(true)}>
+                <>
+                  <button
+                    type="button"
+                    className="toki-danger-btn"
+                    onClick={() => setConfirmLogout(true)}
+                  >
                     Log out
                   </button>
-                </div>
+                  <p className="toki-caption">Nothing saved is deleted.</p>
+                </>
               )}
             </div>
           </div>
