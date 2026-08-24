@@ -3012,7 +3012,9 @@ button.toki-week-cell {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 22px 0;
+  /* Bottom padding clears the now-fixed .toki-tab-bar (see its own
+     comment) so the last card is never hidden behind it. */
+  padding: 16px 22px 110px;
 }
 
 /* Sticky, not a flex sibling relying on container height math -- an
@@ -3025,12 +3027,24 @@ button.toki-week-cell {
    this pinned to the viewport bottom as that page scrolls underneath it,
    the same mechanism the pre-Toki .tab-bar used. */
 .toki-tab-bar {
-  position: sticky;
-  bottom: 0;
+  /* Fixed, not sticky: sticky only pins once the content ahead of it
+     would otherwise scroll past its box, so on a short screen (little
+     scrollable content) it just sat in normal flow right after that
+     content -- visibly floating mid-screen instead of at the bottom, and
+     only reaching the true bottom once there was enough content to push
+     it there. Fixed to the viewport is unconditional: same position
+     whether the tab has one card or ten. left/right + max-width + auto
+     margin centers it the same way .app's own max-width:480px column
+     centers on a wider-than-mobile viewport. */
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 26px;
+  max-width: 448px;
+  margin: 0 auto;
   z-index: 3;
   display: flex;
   gap: 6px;
-  margin: 12px 16px 26px;
   padding: 8px;
   border-radius: 28px;
   background: #fff;
