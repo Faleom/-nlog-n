@@ -262,7 +262,7 @@ export function SortByRule({ profile, onChildFacingChange }: SortByRuleProps) {
   const motion = useMemo(() => motionFor(reduceMotion), [reduceMotion]);
 
   useEffect(() => {
-    void startSession(profile.id).then((s) => setSessionId(s.id));
+    void startSession(profile.id, 'sort-by-rule').then((s) => setSessionId(s.id));
   }, [profile.id]);
 
   useEffect(() => {

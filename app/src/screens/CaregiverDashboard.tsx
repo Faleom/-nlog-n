@@ -32,12 +32,12 @@ import {
   SESSION_LENGTH_OPTIONS,
   calendarWeekdayLabels,
   firstPlayedMonth,
-  longestFocusOn,
   monthGrid,
   recentSessions,
   secondsPlayedOn,
   skillProgress,
   timeByTrackOn,
+  topSkillOn,
   totalDaysPracticed,
   usualSessionMinutes,
   weekStrip,
@@ -198,7 +198,7 @@ function CalendarDayCell({
  * TrackRow's inset button, but nothing here expands: the day is already
  * the drill-down, so a second layer of disclosure underneath it would be
  * disclosure for its own sake. */
-function DayTrackRow({ slice }: { slice: TrackSlice }) {
+function DayTrackRow({ slice, isTopPlayed }: { slice: TrackSlice; isTopPlayed: boolean }) {
   return (
     <li className="dashboard-track-row">
       <div className="dashboard-track-toggle dashboard-day-detail-row">
@@ -208,7 +208,10 @@ function DayTrackRow({ slice }: { slice: TrackSlice }) {
           aria-hidden="true"
         />
         <span className="dashboard-track-text">
-          <span className="dashboard-track-name">{slice.label}</span>
+          <span className="dashboard-track-name">
+            {slice.label}
+            {isTopPlayed && <span className="dashboard-tag">Most played</span>}
+          </span>
           {slice.detail && <span className="dashboard-track-detail">{slice.detail}</span>}
         </span>
         <span className="dashboard-figure-value">{minutes(slice.seconds)} min</span>
@@ -349,7 +352,6 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
   const today = new Date();
   const week = weekStrip(sessions, today);
   const playedTodaySeconds = secondsPlayedOn(sessions, today);
-  const focusTodaySeconds = longestFocusOn(sessions, today);
   const slices = timeByTrackOn(sessions, today);
   const skills = skillProgress(sessions);
   // Two groups, not a ranked list: what is being done alone, and what
@@ -365,8 +367,8 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
   // only happens on the day a caregiver actually asks for it.
   const selectedDate = selectedDayIso ? dateFromIso(selectedDayIso) : null;
   const selectedDaySeconds = selectedDate ? secondsPlayedOn(sessions, selectedDate) : 0;
-  const selectedDayFocusSeconds = selectedDate ? longestFocusOn(sessions, selectedDate) : 0;
   const selectedDaySlices = selectedDate ? timeByTrackOn(sessions, selectedDate) : [];
+  const selectedDayTopSkill = selectedDate ? topSkillOn(sessions, selectedDate) : null;
 
   // The calendar itself, and the paging limits around it: never past the
   // current month (there is nothing to show there yet), never before the
@@ -495,12 +497,12 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
       )}
 
       {/* ---- Day detail -------------------------------------------------
-          Same day-math as "Today's two figures" and "Time by track,
-          today" below, just aimed at whichever day was tapped above --
-          in the week strip or the calendar -- instead of always today. A
-          quiet day gets the same neutral "nothing played" line the other
-          empty states on this screen use -- no arithmetic, no colour,
-          that treats it as a gap (see this file's own header comment). */}
+          Same day-math as "Played today" and "Time by track, today"
+          below, just aimed at whichever day was tapped above -- in the
+          week strip or the calendar -- instead of always today. A quiet
+          day gets the same neutral "nothing played" line the other empty
+          states on this screen use -- no arithmetic, no colour, that
+          treats it as a gap (see this file's own header comment). */}
       {selectedDayIso && (
         <section className="dashboard-card dashboard-day-detail">
           <div className="dashboard-day-detail-head">
@@ -519,22 +521,20 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
             <p className="dashboard-empty">Nothing played this day.</p>
           ) : (
             <>
-              <div className="dashboard-metrics">
-                <div className="dashboard-metric">
-                  <span className="dashboard-metric-label">Played</span>
-                  <span className="dashboard-metric-value">
-                    {minutes(selectedDaySeconds)}
-                    <span className="dashboard-metric-unit">min</span>
-                  </span>
-                </div>
-                <div className="dashboard-metric">
-                  <span className="dashboard-metric-label">Longest focus</span>
-                  <span className="dashboard-metric-value">
-                    {minutes(selectedDayFocusSeconds)}
-                    <span className="dashboard-metric-unit">min</span>
-                  </span>
-                </div>
+              <div className="dashboard-metric">
+                <span className="dashboard-metric-label">Played</span>
+                <span className="dashboard-metric-value">
+                  {minutes(selectedDaySeconds)}
+                  <span className="dashboard-metric-unit">min</span>
+                </span>
               </div>
+
+              {selectedDayTopSkill && (
+                <p className="dashboard-caption">
+                  Most trained: {selectedDayTopSkill.skillName} ({selectedDayTopSkill.recordCount}
+                  {selectedDayTopSkill.recordCount === 1 ? ' rep' : ' reps'} today)
+                </p>
+              )}
 
               {selectedDaySlices.length > 0 && (
                 <>
@@ -557,8 +557,12 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
                     ))}
                   </div>
                   <ul className="dashboard-list">
-                    {selectedDaySlices.map((slice) => (
-                      <DayTrackRow key={slice.track} slice={slice} />
+                    {selectedDaySlices.map((slice, i) => (
+                      <DayTrackRow
+                        key={slice.track}
+                        slice={slice}
+                        isTopPlayed={i === 0 && selectedDaySlices.length > 1}
+                      />
                     ))}
                   </ul>
                 </>
@@ -601,22 +605,13 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
         </div>
       </section>
 
-      {/* ---- Today's two figures --------------------------------------- */}
-      <div className="dashboard-metrics">
-        <div className="dashboard-card dashboard-metric">
-          <span className="dashboard-metric-label">Played today</span>
-          <span className="dashboard-metric-value">
-            {minutes(playedTodaySeconds)}
-            <span className="dashboard-metric-unit">min</span>
-          </span>
-        </div>
-        <div className="dashboard-card dashboard-metric">
-          <span className="dashboard-metric-label">Longest focus</span>
-          <span className="dashboard-metric-value">
-            {minutes(focusTodaySeconds)}
-            <span className="dashboard-metric-unit">min</span>
-          </span>
-        </div>
+      {/* ---- Played today ------------------------------------------------ */}
+      <div className="dashboard-card dashboard-metric">
+        <span className="dashboard-metric-label">Played today</span>
+        <span className="dashboard-metric-value">
+          {minutes(playedTodaySeconds)}
+          <span className="dashboard-metric-unit">min</span>
+        </span>
       </div>
 
       {/* ---- Time by track, today -------------------------------------- */}

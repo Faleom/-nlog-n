@@ -9,15 +9,15 @@ import { INTERACTION_CONFIG, sessionCapMinutes } from '../src/config/interaction
 import type { ChildProfile } from '../src/types';
 
 async function main() {
-  const { createProfile, startSession, endSession, appendSkillRecord, recordMovementBreak } =
-    await import('../src/engine/profileStore');
+  const { createProfile, startSession, endSession, appendSkillRecord } = await import(
+    '../src/engine/profileStore'
+  );
   const {
     getSessionNumber,
     sessionCapSeconds,
     hasCapBeenReached,
     endSessionNow,
     childFacingHandoffLine,
-    describeSessionRecap,
     distinctSkillsThisSession,
   } = await import('../src/engine/sessionLifecycle');
 
@@ -102,24 +102,7 @@ async function main() {
     assert.equal(result.handoffObjectName, 'favourite thing');
   });
 
-  section('F.013 — caregiver recap matches the §7.9 example shape');
-
-  await test('describeSessionRecap reads like the guide\'s own worked example', async () => {
-    const session = await startSession(childId);
-    await appendSkillRecord(session.id, {
-      skillId: 'find-red-cup',
-      context: 'kitchen',
-      supportTier: 3,
-      onScreenTier: 0,
-      prompted: false,
-      timestamp: new Date().toISOString(),
-    });
-    await recordMovementBreak(session.id);
-    await recordMovementBreak(session.id);
-    const ended = await endSession(session.id, 'cap');
-    const recap = describeSessionRecap({ ...ended, durationSeconds: 720, longestFocusStretchSeconds: 240 });
-    assert.equal(recap, '12 minutes, 1 activities, 2 movement breaks. Longest focus stretch: 4 minutes.');
-  });
+  section('F.013 — distinct skills this session');
 
   await test('distinctSkillsThisSession dedupes repeats of the same skill', async () => {
     const session = await startSession(childId);

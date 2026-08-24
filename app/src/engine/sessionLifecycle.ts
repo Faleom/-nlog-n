@@ -88,20 +88,6 @@ export function childFacingHandoffLine(profile: ChildProfile, objectName: string
 }
 
 /**
- * Plain-language caregiver recap, matching the §7.9 example shape exactly:
- * "12 minutes, 3 activities, 2 movement breaks. Longest focus stretch: 4 minutes."
- * Shortening sessions are never framed as decline here -- this only
- * reports what happened, with no comparison to past sessions or any
- * streak/total-time framing (that's explicitly forbidden -- see "Not in
- * this file" in plan/features/F.013.md).
- */
-export function describeSessionRecap(session: SessionLog): string {
-  const minutes = Math.round(session.durationSeconds / 60);
-  const focusMinutes = Math.round(session.longestFocusStretchSeconds / 60);
-  return `${minutes} minutes, ${session.activitiesRun} activities, ${session.movementBreaks} movement breaks. Longest focus stretch: ${focusMinutes} minutes.`;
-}
-
-/**
  * Distinct skills touched this session -- a stand-in for "objects
  * recognised" on the caregiver recap. Derived from existing skillRecords
  * rather than tracked as a second, separate log, so there is only one

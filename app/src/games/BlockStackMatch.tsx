@@ -293,7 +293,7 @@ export function BlockStackMatch({ profile, onChildFacingChange }: BlockStackMatc
   const motion = useMemo(() => motionFor(reduceMotion), [reduceMotion]);
 
   useEffect(() => {
-    void startSession(profile.id).then((s) => setSessionId(s.id));
+    void startSession(profile.id, 'block-stack').then((s) => setSessionId(s.id));
   }, [profile.id]);
 
   useEffect(() => {

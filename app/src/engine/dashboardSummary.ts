@@ -84,7 +84,7 @@ export function weekStrip(sessions: SessionLog[], today: Date): WeekCell[] {
 }
 
 // ---------------------------------------------------------------------------
-// Today's two figures
+// Today's figure
 // ---------------------------------------------------------------------------
 
 /** Total time played on `day`, in seconds. Summed in seconds and rounded
@@ -94,13 +94,34 @@ export function secondsPlayedOn(sessions: SessionLog[], day: Date): number {
   return sessionsOn(sessions, day).reduce((sum, s) => sum + s.durationSeconds, 0);
 }
 
-/** The longest single sustained stretch on `day`, in seconds -- the max,
- * never the sum. Two ten-minute sittings are not a twenty-minute focus. */
-export function longestFocusOn(sessions: SessionLog[], day: Date): number {
-  return sessionsOn(sessions, day).reduce(
-    (max, s) => Math.max(max, s.longestFocusStretchSeconds),
-    0,
-  );
+/** Which activity got the most practice reps on `day` -- the track whose
+ * skillRecords count that day is highest. Reps, not time: a skill drilled
+ * in five short bursts and one drilled in a single long sitting can tie
+ * on minutes but not on this. Null when nothing was logged that day. */
+export function topSkillOn(sessions: SessionLog[], day: Date): TopSkillOfDay | null {
+  const counts = new Map<TrackId, number>();
+  for (const session of sessionsOn(sessions, day)) {
+    if (!session.track || session.skillRecords.length === 0) continue;
+    counts.set(session.track, (counts.get(session.track) ?? 0) + session.skillRecords.length);
+  }
+  let best: TrackId | null = null;
+  let bestCount = 0;
+  for (const [track, recordCount] of counts) {
+    if (recordCount > bestCount) {
+      best = track;
+      bestCount = recordCount;
+    }
+  }
+  if (!best) return null;
+  return { track: best, skillName: getTrack(best).skill, recordCount: bestCount };
+}
+
+export interface TopSkillOfDay {
+  track: TrackId;
+  /** The capability this track trains, in caregiver words (config/tracks.ts). */
+  skillName: string;
+  /** How many skill records -- practice reps -- this track logged that day. */
+  recordCount: number;
 }
 
 // ---------------------------------------------------------------------------

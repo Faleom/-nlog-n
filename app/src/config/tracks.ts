@@ -1,4 +1,4 @@
-// The four activity tracks, named once.
+// The six activity tracks, named once.
 //
 // Before this file the four game names existed as string literals in
 // App.tsx's GameChrome eyebrows and again in the home grid's tiles. The
@@ -11,12 +11,12 @@
 // -------------------------------------------
 // DESIGN-TOKENS §4.2/§4.3 rule the reserved hues (Sunburst, Blush) and
 // Ember off caregiver screens outright. That leaves the Periwink family,
-// so these four are pitched across it -- a violet, a lilac, a soft blue
-// and a teal -- rather than being the obvious red/amber/green/blue set a
-// chart usually reaches for. Two things fall out of that, both wanted:
-// nothing here can read as a red/green judgement about the child, and the
-// four still separate by LIGHTNESS as well as hue, so they survive being
-// seen by a colour-blind caregiver.
+// so these six are pitched across it -- a violet, a lilac, a soft blue,
+// a teal, a cyan and a plum -- rather than being the obvious
+// red/amber/green/blue set a chart usually reaches for. Two things fall
+// out of that, both wanted: nothing here can read as a red/green
+// judgement about the child, and the six still separate by LIGHTNESS as
+// well as hue, so they survive being seen by a colour-blind caregiver.
 //
 // Every one of them measures at least 4:1 against the dashboard card's
 // composited surface, clearing WCAG 1.4.11's 3:1 floor for a graphic that
@@ -62,6 +62,18 @@ export const TRACKS: readonly TrackInfo[] = [
     label: 'Trace and Colour',
     colorVar: '--track-trace',
     skill: 'Tracing a shape and staying inside it',
+  },
+  {
+    id: 'block-stack',
+    label: 'Block-stack match',
+    colorVar: '--track-block-stack',
+    skill: 'Building a tower to match a model, one block at a time',
+  },
+  {
+    id: 'sort-by-rule',
+    label: 'Sort by rule',
+    colorVar: '--track-sort-by-rule',
+    skill: 'Sorting objects into groups by a shared rule',
   },
 ] as const;
 

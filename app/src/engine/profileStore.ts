@@ -145,7 +145,6 @@ export async function startSession(childId: string, track?: TrackId): Promise<Se
     durationSeconds: 0,
     activitiesRun: 0,
     movementBreaks: 0,
-    longestFocusStretchSeconds: 0,
     skillRecords: [],
     endedBy: 'caregiver', // placeholder; endSession() sets the real value
     // Which activity this is. Recorded at the start, not the end, so a
@@ -176,19 +175,6 @@ export async function recordMovementBreak(sessionId: string): Promise<SessionLog
   const session = sessions[sessionId];
   if (!session) throw new Error(`No session with id ${sessionId}`);
   session.movementBreaks += 1;
-  sessions[sessionId] = session;
-  await adapters.storage.set(SESSIONS_KEY, sessions);
-  return session;
-}
-
-export async function updateFocusStretch(
-  sessionId: string,
-  stretchSeconds: number,
-): Promise<SessionLog> {
-  const sessions = (await adapters.storage.get<SessionsMap>(SESSIONS_KEY)) ?? {};
-  const session = sessions[sessionId];
-  if (!session) throw new Error(`No session with id ${sessionId}`);
-  session.longestFocusStretchSeconds = Math.max(session.longestFocusStretchSeconds, stretchSeconds);
   sessions[sessionId] = session;
   await adapters.storage.set(SESSIONS_KEY, sessions);
   return session;

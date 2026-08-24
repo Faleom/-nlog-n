@@ -27,7 +27,7 @@ import { adapters } from '../adapters/registry';
 import { captureRoomAndRecognize } from '../adapters/pipeline/myWorldPipeline';
 import { renderLine, slotValuesFromProfile } from '../engine/slots';
 import { InteractionMachine, type PromptTier } from '../engine/interactionMachine';
-import { startSession, updateFocusStretch } from '../engine/profileStore';
+import { startSession } from '../engine/profileStore';
 import { logActivityOutcome } from '../engine/activityLogging';
 import { INTERACTION_CONFIG } from '../config/interaction';
 import { SessionCelebration } from './SessionCelebration';
@@ -556,7 +556,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const [lastLoggedTier, setLastLoggedTier] = useState<SupportTier | null>(null);
   const [fadingSuggestion, setFadingSuggestion] = useState<FadingSuggestion | null>(null);
   const [sessionEndResult, setSessionEndResult] = useState<SessionEndResult | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const machineRef = useRef<InteractionMachine>(new InteractionMachine());
   // Seeded with a static value, not Date.now() -- useRef's initial-value
@@ -625,29 +624,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // new profile reference on a genuine change, not on every render.
   }, [profile]);
 
-  /** §7.9's "focus-stretch trend" — the metric the caregiver dashboard
-   * reads (caregiverDashboard.ts's getFocusStretchTrend). Called after
-   * every resolved trial: the seconds elapsed since this session started
-   * IS the stretch of engagement sustained up to this success, and
-   * updateFocusStretch keeps the running maximum itself, so the largest
-   * value naturally survives as the session's longest stretch.
-   *
-   * Reads the same `elapsedSeconds` the session poller already maintains
-   * from sessionStartedAtRef (rather than calling Date.now() again here),
-   * so this stays a pure read of state the screen already holds and the
-   * two can never disagree; a sub-second difference is immaterial to a
-   * metric the dashboard renders in whole minutes.
-   *
-   * Fire-and-forget, exactly like logActivityOutcome's call sites: a
-   * storage failure here costs one dashboard data point and must never
-   * reach the child's screen or hold up the celebration. */
-  function recordFocusStretch() {
-    if (!sessionId) return;
-    void updateFocusStretch(sessionId, elapsedSeconds).catch(() => {
-      // Deliberately swallowed — see this function's header.
-    });
-  }
-
   async function handleLevelChange(newLevel: Game1Level) {
     setLevel(newLevel);
     await setGame1Level(profile.id, newLevel);
@@ -664,8 +640,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     if (!sessionId || sessionNumber === null || phase === 'sessionEnded') return;
     const interval = setInterval(() => {
       const now = Date.now();
-      setElapsedSeconds(Math.floor((now - sessionStartedAtRef.current) / 1000));
-
       const tick = machineRef.current.tick(now);
       if (phase === 'searching' || phase === 'confirming') {
         setPromptTier(tick.tier);
@@ -776,7 +750,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     machineRef.current.recordAttempt(true);
     setPhase('celebrating');
     lastObjectNameRef.current = profile.context.companion?.name ?? null;
-    recordFocusStretch();
     void adapters.speechOut.say(
       renderLine('{companion}!', slotValuesFromProfile(profile)),
     );
@@ -846,10 +819,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       setPhase('celebrating');
       setPromptTier(outcome.tier);
       lastObjectNameRef.current = crop.name;
-      // §7.9: this success is the end of an unbroken stretch of engagement
-      // that started with the session — record it before anything can
-      // interrupt, never awaited (see recordFocusStretch's header).
-      recordFocusStretch();
       const line = renderLine(
         'Your {object.name}!',
         slotValuesFromProfile(profile, { 'object.name': crop.name }),

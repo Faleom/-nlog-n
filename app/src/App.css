@@ -92,6 +92,8 @@
   --track-story: #6ed3c6; /* Sea glass      7.54:1 */
   --track-match: #c9a2ff; /* Lilac          6.46:1 */
   --track-trace: #7fa8e8; /* Slate blue     5.54:1 */
+  --track-block-stack: #63cfe6; /* Cyan      10.19:1 on Nightshade */
+  --track-sort-by-rule: #c489e3; /* Plum       7.06:1 on Nightshade */
 
   /* ---- Utility surfaces --------------------------------------------
      Added so Phase 2 has somewhere to send the hardcoded light-mode
@@ -318,6 +320,8 @@
   --track-story: #0e7a6f;
   --track-match: #8a4fd6;
   --track-trace: #3e6fc9;
+  --track-block-stack: #0e7d95; /* 4.71:1 on the card */
+  --track-sort-by-rule: #7a35ad; /* 7.03:1 on the card */
 
   /* ---- Utility surfaces -------------------------------------------------- */
   --color-danger: #b23a2c; /* 5.28:1 on Parchment */
@@ -2187,6 +2191,23 @@ textarea::placeholder {
 .dashboard-track-detail::first-letter,
 .dashboard-recent-detail::first-letter {
   text-transform: uppercase;
+}
+
+/* A day-detail-only marker on whichever track had the most time that
+   day (see CaregiverDashboard.tsx's DayTrackRow) -- a plain fact from
+   the same sort the bar already uses, not a rank across days. */
+.dashboard-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
 }
 
 .dashboard-track-detail,

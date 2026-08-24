@@ -29,7 +29,6 @@ function sessionWith(tiers: SupportTier[]): SessionLog {
     durationSeconds: 300,
     activitiesRun: tiers.length,
     movementBreaks: 0,
-    longestFocusStretchSeconds: 120,
     endedBy: 'finished',
     skillRecords: tiers.map((tier, i) => ({
       skillId: `skill-${i}`,

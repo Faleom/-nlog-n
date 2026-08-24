@@ -32,20 +32,17 @@ async function main() {
     endSession,
     getSessionsForChild,
   } = await import('../src/engine/profileStore');
-  const { describeSessionRecap, distinctSkillsThisSession } = await import('../src/engine/sessionLifecycle');
-  const {
-    NON_DIAGNOSTIC_BANNER,
-    getFocusStretchTrend,
-    getGeneralizedSkills,
-    mostRecentSession,
-  } = await import('../src/engine/caregiverDashboard');
+  const { distinctSkillsThisSession } = await import('../src/engine/sessionLifecycle');
+  const { NON_DIAGNOSTIC_BANNER, getGeneralizedSkills, mostRecentSession } = await import(
+    '../src/engine/caregiverDashboard'
+  );
 
   section('F.019 — populate REAL sessions through the real store, not fixtures');
 
   const profile = await createProfile({ ageMonths: 44, nickname: 'Maya' });
 
   // Session 1: one skill logged at tier 3 (gesture -- not yet independent),
-  // one movement break, an explicit focus-stretch update, ended by cap.
+  // one movement break, ended by cap.
   const session1 = await startSession(profile.id);
   await appendSkillRecord(session1.id, {
     skillId: 'find-red-cup',
@@ -56,8 +53,6 @@ async function main() {
     timestamp: new Date().toISOString(),
   });
   await recordMovementBreak(session1.id);
-  const { updateFocusStretch } = await import('../src/engine/profileStore');
-  await updateFocusStretch(session1.id, 180); // 3 min
   await endSession(session1.id, 'cap');
 
   // Session 2 (later): the SAME skill now logged at tier 5 (independent,
@@ -91,7 +86,6 @@ async function main() {
     prompted: true,
     timestamp: new Date().toISOString(),
   });
-  await updateFocusStretch(session2.id, 90); // 1.5 min -> rounds to 2
   await endSession(session2.id, 'caregiver');
 
   const sessions = await getSessionsForChild(profile.id);
@@ -100,42 +94,17 @@ async function main() {
     assert.equal(sessions.length, 2);
   });
 
-  section('F.019 — Recap panel: describeSessionRecap on the REAL most recent session');
+  section('F.019 — mostRecentSession and distinct skills on the REAL most recent session');
 
   await test('mostRecentSession picks session 2 (later startedAt), not just array order', () => {
     const latest = mostRecentSession(sessions);
     assert.equal(latest?.id, session2.id);
   });
 
-  await test('the recap sentence matches the real logged numbers for that session', () => {
-    const latest = mostRecentSession(sessions)!;
-    const recap = describeSessionRecap(latest);
-    // 3 activities logged in session 2, 0 movement breaks, ~2 min focus stretch.
-    assert.ok(recap.includes('3 activities'), recap);
-    assert.ok(recap.includes('0 movement breaks'), recap);
-    assert.ok(recap.includes('2 minutes'), recap);
-  });
-
   await test('distinctSkillsThisSession reflects the real skill records, deduplicated', () => {
     const latest = mostRecentSession(sessions)!;
     const skills = distinctSkillsThisSession(latest);
     assert.deepEqual([...skills].sort(), ['find-red-cup', 'stack-blocks']);
-  });
-
-  section('F.019 — Focus-stretch trend: real numbers, chronological, no interpretation');
-
-  await test('the trend has one point per real session, in chronological order', () => {
-    const trend = getFocusStretchTrend(sessions);
-    assert.equal(trend.length, 2);
-    assert.equal(trend[0]?.sessionNumber, 1);
-    assert.equal(trend[1]?.sessionNumber, 2);
-    assert.equal(trend[0]?.focusStretchMinutes, 3);
-    assert.equal(trend[1]?.focusStretchMinutes, 2);
-  });
-
-  await test('session 2 is genuinely shorter than session 1 -- the "shortening" case really exists in this data', () => {
-    const trend = getFocusStretchTrend(sessions);
-    assert.ok(trend[1]!.focusStretchMinutes <= trend[0]!.focusStretchMinutes);
   });
 
   section('F.019 — Generalization list: only tier-5 (independent) records, grouped by real context');

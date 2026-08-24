@@ -35,7 +35,7 @@ import {
 import { modelPlaybackCount, actItOutLine, formatVisualSchedule } from '../engine/routineSequencing';
 import { logActivityOutcome } from '../engine/activityLogging';
 import { SessionCelebration } from './SessionCelebration';
-import { startSession, endSession, updateFocusStretch } from '../engine/profileStore';
+import { startSession, endSession } from '../engine/profileStore';
 import { SUPPORT_TIERS } from '../config/supportLadder';
 import { GENERIC_FALLBACK_CROPS } from './genericFallbackCrops';
 import { createTemplateStory } from '../adapters/story/templateStory';
@@ -251,14 +251,6 @@ const STAGE_LABELS: Record<CaptureStage | 'writing', string> = {
   'looking-at-objects': 'Looking around the room…',
   writing: 'Writing the story…',
 };
-
-/** Whole seconds from `startedAtMs` until now, never negative. Lives at
- * module scope, not in the component: reading the clock is impure, and a
- * function declared in a component body is fair game for a render-phase
- * call as far as the linter (rightly) knows. */
-function elapsedSecondsSince(startedAtMs: number): number {
-  return Math.max(0, Math.round((Date.now() - startedAtMs) / 1000));
-}
 
 function shuffled<T>(items: T[]): T[] {
   return [...items].sort(() => Math.random() - 0.5);
@@ -504,16 +496,11 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
   const [captureStage, setCaptureStage] = useState<CaptureStage | 'writing' | null>(null);
 
   const slotElsRef = useRef<(HTMLDivElement | null)[]>([]);
-  // Wall-clock start of the session `sessionId` names. §7.9's focus
-  // stretch is measured from the SESSION's own startedAt, not from
-  // whenever this component happened to mount.
-  const sessionStartedAtRef = useRef<number | null>(null);
   const styleSheet = GAME2_STYLES;
 
   useEffect(() => {
     void startSession(profile.id, 'story').then((s) => {
       setSessionId(s.id);
-      sessionStartedAtRef.current = new Date(s.startedAt).getTime();
     });
   }, [profile.id]);
 
@@ -521,21 +508,6 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
     onChildFacingChange?.(phase === 'blanks');
     return () => onChildFacingChange?.(false);
   }, [phase, onChildFacingChange]);
-
-  /** §7.9's "longest focus stretch", which the caregiver dashboard's
-   * focus-stretch trend reads. Called at this game's real-progress
-   * moments (a photo actually lands in a spot; the story is finished).
-   * updateFocusStretch takes the running Math.max itself, so repeatedly
-   * handing it the seconds elapsed since the session started naturally
-   * converges on the longest stretch the child stayed with it.
-   * Fire-and-forget and swallowed on failure -- the same shape as the
-   * other logging in this file, because a telemetry write must never be
-   * able to interrupt a game already in a child's hands. */
-  function noteFocusProgress() {
-    const startedAt = sessionStartedAtRef.current;
-    if (!sessionId || startedAt === null) return;
-    void updateFocusStretch(sessionId, elapsedSecondsSince(startedAt)).catch(() => undefined);
-  }
 
   async function startRound() {
     setPhase('capturing');
@@ -697,9 +669,6 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
    * by both the drag-drop path and the tap-to-place path so they can never
    * drift into different behaviour. */
   function placeInSlot(cropId: string, slotIndex: number) {
-    // Read before the setState below, so the occupied-slot no-op inside
-    // the updater doesn't get logged as progress.
-    const wasEmpty = slots[slotIndex] === null;
     setSlots((prev) => {
       if (prev[slotIndex] !== null) return prev; // occupied -- no-op, not a swap
       const next = [...prev];
@@ -707,9 +676,6 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
       return next;
     });
     setPoolIds((prev) => prev.filter((id) => id !== cropId));
-    // §7.9: a photo actually landing in a spot is this game's real
-    // "the child is still with it" moment. See noteFocusProgress.
-    if (wasEmpty) noteFocusProgress();
   }
 
   function returnToPool(cropId: string) {
@@ -804,9 +770,6 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
     // title to.
     const lines = formatVisualSchedule(profile, "{child}'s story time!", renderedLines);
     setSchedule(lines);
-    // The whole story resolved -- the biggest real-progress moment there
-    // is (§7.9).
-    noteFocusProgress();
     void adapters.speechOut.say(lines.join('. '));
     // No auto-advance -- this used to jump to reportingSupport on its own
     // after 600ms, which read as instant/abrupt. The caregiver now taps
@@ -831,7 +794,6 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
     setEndedSession(ended);
     setPhase('sessionEnded');
     setSessionId(null);
-    sessionStartedAtRef.current = null;
     // Deliberately NOT starting the next session here. Opening one the
     // moment the last closed left a trail of empty zero-length sessions in
     // the log for stories nobody played -- the next one starts when a
@@ -843,7 +805,6 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
     setPhase('idle');
     void startSession(profile.id, 'story').then((s) => {
       setSessionId(s.id);
-      sessionStartedAtRef.current = new Date(s.startedAt).getTime();
     });
   }
 

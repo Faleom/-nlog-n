@@ -36,7 +36,7 @@ async function main() {
   const {
     weekStrip,
     secondsPlayedOn,
-    longestFocusOn,
+    topSkillOn,
     timeByTrackOn,
     recentSessions,
     skillProgress,
@@ -86,7 +86,6 @@ async function main() {
     track: Track;
     startedAt: string;
     durationSeconds: number;
-    focusSeconds: number;
     skills?: { skillId: string; context: string; supportTier: 1 | 2 | 3 | 4 | 5 }[];
   }): SessionLog {
     return {
@@ -97,7 +96,6 @@ async function main() {
       durationSeconds: opts.durationSeconds,
       activitiesRun: opts.skills?.length ?? 0,
       movementBreaks: 0,
-      longestFocusStretchSeconds: opts.focusSeconds,
       skillRecords: (opts.skills ?? []).map((skill) => ({
         skillId: skill.skillId,
         context: skill.context,
@@ -117,7 +115,6 @@ async function main() {
       track: 'find-it',
       startedAt: daysAgo(today, 0, 9),
       durationSeconds: 8 * 60,
-      focusSeconds: 5 * 60,
       skills: [
         { skillId: 'find-cup', context: 'kitchen', supportTier: 5 },
         { skillId: 'find-cup', context: 'bedroom', supportTier: 5 },
@@ -128,13 +125,11 @@ async function main() {
       track: 'find-it',
       startedAt: daysAgo(today, 0, 11),
       durationSeconds: 4 * 60,
-      focusSeconds: 3 * 60,
     }),
     session({
       track: 'match',
       startedAt: daysAgo(today, 0, 14),
       durationSeconds: 6 * 60,
-      focusSeconds: 6 * 60,
       skills: [{ skillId: 'match-apple', context: 'living-room', supportTier: 4 }],
     }),
     // Three days ago: must never leak into a "today" figure.
@@ -142,7 +137,6 @@ async function main() {
       track: 'trace',
       startedAt: daysAgo(today, 3, 10),
       durationSeconds: 20 * 60,
-      focusSeconds: 19 * 60,
     }),
   ];
 
@@ -184,15 +178,20 @@ async function main() {
     assert.equal(secondsPlayedOn(sessions, today), (8 + 4 + 6) * 60);
   });
 
-  await test('"longest focus" picks the max single stretch, not the sum', () => {
-    assert.equal(longestFocusOn(sessions, today), 6 * 60);
+  await test('"top skill" picks the track with the most practice reps, not the most time', () => {
+    // find-it logged 3 skill records today (across two sessions), match
+    // logged 1 -- find-it wins on reps even though match's single session
+    // ran nearly as long as find-it's two combined.
+    const top = topSkillOn(sessions, today);
+    assert.equal(top?.track, 'find-it');
+    assert.equal(top?.recordCount, 3);
   });
 
   await test('yesterday, with no sessions, is zero rather than a carried-over figure', () => {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     assert.equal(secondsPlayedOn(sessions, yesterday), 0);
-    assert.equal(longestFocusOn(sessions, yesterday), 0);
+    assert.equal(topSkillOn(sessions, yesterday), null);
   });
 
   section('dashboard — time by track');
@@ -219,7 +218,6 @@ async function main() {
       durationSeconds: 100,
       activitiesRun: 0,
       movementBreaks: 0,
-      longestFocusStretchSeconds: 0,
       skillRecords: [],
       endedBy: 'finished' as const,
       track: (['find-it', 'match', 'trace'] as const)[i],
@@ -289,7 +287,6 @@ async function main() {
         track: 'find-it',
         startedAt: daysAgo(today, 0, 15),
         durationSeconds: 60,
-        focusSeconds: 60,
         skills: [{ skillId: 'find-shoe', context: 'kitchen', supportTier: 5 }],
       }),
     ];
@@ -317,7 +314,6 @@ async function main() {
         track: 'match',
         startedAt: daysAgo(today, 0, 16),
         durationSeconds: 60,
-        focusSeconds: 60,
         skills: [{ skillId: 'match-apple', context: 'living-room', supportTier: 5 }],
       }),
     ];
@@ -330,7 +326,6 @@ async function main() {
       track: 'match',
       startedAt: daysAgo(today, 1, 10),
       durationSeconds: 5 * 60,
-      focusSeconds: 60,
       skills: [{ skillId: 'legacy-skill', context: 'kitchen', supportTier: 5 }],
     });
     delete (untracked as { track?: unknown }).track;
@@ -374,7 +369,6 @@ async function main() {
         track: 'find-it',
         startedAt: daysAgo(today, 0, 15),
         durationSeconds: 60,
-        focusSeconds: 60,
         skills: [{ skillId: 'find-shoe', context: 'kitchen', supportTier: 5 }],
       }),
     ];
@@ -398,7 +392,6 @@ async function main() {
         track: 'match',
         startedAt: daysAgo(today, 0, 17),
         durationSeconds: 60,
-        focusSeconds: 60,
         skills: [{ skillId: 'match-apple', context: 'living-room', supportTier: 2 }],
       }),
     ];

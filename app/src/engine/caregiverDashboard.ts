@@ -15,26 +15,6 @@ import type { SessionLog } from '../types';
  * CaregiverDashboard.tsx — not first-run only, no dismiss. */
 export const NON_DIAGNOSTIC_BANNER = 'This is an activity log, not a clinical assessment.';
 
-/** One row of the focus-stretch trend — session number (1-indexed,
- * chronological) and its longest sustained-attention stretch, in whole
- * minutes. The metric ADHD caregivers care about most (§7.9). */
-export interface FocusStretchPoint {
-  sessionNumber: number;
-  startedAt: string;
-  focusStretchMinutes: number;
-  durationMinutes: number;
-}
-
-export function getFocusStretchTrend(sessions: SessionLog[]): FocusStretchPoint[] {
-  const chronological = [...sessions].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-  return chronological.map((session, i) => ({
-    sessionNumber: i + 1,
-    startedAt: session.startedAt,
-    focusStretchMinutes: Math.round(session.longestFocusStretchSeconds / 60),
-    durationMinutes: Math.round(session.durationSeconds / 60),
-  }));
-}
-
 /** Which skills reached independence (support tier 5), and in which
  * contexts — the generalization tracker (§7.9). Possible only because
  * content comes from the child's real environment; still just a plain

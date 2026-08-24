@@ -173,7 +173,6 @@ export interface SessionLog {
   durationSeconds: number;
   activitiesRun: number;
   movementBreaks: number;
-  longestFocusStretchSeconds: number;
   skillRecords: SkillRecord[];
   /** 'finished' = the child completed the session's planned activities.
    * Distinct from 'cap' on purpose: a log that records "time ran out" for a
