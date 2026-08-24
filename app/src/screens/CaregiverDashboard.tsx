@@ -447,8 +447,9 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
           never before the month of the very first-ever session. */}
       {showCalendar && (
         <section className="dashboard-card">
-          <p className="dashboard-caption">
-            {daysPracticed} {daysPracticed === 1 ? 'day' : 'days'} played so far.
+          <p className="dashboard-days-practiced">
+            <span className="dashboard-days-practiced-value">{daysPracticed}</span>{' '}
+            {daysPracticed === 1 ? 'day' : 'days'} played so far
           </p>
           <div className="dashboard-calendar-head">
             <button

@@ -1873,6 +1873,28 @@ textarea::placeholder {
   opacity: 0.7;
 }
 
+/* The one number on this card worth the eye landing on first -- same
+   size/weight/colour treatment as .dashboard-metric-value elsewhere on
+   this screen, so "big coloured figure" reads as this app's own way of
+   drawing attention, not a borrowed streak-counter look. */
+.dashboard-days-practiced {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: -2px 0 2px;
+  font-size: 0.95rem;
+  color: var(--color-ink-muted);
+}
+
+.dashboard-days-practiced-value {
+  font-size: 2rem;
+  font-weight: var(--weight-caregiver-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--color-primary-bright);
+}
+
 .dashboard-calendar-head {
   display: flex;
   align-items: center;
