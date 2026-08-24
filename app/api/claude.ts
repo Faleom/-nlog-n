@@ -17,9 +17,54 @@
 // one call that actually reads a photo.
 
 import Anthropic from '@anthropic-ai/sdk';
-import { buildObservationSystemPrompt, buildObservationUserPrompt } from '../src/engine/branch2Card';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// F.015's two prompt-builders, duplicated from src/engine/branch2Card.ts
+// rather than imported from it. api/ is a separate deploy target from
+// src/ (see VISION_PROMPT's and STORY_PROMPT's comments below for the
+// same rule already followed for the other two prompts) -- importing
+// across that boundary isn't just a style rule, it actively breaks on
+// Vercel: the function bundler doesn't trace a relative import that
+// reaches outside api/, so the deployed function 500s on every request
+// with ERR_MODULE_NOT_FOUND at cold start, before the handler even runs.
+// Keep byte-for-byte identical to branch2Card.ts's originals.
+function buildObservationSystemPrompt(): string {
+  return [
+    "You rewrite a parent's own words about their child's development into one",
+    'short, clear, neutral paragraph, for a health worker.',
+    '',
+    'STRICT RULES:',
+    '- Only rephrase what the parent literally said. Never add, infer, extend,',
+    '  or "complete" anything they did not say.',
+    '- Never name or imply any medical, developmental, or psychological condition.',
+    '- Never use these words: delayed, disorder, risk, concerning, abnormal,',
+    '  symptom, likely, probably, suggests.',
+    '- Never state a severity, probability, or percentage of any kind.',
+    '- Never recommend anything. Do not tell the parent what to do next --',
+    '  that is handled elsewhere.',
+    '- Output ONLY the rewritten paragraph. No greeting, no heading, no',
+    '  questions, no bullet points, no extra commentary, no quotation marks.',
+  ].join('\n');
+}
+
+function buildObservationUserPrompt(answers: {
+  whatNoticed: string;
+  whenNoticed: string;
+  whatItLooksLike: string;
+  childAgeMonths: number;
+}): string {
+  return [
+    "Parent's own words:",
+    `- What they noticed: "${answers.whatNoticed}"`,
+    `- When they first noticed it: "${answers.whenNoticed}"`,
+    `- What it looks like when it happens: "${answers.whatItLooksLike}"`,
+    '',
+    `Child's age: ${answers.childAgeMonths} months.`,
+    '',
+    'Rewrite this into one short, clear, neutral paragraph, following the strict rules exactly.',
+  ].join('\n');
+}
 
 type VisionRequest = { kind: 'vision'; imageBase64: string; mediaType: string };
 type CardRequest = {
