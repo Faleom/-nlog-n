@@ -48,6 +48,27 @@ import { iconKeyFor } from './objectIconLogic';
 import { pickNextTarget } from './game1Trial';
 import { getGame1Level, setGame1Level, type Game1Level } from './game1Level';
 import {
+  buildQuest,
+  isQuestComplete,
+  remainingFor,
+  questBrief,
+  questSkillId,
+  type Quest,
+} from './game1/quests';
+import {
+  WALLS,
+  WALL_SHORT,
+  canStart,
+  cropsOf,
+  directionFor,
+  onWall,
+  placeCrops,
+  type PlacedCrop,
+  type WallCapture,
+  type WallIndex,
+} from './game1/walls';
+import { RoomPanorama, PANORAMA_STYLES } from './game1/RoomPanorama';
+import {
   applyProfileTuning,
   buildConfirmationGrid,
   buildSearchPromptTemplate,
@@ -300,6 +321,63 @@ const GAME1_STYLES = `
 .g1-crop--celebrating { animation: g1-celebrate 800ms ease-out forwards; z-index: 1; position: relative; }
 .g1-btn-accent { border: 2px solid var(--g1-accent, var(--color-primary)) !important; }
 .g1-found-thumb { border-radius: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 5px; }
+/* THE COLLECTION TRAY (levels 3-5). CAREGIVER-facing only: it renders in
+   'searching', which is the grown-up's screen, never in the child's two
+   zero-text phases. What has arrived is shown as a row that fills up
+   rather than as "3 of 5", because a numeral is reading, not counting;
+   the digits in the caption below it are for the adult, who is the only
+   person reading this half of the screen.
+   An empty slot is a dashed outline on the bare surface and a filled one
+   is a lit tile (--color-tile, per DESIGN-TOKENS §1.4, since a drawn
+   object belongs on a lit tile even on a dark ground), ringed in child's own
+   favourite colour via the same --g1-accent every other accent here reads.
+   No --color-reward / --color-companion: filling a slot is progress the
+   caregiver is tracking, not the child's reward beat. */
+.g1-tray {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 10px 12px;
+  min-height: 56px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-wash);
+}
+.g1-tray-slot {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  background: transparent;
+  border: 2px dashed var(--color-border-strong);
+  opacity: 0.45;
+  transition: opacity 200ms ease;
+}
+.g1-tray-slot--here {
+  background: var(--color-tile);
+  border: 2px solid var(--g1-accent, var(--color-primary));
+  opacity: 1;
+}
+.g1-tray-caption { font-size: 0.75rem; color: var(--color-ink-muted); margin: 6px 0 0; }
+/* One side of the room, as a capture button. Two lines: the direction,
+   then what that side currently holds. Caregiver chrome, so it sits on
+   the same 96px block the other capture-scale actions in this file use
+   rather than on --touch-min. */
+.g1-wall-shot {
+  min-width: 96px;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.g1-wall-shot--taken { border: 1px solid var(--color-border) !important; }
+.g1-wall-shot-name { font-size: 0.95rem; font-weight: var(--weight-caregiver-strong); }
+.g1-wall-shot-state { font-size: 0.72rem; color: var(--color-ink-muted); }
 /* §4.3: "cap the grid on phones, never shrink the target" — below the
    tablet breakpoint the confirmation grid becomes a horizontally
    scrolling carousel (~2.5 crops visible) instead of wrapping into a
@@ -533,6 +611,23 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
    * are shown to the caregiver during 'searching' (never to the child). */
   const [activeSkill, setActiveSkill] = useState<SkillTemplate | null>(null);
 
+  // ---- the room as three walls (games/game1/walls.ts) ----
+  // One photo became three: left, ahead, right, each tagged to the wall it
+  // was shot from, so the caregiver can point ("it's on the shelf behind
+  // you") instead of only describing. `placed` is the joined room, with
+  // crop ids namespaced per wall so two blue cups on two walls cannot
+  // collide (see placeCrops).
+  const [captures, setCaptures] = useState<WallCapture[]>([]);
+  const [placed, setPlaced] = useState<PlacedCrop[]>([]);
+  const [activeWall, setActiveWall] = useState<WallIndex | null>(null);
+
+  // ---- what this round is asking for (games/game1/quests.ts) ----
+  // A fetch quest holds one object; a collect/combine quest holds several
+  // and the child makes one trip to the shelf per member. Levels 1-2 and
+  // the Companion hunt stay single-object and never read this.
+  const [quest, setQuest] = useState<Quest | null>(null);
+  const [broughtIds, setBroughtIds] = useState<Set<string>>(new Set());
+
   // §8.1 "Profile tuning": derived once from the four response-profile
   // dimensions, never a condition (ARCHITECTURE-RULES.md §5.2). Recomputed
   // only if the profile object itself changes, not per trial.
@@ -556,6 +651,22 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const [lastLoggedTier, setLastLoggedTier] = useState<SupportTier | null>(null);
   const [fadingSuggestion, setFadingSuggestion] = useState<FadingSuggestion | null>(null);
   const [sessionEndResult, setSessionEndResult] = useState<SessionEndResult | null>(null);
+
+  // Mirrors of the three above. The celebration -> next-object hop runs
+  // inside a setTimeout, and a timeout callback closes over the state from
+  // the render that scheduled it -- so reading `quest` or `broughtIds`
+  // there would see the values from before the object arrived, and a
+  // collection would either repeat one object forever or end a trip early.
+  const questRef = useRef<Quest | null>(null);
+  const broughtIdsRef = useRef<Set<string>>(new Set());
+  /** The crop pool the CURRENT round's quest was built from. Deliberately
+   * the pool itself rather than `placed`: on the degraded path (§11) there
+   * are no walls at all and the round runs on GENERIC_FALLBACK_CROPS, so
+   * reading the joined room back here would hand the second trip of a
+   * collection an empty pool and a one-tile confirmation grid. */
+  const roundPoolRef = useRef<TaggedCrop[]>([]);
+  /** Walks buildQuest's group list so consecutive rounds differ. */
+  const questIndexRef = useRef<number>(0);
 
   const machineRef = useRef<InteractionMachine>(new InteractionMachine());
   // Seeded with a static value, not Date.now() -- useRef's initial-value
@@ -667,10 +778,24 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
    * picking or grid building ever see it -- neither pickNextTarget nor
    * buildConfirmationGrid need to know this happened, they just always get
    * a pool where every candidate is visually distinct.
+   *
+   * `forcedTarget` is how a collecting round (levels 3-5) names the member
+   * it still wants. Without it the child could be asked for the same red
+   * ball twice while a red cup sits unfetched, and the collection would
+   * never close. The forced object is put at the FRONT of the pool before
+   * de-duplication, so it is the survivor of its own look-alike group
+   * rather than the one dropped -- otherwise a quest could ask for an
+   * object that is not in its own confirmation grid.
    */
-  function startTrialWith(pool: TaggedCrop[], effectiveLevel: Game1Level = level) {
-    const dedupedPool = dedupeCropsByIcon(pool);
-    const picked = pickNextTarget(dedupedPool, lastTargetIdRef.current);
+  function startTrialWith(
+    pool: TaggedCrop[],
+    effectiveLevel: Game1Level = level,
+    forcedTarget?: TaggedCrop,
+  ) {
+    const dedupedPool = dedupeCropsByIcon(
+      forcedTarget ? [forcedTarget, ...pool.filter((c) => c.id !== forcedTarget.id)] : pool,
+    );
+    const picked = forcedTarget ?? pickNextTarget(dedupedPool, lastTargetIdRef.current);
     lastTargetIdRef.current = picked.id;
     setTarget(picked);
     setCompanionHuntActive(false);
@@ -756,7 +881,83 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
   }
 
-  async function handleCapturePress() {
+  /** Recomputes the joined room from whatever walls have been shot. */
+  function commitCaptures(next: WallCapture[]) {
+    const nextPlaced = placeCrops(next);
+    setCaptures(next);
+    setPlaced(nextPlaced);
+    setCrops(cropsOf(nextPlaced));
+  }
+
+  /**
+   * Opens a round at the caregiver-set level.
+   *
+   * Levels 1-2 build a single-object 'fetch' quest, which behaves exactly
+   * as this game always has; 3 builds a 'collect' and 4-5 a 'combine', and
+   * those are the rounds the tray and questBrief() below are for.
+   *
+   * Falls back down the ladder when the room cannot support the level --
+   * a room with no colour appearing twice cannot pose a counting task, and
+   * §11's posture is to degrade quietly rather than show an error or ask
+   * for objects the child does not own.
+   */
+  function startQuest(pool: TaggedCrop[], effectiveLevel: Game1Level = level) {
+    let q = buildQuest(effectiveLevel, pool, questIndexRef.current);
+    if (!q) q = buildQuest(1, pool, questIndexRef.current);
+    questIndexRef.current += 1;
+    roundPoolRef.current = pool;
+
+    const fresh = new Set<string>();
+    setQuest(q);
+    questRef.current = q;
+    setBroughtIds(fresh);
+    broughtIdsRef.current = fresh;
+
+    if (!q) {
+      // Nothing recognised at all. startTrialWith still runs so the child
+      // gets the generic fallback set rather than a dead screen.
+      startTrialWith(pool, effectiveLevel);
+      return;
+    }
+    startTrialWith(pool, effectiveLevel, q.members[0]);
+  }
+
+  /**
+   * One object just arrived in the child's hands.
+   *
+   * For a fetch that ends the round. For a collection it ticks one member
+   * off and sends them back for the next one. What the caregiver sees is
+   * a record of trips that ended in an object arriving, never a number
+   * shown to the child.
+   */
+  function advanceOrFinish(broughtCropId: string) {
+    const q = questRef.current;
+    // §8.1 lively/short-attention tuning: "faster celebration".
+    const delay = tuning.fasterCelebration ? 400 : 800;
+
+    if (!q || q.kind === 'fetch') {
+      setTimeout(() => setPhase('reportingSupport'), delay);
+      return;
+    }
+
+    const next = new Set(broughtIdsRef.current);
+    next.add(broughtCropId);
+    broughtIdsRef.current = next;
+    setBroughtIds(next);
+
+    if (isQuestComplete(q, next)) {
+      setTimeout(() => setPhase('reportingSupport'), delay);
+      return;
+    }
+
+    const stillWanted = remainingFor(q, next)[0];
+    setTimeout(() => {
+      startTrialWith(roundPoolRef.current, level, stillWanted);
+    }, delay);
+  }
+
+  async function handleCapturePress(wall: WallIndex) {
+    setActiveWall(wall);
     setPhase('capturing');
     setCaptureNotice(null);
     setSlowCapture(false);
@@ -781,7 +982,15 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // "found in your room" reveal below — showing it for the generic
     // fallback set would misrepresent placeholder crops as real detections.
     if (outcome.kind === 'success') {
-      setCrops(outcome.crops);
+      // One wall of the room, added to whatever has been shot already.
+      // Re-shooting a wall REPLACES it rather than appending -- otherwise a
+      // caregiver correcting a blurry photo would leave the old wall's
+      // objects in the room, and the child would be sent to fetch things
+      // that are no longer on screen.
+      commitCaptures([
+        ...captures.filter((c) => c.wall !== wall),
+        { wall, crops: outcome.crops, scene: outcome.scene },
+      ]);
       setScene(outcome.scene);
       setFallbackReason(null);
       setPhase('foundObjects');
@@ -800,7 +1009,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
           : 'no-photo',
     );
     setCrops(GENERIC_FALLBACK_CROPS);
-    startTrialWith(GENERIC_FALLBACK_CROPS);
+    startQuest(GENERIC_FALLBACK_CROPS);
   }
 
   function handleTheyBroughtIt() {
@@ -824,8 +1033,10 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
         slotValuesFromProfile(profile, { 'object.name': crop.name }),
       );
       void adapters.speechOut.say(line);
-      // §8.1 lively/short-attention tuning: "faster celebration".
-      setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
+      // On a collecting round this hop goes back out for the next object
+      // instead of straight to the support report; on a plain fetch it is
+      // the same faster/slower celebration timeout it always was.
+      advanceOrFinish(crop.id);
       return;
     }
 
@@ -856,9 +1067,18 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // `find-${category}` string this file used to invent for itself. That
     // string survives only as an unreachable-in-practice fallback for a
     // trial whose skill never resolved.
+    //
+    // A collecting or combining round is a different skill from a single
+    // fetch, and it logs as ONE event -- otherwise five trips to gather
+    // the red things would be recorded as five separate "find a toy"
+    // events and the caregiver dashboard would show a burst of activity
+    // that never happened. Plain fetches (levels 1-2) still log F.007's
+    // authored per-object skill, which is the more specific of the two.
     const skillId = companionHuntActive
       ? 'find-companion'
-      : (activeSkill?.skillId ?? `find-${target?.category}`);
+      : quest && quest.kind !== 'fetch'
+        ? questSkillId(quest.kind)
+        : (activeSkill?.skillId ?? `find-${target?.category}`);
 
     await logActivityOutcome({
       sessionId,
@@ -913,20 +1133,32 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       return;
     }
 
-    // §8.1: "one photo per session, not per trial" — the NEXT trial reuses
+    // §8.1: "one photo per session, not per trial" — the NEXT round reuses
     // the same crop set rather than re-prompting for a capture. Only the
     // pre-capture 'idle' screen (before crops exist) shows the capture
-    // button; every trial after the first flows straight back into
+    // buttons; every round after the first flows straight back into
     // 'searching'.
-    startTrialWith(crops);
+    //
+    // startQuest, not startTrialWith: this is a NEW ROUND, so it needs a
+    // FRESH quest. Reusing the finished one leaves a completed collection
+    // on screen -- the tray reading "4 of 4" and the brief still naming
+    // last round's groups, while the object actually being asked for came
+    // from somewhere else entirely.
+    startQuest(crops);
   }
 
   /** §7.7: "Return: always to a task one level easier than the one that
-   * triggered it." A one-trial-only override — does NOT persist as the
-   * child's new level (see startTrialWith's `effectiveLevel` param). */
+   * triggered it." A one-round-only override — does NOT persist as the
+   * child's new level (see startTrialWith's `effectiveLevel` param).
+   *
+   * A break ENDS the current round rather than resuming it. Dropping a
+   * level mid-collection has no coherent meaning -- the collection was
+   * built for the harder level and half of it is already in the child's
+   * hands -- so the honest reading of "return to a task one level easier"
+   * is a fresh, easier task. */
   function handleMovementBreakDone() {
     const easierLevel = Math.max(1, level - 1) as Game1Level;
-    startTrialWith(crops, easierLevel);
+    startQuest(crops, easierLevel);
   }
 
   if (phase === 'sessionEnded') {
@@ -951,7 +1183,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   if (phase === 'idle') {
     return (
       <div className="screen" style={accentStyle}>
-        <style>{GAME1_STYLES}</style>
+        <style>{GAME1_STYLES + PANORAMA_STYLES}</style>
         <h2>Find It In Your World</h2>
         {/* The session/cap/elapsed readout that used to sit here is gone.
             It was plumbing on a screen a child is usually looking at too,
@@ -978,7 +1210,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
             file's header for why. */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Level:</span>
-          {([1, 2, 3, 4] as const).map((l) => (
+          {([1, 2, 3, 4, 5] as const).map((l) => (
             <button
               key={l}
               className={l === level ? 'g1-btn-accent' : undefined}
@@ -994,13 +1226,44 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
             </button>
           ))}
         </div>
-        <button
-          className="g1-btn-accent"
-          style={{ minWidth: 88, minHeight: 88 }}
-          onClick={() => void handleCapturePress()}
-        >
-          Choose a photo of the room
-        </button>
+        {/* THREE WALLS, not one photo (games/game1/walls.ts). The
+            caregiver stands in one spot and shoots left, ahead, right --
+            only the part of the room they want the child moving around
+            in. Any one wall is enough to start; three just gives more to
+            turn towards. Re-tapping a side retakes it. */}
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-ink-muted)', margin: '4px 0 0' }}>
+          Photograph the sides of the room you want to use:
+        </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {WALLS.map((wall) => {
+            const shot = captures.find((c) => c.wall === wall);
+            return (
+              <button
+                key={wall}
+                type="button"
+                className={
+                  shot ? 'g1-wall-shot g1-wall-shot--taken' : 'g1-wall-shot g1-btn-accent'
+                }
+                onClick={() => void handleCapturePress(wall)}
+              >
+                <span className="g1-wall-shot-name">{WALL_SHORT[wall]}</span>
+                <span className="g1-wall-shot-state">
+                  {shot ? `${shot.crops.length} found, retake` : 'add photo'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {captures.length > 0 && (
+          <button
+            className="g1-btn-accent"
+            style={{ minWidth: 88, minHeight: 88 }}
+            disabled={!canStart(captures)}
+            onClick={() => startQuest(cropsOf(placed))}
+          >
+            {canStart(captures) ? "Let's play!" : 'Nothing found yet, try another photo'}
+          </button>
+        )}
         <button type="button" className="quiet-action" onClick={() => void handleEndSession('caregiver')}>
           <span className="quiet-action-chip">End session</span>
         </button>
@@ -1019,9 +1282,10 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // final report.
     return (
       <div className="screen" style={accentStyle}>
-        <style>{GAME1_STYLES}</style>
+        <style>{GAME1_STYLES + PANORAMA_STYLES}</style>
         <p style={{ fontSize: '1rem', opacity: 0.8 }}>
           {slowCapture ? "Still looking around the room..." : 'Looking around the room...'}
+          {activeWall !== null && ` (${WALL_SHORT[activeWall].toLowerCase()})`}
         </p>
       </div>
     );
@@ -1037,20 +1301,39 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // phase is only reached on a real 'success' outcome).
     return (
       <div className="screen" style={accentStyle}>
-        <style>{GAME1_STYLES}</style>
+        <style>{GAME1_STYLES + PANORAMA_STYLES}</style>
         <h2>Found in your room!</h2>
         <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-          {crops.length} object{crops.length === 1 ? '' : 's'} recognised from the photo:
+          {crops.length} object{crops.length === 1 ? '' : 's'} across {captures.length} side
+          {captures.length === 1 ? '' : 's'} of the room:
         </p>
-        {scene && <RoomMap scene={scene} crops={crops} />}
+        {/* The side that was just shot, at full size with every box the
+            model actually returned. Scoped to THAT wall's objects: the
+            other walls' bboxes are in their own photos' pixel space, so
+            drawing them over this one would put badges on nothing. */}
+        {scene && activeWall !== null && (
+          <RoomMap scene={scene} crops={cropsOf(onWall(placed, activeWall))} />
+        )}
+        {/* The joined room. Object NAMES stay in the legend underneath --
+            nothing is captioned onto a photo, where it would cover the
+            very objects it describes. Wall direction is carried by
+            position: the left wall is the panel on the left. */}
+        <RoomPanorama placed={placed} captures={captures} />
         <ObjectLegend crops={crops} />
-        <button
-          className="g1-btn-accent"
-          style={{ minWidth: 88, minHeight: 88 }}
-          onClick={() => startTrialWith(crops)}
-        >
-          Let&rsquo;s play!
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          {WALLS.some((w) => !captures.some((c) => c.wall === w)) && (
+            <button type="button" style={{ minHeight: 56 }} onClick={() => setPhase('idle')}>
+              Add another side
+            </button>
+          )}
+          <button
+            className="g1-btn-accent"
+            style={{ minWidth: 88, minHeight: 88 }}
+            onClick={() => startQuest(cropsOf(placed))}
+          >
+            Let&rsquo;s play!
+          </button>
+        </div>
       </div>
     );
   }
@@ -1066,7 +1349,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
 
   return (
     <div className="screen" style={accentStyle}>
-      <style>{GAME1_STYLES}</style>
+      <style>{GAME1_STYLES + PANORAMA_STYLES}</style>
 
       {phase === 'searching' && (
         <>
@@ -1075,10 +1358,66 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
               Caregiver view: help them find {profile.context.companion?.name ?? 'their Companion'}!
             </p>
           ) : (
-            <p>
-              Caregiver view: find {target && targetDescriptionForLevel(level, target)},{' '}
-              {searchScopeLabelForLevel(level)}. (Level {level})
-            </p>
+            <>
+              <p>
+                Caregiver view: find {target && targetDescriptionForLevel(level, target)},{' '}
+                {searchScopeLabelForLevel(level)}. (Level {level})
+                {/* F.009's gesture tier, made usable: the app knows which
+                    wall the object was photographed on, so it can tell the
+                    caregiver which way to gesture. Omitted rather than
+                    guessed when the object was never placed (the generic
+                    fallback set has no walls). */}
+                {target && directionFor(placed, target.id) && (
+                  <>
+                    {' '}
+                    <strong>{directionFor(placed, target.id)}.</strong>
+                  </>
+                )}
+              </p>
+              {/* The whole round, stated once, so the caregiver knows what
+                  they are steering towards before the first trip. */}
+              {quest && quest.kind !== 'fetch' && (
+                <p style={{ fontSize: '0.85rem', opacity: 0.8 }}>{questBrief(quest)}</p>
+              )}
+              {/* WHAT ARRIVED IS SHOWN AS A TRAY, NOT AS A NUMERAL.
+                  A pre-literate child cannot read "3 of 5" -- that is
+                  reading, not counting. So what has arrived is shown as a
+                  row that fills up. The digits in the caption are for the
+                  grown-up, who is the only person reading this half of the
+                  screen (§8.0). See .g1-tray in GAME1_STYLES. */}
+              {quest && quest.kind !== 'fetch' && (
+                <div>
+                  <div className="g1-tray">
+                    {quest.members.map((m) => {
+                      const here = broughtIds.has(m.id);
+                      return (
+                        <div
+                          key={m.id}
+                          className={here ? 'g1-tray-slot g1-tray-slot--here' : 'g1-tray-slot'}
+                          title={`${m.colour} ${m.name}`}
+                        >
+                          <ObjectIcon name={m.name} category={m.category} size={30} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="g1-tray-caption">
+                    {broughtIds.size} of {quest.members.length} brought so far
+                  </p>
+                </div>
+              )}
+              {/* Where everything is, so the caregiver can gesture towards
+                  it instead of describing it. Skipped on the degraded
+                  path, where there is no real room to show. */}
+              {placed.length > 0 && (
+                <RoomPanorama
+                  placed={placed}
+                  captures={captures}
+                  wantedIds={target ? new Set([target.id]) : undefined}
+                  doneIds={broughtIds}
+                />
+              )}
+            </>
           )}
           <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
             Support tier {suggestedTierInfo.tier}, {suggestedTierInfo.name}:{' '}

@@ -1,4 +1,4 @@
-// F.012 — Game 1 difficulty levels 1-4. Pure logic only (prompt type, grid
+// F.012 — Game 1 difficulty levels 1-5. Pure logic only (prompt type, grid
 // size, distractors, search scope, profile tuning) — no React, no camera,
 // fully testable without a browser. See scripts/smoke-f012.ts.
 //
@@ -41,7 +41,16 @@ const NEED_BY_CATEGORY: Record<string, string> = {
   stationery: 'you want to draw',
 };
 
-function needPhraseForCategory(category: string): string {
+/** RETAINED, not currently on the level ladder.
+ *
+ * Levels 3-5 were repurposed as the counting levels, which took this
+ * phrasing off the critical path. It is kept and exported because the
+ * mapping itself is real domain work -- it covers §7.5's object table by
+ * category and degrades to a generic phrase rather than guessing -- and a
+ * "why do you need it" prompt is the obvious next abstraction axis if we
+ * ever want one. Deleting it would mean re-deriving it later from the same
+ * guide section. */
+export function needPhraseForCategory(category: string): string {
   return NEED_BY_CATEGORY[category.toLowerCase()] ?? 'you need it';
 }
 
@@ -59,10 +68,22 @@ export function targetDescriptionForLevel(level: Game1Level, target: TaggedCrop)
       return `your ${target.colour} ${target.name}`;
     case 2:
       return `something ${target.colour}`;
+    // Levels 3-5 are the COUNTING levels (games/game1/quests.ts). The hard
+    // part there is holding a group in mind across several trips to the
+    // shelf, so the naming of each individual object drops back to the
+    // easiest form there is. Stacking an abstract description ("something
+    // you drink from") on top of a five-object collection would make two
+    // things hard at once, and a child who then fails tells us nothing
+    // about which of the two defeated them.
+    //
+    // The GROUP is described by questBrief() in games/game1/quests.ts,
+    // which is the line the caregiver reads out at the start of a
+    // collecting round. This function only names the one object in front
+    // of the child, which is why 3-5 collapse to a single plain case.
     case 3:
-      return `something you ${target.function}`;
     case 4:
-      return `something you use when ${needPhraseForCategory(target.category)}`;
+    case 5:
+      return `your ${target.colour} ${target.name}`;
   }
 }
 
@@ -73,7 +94,10 @@ export function targetDescriptionForLevel(level: Game1Level, target: TaggedCrop)
 // ---------------------------------------------------------------------------
 
 export function gridSizeForLevel(level: Game1Level): number {
-  const bySize: Record<Game1Level, number> = { 1: 2, 2: 4, 3: 5, 4: 6 };
+  // 5 matches 4: the grid is clamped to what the room offered anyway, and
+  // level 5's extra difficulty is the size of the COLLECTION, not the
+  // number of distractors on screen.
+  const bySize: Record<Game1Level, number> = { 1: 2, 2: 4, 3: 5, 4: 6, 5: 6 };
   return bySize[level];
 }
 
@@ -134,8 +158,11 @@ export function shuffleGrid<T>(grid: T[], rng: () => number = Math.random): T[] 
 
 export function searchScopeLabelForLevel(level: Game1Level): string {
   if (level === 1) return 'right around you';
-  if (level === 2) return 'anywhere in this room';
-  return 'in a different room this time';
+  // Everything from 2 up stays in THIS room. The counting levels already
+  // ask for several trips to the shelf; sending those trips to another
+  // room would turn one round into the whole twelve-minute session cap
+  // (F.013) and the child would never reach the end of a collection.
+  return 'anywhere in this room';
 }
 
 // ---------------------------------------------------------------------------

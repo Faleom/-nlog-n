@@ -132,7 +132,18 @@ async function main() {
   await test('the between-trials path (handleSupportTierReport) reuses `crops` state, it does not recapture', () => {
     const handlerStart = game1Code.indexOf('async function handleSupportTierReport');
     const handlerSection = game1Code.slice(handlerStart, game1Code.indexOf('if (phase ===', handlerStart));
-    assert.ok(/startTrialWith\(crops\)/.test(handlerSection), 'the next trial must reuse the existing session crop set');
+    // Either name is fine, and both are the same guarantee: the next
+    // round is opened from the `crops` state this session already has.
+    // startQuest() is what levels 3-5 (games/game1/quests.ts) renamed the
+    // between-rounds call to -- a new counting round needs a FRESH quest,
+    // not the finished one -- and it still takes `crops`, so the thing
+    // this test actually guards against (a recapture between rounds) is
+    // unchanged. The captureRoomAndRecognize assertion below is the other
+    // half of that guarantee.
+    assert.ok(
+      /startTrialWith\(crops\)|startQuest\(crops\)/.test(handlerSection),
+      'the next round must reuse the existing session crop set',
+    );
     assert.ok(!/captureRoomAndRecognize/.test(handlerSection), 'must not recapture between trials');
   });
 
