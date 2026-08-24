@@ -1449,14 +1449,6 @@ textarea::placeholder {
   );
 }
 
-/* One line of orientation under a tab that holds a single destination, so
-   the tab is not a button floating in an empty screen. */
-.home-tab-hint {
-  max-width: 40ch;
-  padding: 0 2px;
-  font-size: 0.85rem;
-  color: var(--color-ink-muted);
-}
 
 /* ---- Appearance -------------------------------------------------------
    Same segmented-pill construction as .dashboard-length-row/-option (the
@@ -2228,24 +2220,25 @@ textarea::placeholder {
 }
 
 /* ---- Recently played --------------------------------------------------
-   Each row names a GAME (not a sitting), so it carries the same emoji
-   its own Play-tab tile shows, tinted with that track's own colour --
+   Each row names a GAME (not a sitting), so it carries the same painted
+   scene its own Play-tab tile shows (TRACK_THUMBNAIL, a small crop of
+   the exact tile art) on a plate tinted with that track's own colour --
    the same legend the calendar's bar/dot already use elsewhere on this
    screen -- and a "View" button that is also "play this again". */
 
 .dashboard-recent-icon {
-  display: grid;
   flex: none;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  font-size: 1.05rem;
-  /* The emoji itself is full-colour already; the tinted circle behind it
-     only needs to read as "this track's colour", not carry contrast for
-     text -- opacity keeps it a wash rather than a solid disc fighting
-     the glyph's own colours. */
-  opacity: 0.9;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+}
+
+.dashboard-recent-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .dashboard-recent-view {
@@ -2340,11 +2333,6 @@ textarea::placeholder {
   .dashboard-length-option {
     transition: none;
   }
-}
-
-/* The device-storage note under the tab, not part of any card. */
-.dashboard-footnote {
-  margin-top: 4px;
 }
 
 /* ---------------------------------------------------------------------

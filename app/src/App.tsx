@@ -819,16 +819,11 @@ function App() {
             asked for, and showed them nothing in between. The old
             { kind: 'dashboard' } route is gone with it. */}
         {homeTab === 'dashboard' && (
-          <>
-            <CaregiverDashboard
-              profile={profile}
-              onProfileChange={updateProfile}
-              onPlayTrack={(track) => setScreen(TRACK_TO_SCREEN[track])}
-            />
-            <p className="home-tab-hint dashboard-footnote">
-              Sessions and skills are stored on this device only.
-            </p>
-          </>
+          <CaregiverDashboard
+            profile={profile}
+            onProfileChange={updateProfile}
+            onPlayTrack={(track) => setScreen(TRACK_TO_SCREEN[track])}
+          />
         )}
 
         {homeTab === 'setup' && (
