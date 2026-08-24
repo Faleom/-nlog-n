@@ -66,84 +66,18 @@ interface CaregiverDashboardProps {
  * session log). */
 const RECENT_GAMES_LIMIT = 3;
 
-/** The exact painted-scene motif each track's own Play-tab tile already
- * draws (App.tsx's home-play-grid) -- same paths, just cropped small, so
- * a Recently-played row shows the real game art rather than a second,
- * lower-fidelity icon language. Drawn in `currentColor` (set to
- * --color-ink below) over a plate tinted with the track's own colour,
- * the same legend the calendar bar/dot already use. */
-const TRACK_THUMBNAIL: Record<TrackId, ReactNode> = {
-  'find-it': (
-    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-      <path d="M0 62 H160" stroke="currentColor" strokeOpacity="0.24" strokeWidth="2" />
-      <path d="M0 78 L160 62" stroke="currentColor" strokeOpacity="0.12" strokeWidth="2" />
-      <rect x="10" y="44" width="14" height="18" rx="3" stroke="currentColor" strokeOpacity="0.32" strokeWidth="2" />
-      <circle cx="40" cy="53" r="9" stroke="currentColor" strokeOpacity="0.32" strokeWidth="2" />
-      <path d="M58 62 L68 42 L78 62 Z" stroke="currentColor" strokeOpacity="0.32" strokeWidth="2" strokeLinejoin="round" />
-      <circle cx="116" cy="32" r="20" stroke="currentColor" strokeOpacity="0.62" strokeWidth="3.5" />
-      <path d="M130 46 L144 60" stroke="currentColor" strokeOpacity="0.62" strokeWidth="6" strokeLinecap="round" />
-    </svg>
-  ),
-  story: (
-    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-      <rect x="14" y="54" width="38" height="30" rx="8" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeOpacity="0.42" strokeWidth="2" />
-      <rect x="58" y="54" width="38" height="30" rx="8" fill="currentColor" fillOpacity="0.12" stroke="currentColor" strokeOpacity="0.3" strokeWidth="2" />
-      <rect x="36" y="20" width="38" height="30" rx="8" fill="currentColor" fillOpacity="0.28" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" />
-      <path d="M126 38 L138 62 L114 62 Z" fill="currentColor" fillOpacity="0.16" stroke="currentColor" strokeOpacity="0.34" strokeWidth="2" strokeLinejoin="round" />
-    </svg>
-  ),
-  match: (
-    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-      <defs>
-        <mask id="dashboard-recent-crescent">
-          <rect width="160" height="88" fill="white" />
-          <circle cx="112" cy="20" r="17" fill="black" />
-        </mask>
-      </defs>
-      <circle cx="126" cy="28" r="20" fill="currentColor" fillOpacity="0.62" mask="url(#dashboard-recent-crescent)" />
-      <path d="M0 70 H160" stroke="currentColor" strokeOpacity="0.18" strokeWidth="2" />
-      <rect x="58" y="42" width="26" height="28" rx="6" fill="currentColor" fillOpacity="0.3" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" />
-    </svg>
-  ),
-  trace: (
-    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-      <path
-        d="M46 66 C30 66 22 52 22 40 C22 24 36 14 52 14 C68 14 82 24 84 40 C86 54 76 66 60 66 Z"
-        stroke="currentColor"
-        strokeOpacity="0.55"
-        strokeWidth="3"
-        strokeDasharray="1 7"
-        strokeLinecap="round"
-      />
-      <path
-        d="M96 60 C108 44 124 34 140 32"
-        stroke="currentColor"
-        strokeOpacity="0.7"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-  'block-stack': (
-    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-      <path d="M0 78 H160" stroke="currentColor" strokeOpacity="0.16" strokeWidth="2" />
-      <rect x="34" y="58" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeOpacity="0.4" strokeWidth="2" />
-      <rect x="34" y="36" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.26" stroke="currentColor" strokeOpacity="0.46" strokeWidth="2" />
-      <rect x="34" y="14" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.32" stroke="currentColor" strokeOpacity="0.52" strokeWidth="2" />
-      <rect x="100" y="58" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeOpacity="0.4" strokeWidth="2" />
-      <rect x="100" y="36" width="26" height="20" rx="4" fill="currentColor" fillOpacity="0.26" stroke="currentColor" strokeOpacity="0.46" strokeWidth="2" />
-    </svg>
-  ),
-  'sort-by-rule': (
-    <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
-      <path d="M10 52 L34 52 L30 78 L10 78 Z" stroke="currentColor" strokeOpacity="0.42" strokeWidth="2" strokeLinejoin="round" />
-      <circle cx="22" cy="45" r="8" fill="currentColor" fillOpacity="0.3" />
-      <path d="M126 52 L150 52 L146 78 L126 78 Z" stroke="currentColor" strokeOpacity="0.42" strokeWidth="2" strokeLinejoin="round" />
-      <rect x="130" y="38" width="14" height="14" rx="3" fill="currentColor" fillOpacity="0.3" />
-      <path d="M70 26 L82 48 L58 48 Z" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" strokeLinejoin="round" />
-      <circle cx="98" cy="38" r="9" stroke="currentColor" strokeOpacity="0.5" strokeWidth="2" />
-    </svg>
-  ),
+/** The same emoji the Play hub's own winding-path node uses for this
+ * track (App.tsx, the toki-path-node buttons) -- a Recently-played row
+ * used to carry its own painted-scene SVG motif instead, which meant the
+ * same game read as two different icons depending which tab you were on.
+ * One icon language, everywhere the game is named. */
+const TRACK_ICON: Record<TrackId, ReactNode> = {
+  'find-it': '🔍',
+  story: '🧸',
+  match: '🌓',
+  trace: '🖍️',
+  'block-stack': '🧱',
+  'sort-by-rule': '🧺',
 };
 
 function Banner() {
@@ -734,7 +668,7 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
                   style={{ background: `var(${game.colorVar})` }}
                   aria-hidden="true"
                 >
-                  {TRACK_THUMBNAIL[game.track]}
+                  {TRACK_ICON[game.track]}
                 </span>
                 <span className="dashboard-recent-name">{game.label}</span>
                 <button
