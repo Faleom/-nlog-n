@@ -229,30 +229,41 @@ export function humanizeSkillId(skillId: string): string {
 // Recently played
 // ---------------------------------------------------------------------------
 
-export interface RecentSession {
-  id: string;
-  track: TrackId | null;
+export interface RecentGame {
+  track: TrackId;
+  /** The name shown to the caregiver (config/tracks.ts). */
   label: string;
-  detail: string | null;
-  minutes: number;
-  seconds: number;
-  startedAt: string;
+  /** CSS custom property holding this track's colour (config/tracks.ts) --
+   * the same one the time-by-track bar/dot use, so a game's icon ties to
+   * the same colour legend everywhere else it appears. */
+  colorVar: string;
 }
 
-/** The last `limit` sessions, newest first. */
-export function recentSessions(sessions: SessionLog[], limit: number): RecentSession[] {
-  return [...sessions]
-    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-    .slice(0, limit)
-    .map((session) => ({
-      id: session.id,
-      track: session.track ?? null,
-      label: session.track ? getTrack(session.track).label : 'Activity',
-      detail: describePlayed([session]),
-      minutes: Math.round(session.durationSeconds / 60),
-      seconds: session.durationSeconds,
-      startedAt: session.startedAt,
-    }));
+/**
+ * Up to `limit` distinct GAMES, most-recently-played first -- not the
+ * last `limit` sessions, which could all be the same game replayed. A
+ * track re-played today jumps back to the front rather than adding a
+ * second entry, so the list reads as "what's in rotation", not a raw
+ * session log. Capped at `limit`: play a fourth distinct game and the
+ * least-recently-touched of the previous three quietly falls off, same
+ * as a stack that pops its oldest push past its limit.
+ *
+ * No day filter, deliberately: a caregiver who last opened the app two
+ * days ago should still see what was played then, not an empty list
+ * that resets with the calendar.
+ */
+export function recentlyPlayedGames(sessions: SessionLog[], limit: number): RecentGame[] {
+  const newestFirst = [...sessions].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  const seen = new Set<TrackId>();
+  const games: RecentGame[] = [];
+  for (const session of newestFirst) {
+    if (!session.track || seen.has(session.track)) continue;
+    seen.add(session.track);
+    const info = getTrack(session.track);
+    games.push({ track: session.track, label: info.label, colorVar: info.colorVar });
+    if (games.length === limit) break;
+  }
+  return games;
 }
 
 // ---------------------------------------------------------------------------

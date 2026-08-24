@@ -38,7 +38,7 @@ async function main() {
     secondsPlayedOn,
     topSkillOn,
     timeByTrackOn,
-    recentSessions,
+    recentlyPlayedGames,
     skillProgress,
     usualSessionMinutes,
     SESSION_LENGTH_OPTIONS,
@@ -430,14 +430,54 @@ async function main() {
 
   section('dashboard — recently played');
 
-  await test('the most recent sessions come back newest-first, with track and time', () => {
-    const recent = recentSessions(sessions, 3);
+  await test('games come back deduped by track, newest first', () => {
+    // Three distinct tracks in the fixture (find-it, match, trace) --
+    // find-it appears in TWO sessions, so this also proves the dedupe:
+    // only its most recent (11:00, not the 9:00 one) determines its slot.
+    const recent = recentlyPlayedGames(sessions, 3);
     assert.equal(recent.length, 3);
-    assert.equal(recent[0].track, 'match');
-    assert.equal(recent[0].minutes, 6);
+    assert.deepEqual(
+      recent.map((g) => g.track),
+      ['match', 'find-it', 'trace'],
+    );
     assert.equal(recent[0].label, getTrack('match').label);
-    const times = recent.map((r) => r.startedAt);
-    assert.deepEqual([...times].sort().reverse(), times);
+    assert.equal(recent[0].colorVar, getTrack('match').colorVar);
+  });
+
+  await test('a track played twice only ever appears once', () => {
+    const recent = recentlyPlayedGames(sessions, 3);
+    assert.equal(recent.filter((g) => g.track === 'find-it').length, 1);
+  });
+
+  await test('a fourth distinct game bumps the least-recently-played of the previous three off the list', () => {
+    const fourthGame: SessionLog = {
+      id: 'extra',
+      childId: child.id,
+      startedAt: daysAgo(today, 0, 15), // newest session of all
+      durationSeconds: 60,
+      activitiesRun: 0,
+      movementBreaks: 0,
+      skillRecords: [],
+      endedBy: 'finished',
+      track: 'story',
+    };
+    const recent = recentlyPlayedGames([...sessions, fourthGame], 3);
+    assert.equal(recent.length, 3);
+    assert.deepEqual(
+      recent.map((g) => g.track),
+      ['story', 'match', 'find-it'],
+    );
+    assert.ok(
+      !recent.some((g) => g.track === 'trace'),
+      'trace was the least-recently-played and should have fallen off',
+    );
+  });
+
+  await test('a session from days ago still surfaces -- no "today" filter resets the list', () => {
+    // The fixture's only trace session is 3 days old; it still shows up
+    // above precisely because recentlyPlayedGames never scopes to today.
+    const recent = recentlyPlayedGames(sessions, 3);
+    assert.ok(recent.some((g) => g.track === 'trace'));
   });
 
   section('dashboard — usual session length is a preference, not a goal');

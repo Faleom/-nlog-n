@@ -34,7 +34,7 @@ import {
   firstPlayedMonth,
   localDayKey,
   monthGrid,
-  recentSessions,
+  recentlyPlayedGames,
   secondsPlayedOn,
   skillProgress,
   timeByTrackOn,
@@ -46,16 +46,37 @@ import {
   type SkillProgressRow,
   type TrackSlice,
 } from '../engine/dashboardSummary';
-import type { ChildProfile, SessionLog, SupportTier } from '../types';
+import type { ChildProfile, SessionLog, SupportTier, TrackId } from '../types';
 
 interface CaregiverDashboardProps {
   profile: ChildProfile;
   /** So App's copy of the profile stays in step when the session-length
    * preference is saved -- the games read it on their next launch. */
   onProfileChange?: (profile: ChildProfile) => void;
+  /** "View" on a Recently played row launches straight into that game --
+   * the same screen its own Play-tab tile opens, just reached from here
+   * instead. App.tsx owns the actual screen routing, this just names
+   * which track was asked for. */
+  onPlayTrack: (track: TrackId) => void;
 }
 
-const RECENT_LIMIT = 5;
+/** A stack of at most 3: play a fourth distinct game and the
+ * least-recently-touched of the previous three falls off (see
+ * recentlyPlayedGames's own header for why this reads as a stack, not a
+ * session log). */
+const RECENT_GAMES_LIMIT = 3;
+
+/** Same emoji each track's own Play-tab tile already uses (App.tsx's
+ * home-play-grid) -- one glyph per game, reused here rather than
+ * inventing a second icon language for the same six games. */
+const TRACK_ICON: Record<TrackId, string> = {
+  'find-it': '🔍',
+  story: '🧸',
+  match: '🌓',
+  trace: '🖍️',
+  'block-stack': '🧱',
+  'sort-by-rule': '🧺',
+};
 
 function Banner() {
   return <p className="dashboard-banner">{NON_DIAGNOSTIC_BANNER}</p>;
@@ -246,7 +267,7 @@ function SkillRow({ skill }: { skill: SkillProgressRow }) {
   );
 }
 
-export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashboardProps) {
+export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: CaregiverDashboardProps) {
   const [sessions, setSessions] = useState<SessionLog[] | null>(null);
   const [lengthChoice, setLengthChoice] = useState(usualSessionMinutes(profile));
   // Which day of the week strip is expanded below it, if any. Defaults to
@@ -343,7 +364,7 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
   // verdict on the child, and the order inside each is the ladder's.
   const unaided = skills.filter((skill) => skill.mastered);
   const withSupport = skills.filter((skill) => !skill.mastered);
-  const recent = recentSessions(sessions, RECENT_LIMIT);
+  const recentGames = recentlyPlayedGames(sessions, RECENT_GAMES_LIMIT);
 
   // The day-detail panel's own figures -- same functions the "today"
   // figures above use, just handed whichever date is selected instead of
@@ -632,19 +653,29 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
       {/* ---- Recently played ------------------------------------------- */}
       <section className="dashboard-card">
         <h3 className="dashboard-card-title">Recently played</h3>
-        {recent.length === 0 ? (
-          <p className="dashboard-empty">Nothing logged yet.</p>
+        {recentGames.length === 0 ? (
+          <p className="dashboard-empty">
+            Nothing logged yet. Games appear here once {nickname} has played one.
+          </p>
         ) : (
           <ul className="dashboard-list">
-            {recent.map((entry) => (
-              <li key={entry.id} className="dashboard-recent-row">
-                <span className="dashboard-recent-text">
-                  <span className="dashboard-recent-name">{entry.label}</span>
-                  {entry.detail && (
-                    <span className="dashboard-recent-detail">{entry.detail}</span>
-                  )}
+            {recentGames.map((game) => (
+              <li key={game.track} className="dashboard-recent-row">
+                <span
+                  className="dashboard-recent-icon"
+                  style={{ background: `var(${game.colorVar})` }}
+                  aria-hidden="true"
+                >
+                  {TRACK_ICON[game.track]}
                 </span>
-                <span className="dashboard-figure-value">{minutes(entry.seconds)} min</span>
+                <span className="dashboard-recent-name">{game.label}</span>
+                <button
+                  type="button"
+                  className="dashboard-recent-view"
+                  onClick={() => onPlayTrack(game.track)}
+                >
+                  View
+                </button>
               </li>
             ))}
           </ul>

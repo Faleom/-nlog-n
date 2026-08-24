@@ -2162,8 +2162,7 @@ textarea::placeholder {
 }
 
 .dashboard-track-text,
-.dashboard-skill-text,
-.dashboard-recent-text {
+.dashboard-skill-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2179,11 +2178,19 @@ textarea::placeholder {
   overflow-wrap: anywhere;
 }
 
+/* Sits directly in the row (no wrapping .dashboard-recent-text -- there
+   is only ever one line here, unlike the track/skill rows' name+detail
+   pairs), so it needs its own flex sizing to take the row's spare width
+   and push the icon/View button to their fixed slots either side. */
+.dashboard-recent-name {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Skill ids arrive kebab-cased and lowercase; capitalising the whole
    phrase would Title Case A Sentence, so only the first letter moves. */
 .dashboard-skill-name::first-letter,
-.dashboard-track-detail::first-letter,
-.dashboard-recent-detail::first-letter {
+.dashboard-track-detail::first-letter {
   text-transform: uppercase;
 }
 
@@ -2205,8 +2212,7 @@ textarea::placeholder {
 }
 
 .dashboard-track-detail,
-.dashboard-skill-context,
-.dashboard-recent-detail {
+.dashboard-skill-context {
   font-size: 0.74rem;
   line-height: 1.35;
   color: var(--color-ink-muted);
@@ -2219,6 +2225,49 @@ textarea::placeholder {
   font-weight: var(--weight-caregiver-strong);
   font-variant-numeric: tabular-nums;
   color: var(--color-ink);
+}
+
+/* ---- Recently played --------------------------------------------------
+   Each row names a GAME (not a sitting), so it carries the same emoji
+   its own Play-tab tile shows, tinted with that track's own colour --
+   the same legend the calendar's bar/dot already use elsewhere on this
+   screen -- and a "View" button that is also "play this again". */
+
+.dashboard-recent-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 1.05rem;
+  /* The emoji itself is full-colour already; the tinted circle behind it
+     only needs to read as "this track's colour", not carry contrast for
+     text -- opacity keeps it a wash rather than a solid disc fighting
+     the glyph's own colours. */
+  opacity: 0.9;
+}
+
+.dashboard-recent-view {
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+  font-size: 0.78rem;
+  font-weight: 700;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.dashboard-recent-view:active {
+  transform: none;
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
 }
 
 /* ---- Skills and support ---------------------------------------------- */

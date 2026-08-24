@@ -50,7 +50,7 @@ import { adapters } from './adapters/registry';
 import { clearActiveProfile, getActiveProfile } from './engine/profileStore';
 import { getThemePreference, setThemePreference, type ThemeChoice } from './engine/themePreference';
 import type { Branch2FlowResult } from './engine/branch2';
-import type { ChildProfile } from './types';
+import type { ChildProfile, TrackId } from './types';
 import type { ConcernAnswers } from './types';
 import './App.css';
 
@@ -86,6 +86,18 @@ const WORRY_FLOW = 'Thinking about development';
 // World" -- taken directly from the source branch's own naming for this
 // pair (`const LOGIC_FLOW = 'Looking and Sorting';`).
 const LOGIC_FLOW = 'Looking and Sorting';
+
+// Recently played's "View" button launches straight into the game whose
+// track it names -- the same screen that track's own Play-tab tile
+// opens, just reached from the Dashboard tab instead.
+const TRACK_TO_SCREEN: Record<TrackId, Screen> = {
+  'find-it': { kind: 'game1' },
+  story: { kind: 'game2' },
+  match: { kind: 'game3' },
+  trace: { kind: 'trace' },
+  'block-stack': { kind: 'blockStack' },
+  'sort-by-rule': { kind: 'sortByRule' },
+};
 
 // The four places Branch 1 home is split into. This started as two (Play +
 // a single "Family" tab) and "Family" immediately became the dense dashboard
@@ -808,7 +820,11 @@ function App() {
             { kind: 'dashboard' } route is gone with it. */}
         {homeTab === 'dashboard' && (
           <>
-            <CaregiverDashboard profile={profile} onProfileChange={updateProfile} />
+            <CaregiverDashboard
+              profile={profile}
+              onProfileChange={updateProfile}
+              onPlayTrack={(track) => setScreen(TRACK_TO_SCREEN[track])}
+            />
             <p className="home-tab-hint dashboard-footnote">
               Sessions and skills are stored on this device only.
             </p>
