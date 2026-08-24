@@ -78,11 +78,10 @@ async function main() {
 
   await test('swapping the Companion in the SAME profile object changes every rendered line, no branching code', () => {
     const profile = profileWithCompanion('Bunbun');
-    const huntLineBefore = renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile), profile.context);
+    const huntLineBefore = renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile));
     const helperLineBefore = renderLine(
       HELPER_FRAMING_PROMPT_TEMPLATE,
-      slotValuesFromProfile(profile, { 'object.name': 'cup' }),
-      profile.context,
+      slotValuesFromProfile(profile, { 'object.name': 'cup' })
     );
     assert.match(huntLineBefore, /Bunbun/);
     assert.match(helperLineBefore, /Bunbun/);
@@ -92,11 +91,10 @@ async function main() {
     // visibly changes, same code" means at the level this file can prove.
     profile.context.companion = { name: 'Captain Whiskers', pronoun: 'he', photo: 'data:image/png;base64,cat' };
 
-    const huntLineAfter = renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile), profile.context);
+    const huntLineAfter = renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile));
     const helperLineAfter = renderLine(
       HELPER_FRAMING_PROMPT_TEMPLATE,
-      slotValuesFromProfile(profile, { 'object.name': 'cup' }),
-      profile.context,
+      slotValuesFromProfile(profile, { 'object.name': 'cup' })
     );
     assert.match(huntLineAfter, /Captain Whiskers/);
     assert.doesNotMatch(huntLineAfter, /Bunbun/);
@@ -108,7 +106,7 @@ async function main() {
 
   await test('the hunt/helper templates still render sensibly via the existing neutral defaults', () => {
     const profile = profileWithoutCompanion();
-    const line = renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile), profile.context);
+    const line = renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile));
     assert.match(line, /your friend/, 'engine/slots.ts\'s existing neutral default, unchanged by F.017');
   });
 

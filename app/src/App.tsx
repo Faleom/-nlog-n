@@ -5,8 +5,8 @@
 //   Onboarding (age + nickname + two equal doors)
 //     -> Branch 1 ("my-world"): a ONE-TIME chain through response profile
 //        -> quick preferences (favourite colour, then Companion capture
-//        folded in as its own second page) -> avoid list, then Branch 1
-//        home (both games, dashboard, switch-branch always available)
+//        folded in as its own second page), then Branch 1 home (both
+//        games, dashboard, switch-branch always available)
 //     -> Branch 2 ("worry-to-question"): milestones -> (no concern: back
 //        to the two doors, nothing recorded) or (concern: the question
 //        card -> immediately offered a Branch 1 activity, per §9.3 step 9)
@@ -17,9 +17,9 @@
 // intro into Onboarding. That greeting is local device recognition only --
 // no account, no password, no network -- it is a presentation layer over the
 // getActiveProfile() storage read and must stay that way.
-// From Branch 1 home on: the Branch-1 onboarding screens only chain forward
+// From Branch 1 home on: the two Branch-1 onboarding screens only chain forward
 // automatically the moment Onboarding.onComplete fires. Each Screen variant
-// for those carries its own `returnToHome: boolean`: false while
+// for those two carries its own `returnToHome: boolean`: false while
 // still inside that first forward chain (advance to the next screen),
 // true when reached later from Branch 1 home's "Edit: ..." buttons (go
 // straight back to home instead). Same components either way, just a
@@ -36,7 +36,6 @@ import { ScreenHeader } from './components/ScreenHeader';
 import { Onboarding } from './screens/Onboarding';
 import { ResponseProfileScreen } from './screens/ResponseProfile';
 import { QuickPreferencesScreen } from './screens/QuickPreferences';
-import { AvoidListScreen } from './screens/AvoidList';
 import { CaregiverDashboard } from './screens/CaregiverDashboard';
 import { Branch2Milestones } from './screens/Branch2Milestones';
 import { Branch2Card } from './screens/Branch2Card';
@@ -50,7 +49,6 @@ import { SortByRule } from './games/SortByRule';
 import { adapters } from './adapters/registry';
 import { clearActiveProfile, getActiveProfile } from './engine/profileStore';
 import { getThemePreference, setThemePreference, type ThemeChoice } from './engine/themePreference';
-import { installAvoidFilter } from './engine/avoidFilter';
 import type { Branch2FlowResult } from './engine/branch2';
 import type { ChildProfile } from './types';
 import type { ConcernAnswers } from './types';
@@ -62,7 +60,6 @@ type Screen =
   | { kind: 'onboarding' }
   | { kind: 'responseProfile'; returnToHome: boolean }
   | { kind: 'quickPreferences'; returnToHome: boolean }
-  | { kind: 'avoidList'; returnToHome: boolean }
   | { kind: 'branch1Home' }
   | { kind: 'game1' }
   | { kind: 'game2' }
@@ -78,7 +75,7 @@ type Screen =
 // the back button and (during first-time setup) the step count, is the
 // whole answer to "where am I / where am I headed."
 const SETUP_FLOW = 'Setting up your child’s profile';
-// The setup editors are reachable twice: inside first-time onboarding
+// The two setup editors are reachable twice: inside first-time onboarding
 // (where they carry SETUP_FLOW and a step counter) and, later, one at a time
 // from the home hub's Setup tab. The second case used to show a bare
 // "My World" eyebrow; it now names the tab it was launched from, which is
@@ -97,7 +94,7 @@ const LOGIC_FLOW = 'Looking and Sorting';
 // *job*, not by audience:
 //   play      -- the child-pointed half: the games.
 //   dashboard -- what has happened: the caregiver dashboard.
-//   setup     -- what the activities are built FROM: the four editors,
+//   setup     -- what the activities are built FROM: the two editors,
 //                plus the log-out action, since this is the settings home.
 //   notes     -- what the caregiver has NOTICED: the neutral note prompt
 //                and the Branch 2 switch, which are the same gesture
@@ -259,11 +256,6 @@ function App() {
   }
 
   useEffect(() => {
-    // §6.4: the avoid-list filter is wired once, globally -- it reads
-    // whichever profile's context is passed to renderLine() at call time,
-    // so this does not need to be re-run per profile switch.
-    installAvoidFilter();
-
     void getThemePreference().then(setTheme);
 
     // Both paths now land on the SAME welcome screen; it is the presence or
@@ -292,7 +284,7 @@ function App() {
     setScreen({ kind: 'branch1Home' });
   }
 
-  // The four "Edit: ..." screens now live on the Setup tab, so a
+  // The three "Edit: ..." screens now live on the Setup tab, so a
   // returnToHome:true exit has to land there explicitly rather than trusting
   // whatever tab happened to be selected.
   function goToSetupHome(): void {
@@ -454,31 +446,6 @@ function App() {
           profile={profile}
           onComplete={(updated) => {
             updateProfile(updated);
-            if (screen.returnToHome) {
-              goToSetupHome();
-            } else {
-              setScreen({ kind: 'avoidList', returnToHome: false });
-            }
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (screen.kind === 'avoidList') {
-    return (
-      <div className="app" key={screen.kind}>
-        <AppHeader />
-        <ScreenHeader
-          eyebrow={screen.returnToHome ? SETUP_TAB_FLOW : SETUP_FLOW}
-          step={screen.returnToHome ? undefined : { current: 4, total: 4 }}
-          onBack={screen.returnToHome ? goToSetupHome : undefined}
-          backLabel="Setup"
-        />
-        <AvoidListScreen
-          profile={profile}
-          onComplete={(updated) => {
-            updateProfile(updated);
             // Last screen of the first-time chain, so its no-return exit is
             // the one that should open on the activities, not on Setup.
             if (screen.returnToHome) {
@@ -617,7 +584,7 @@ function App() {
 
   // branch1Home — one screen, FOUR tabs, one bottom tab bar. The first pass
   // split the old single long scroll into Play + Family; Family then held
-  // the dashboard, four setup editors, the branch switch and the note
+  // the dashboard, three setup editors, the branch switch and the note
   // prompt, which is exactly the "one dense dashboard" §4.2 rules out. This
   // pass re-splits that half by job (see HOME_TABS above). Nothing was cut:
   // every destination the scrolling version offered is still one tap away.
@@ -864,12 +831,6 @@ function App() {
                   onClick={() => setScreen({ kind: 'quickPreferences', returnToHome: true })}
                 >
                   Favourites
-                </button>
-                <button
-                  className="home-edit-button"
-                  onClick={() => setScreen({ kind: 'avoidList', returnToHome: true })}
-                >
-                  Things to avoid
                 </button>
               </div>
             </div>

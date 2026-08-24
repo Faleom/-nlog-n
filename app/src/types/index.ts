@@ -100,20 +100,10 @@ export interface PeopleAndRoutine {
   routineAnchors?: string[];
 }
 
-/** Layer 4 — hard-excluded from ALL generated content, engine-level (§6.2). */
-export interface AvoidList {
-  loudSounds?: boolean;
-  fastAnimation?: boolean;
-  avoidedColour?: string;
-  avoidedTerms?: string[];
-  surprises?: boolean;
-}
-
 export interface ChildContextProfile {
   companion?: Companion;
   quickPreferences?: QuickPreferences;
   peopleAndRoutine?: PeopleAndRoutine;
-  avoidList?: AvoidList;
 }
 
 // ---------------------------------------------------------------------------

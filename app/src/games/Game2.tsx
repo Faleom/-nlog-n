@@ -39,13 +39,6 @@ import { startSession, endSession, updateFocusStretch } from '../engine/profileS
 import { SUPPORT_TIERS } from '../config/supportLadder';
 import { GENERIC_FALLBACK_CROPS } from './genericFallbackCrops';
 import { createTemplateStory } from '../adapters/story/templateStory';
-import {
-  isColourAvoided,
-  containsAvoidedContent,
-  shouldReduceAnimation,
-  shouldUseVisualPulseInsteadOfChime,
-  shouldAnnounceChangesInAdvance,
-} from '../engine/avoidFilter';
 import type { ChildProfile, SessionLog, SupportTier, TaggedCrop } from '../types';
 import type { GeneratedStoryTemplate } from '../adapters/ports';
 
@@ -271,21 +264,17 @@ function shuffled<T>(items: T[]): T[] {
   return [...items].sort(() => Math.random() - 0.5);
 }
 
-/** The lowest animation tier for this screen. Kept in its own string so
- * the exact same suppressions can be served BOTH from a media query (the
- * OS-level prefers-reduced-motion setting, which nothing in this file
- * honoured before) and unconditionally, when the caregiver explicitly
- * checked "Fast animation or flashing" (§6.2, avoidFilter's
- * shouldReduceAnimation). Every rule here removes MOVEMENT only -- the
- * colour/border/shadow half of each state is deliberately left alone, so
- * "picked up", "drop target" and "active step" all stay just as visible,
- * they simply arrive instantly instead of over 160ms. */
+/** The lowest animation tier for this screen, served from a media query
+ * for the OS-level prefers-reduced-motion setting. Every rule here removes
+ * MOVEMENT only -- the colour/border/shadow half of each state is
+ * deliberately left alone, so "picked up", "drop target" and "active
+ * step" all stay just as visible, they simply arrive instantly instead of
+ * over 160ms. */
 const GAME2_REDUCED_MOTION_RULES = `
 .g2-crop, .g2-slot, .g2-step-badge, .g2-step-card, .g2-speak-btn-glyph { transition: none; }
 .g2-crop--picked, .g2-slot--target, .g2-step-badge--active { transform: none; }
 .g2-speak-btn:active .g2-speak-btn-glyph { transform: none; }
 .g2-drag-ghost { transform: translate(-50%, -50%); }
-.g2-celebrate { animation: none; background-color: var(--color-primary-soft); }
 `;
 
 const GAME2_STYLES = `
@@ -424,19 +413,6 @@ const GAME2_STYLES = `
   border: 1px solid var(--color-border);
 }
 
-/* §6.2's "a silenced chime becomes a visual pulse". Applied to the whole
-   'complete' screen when the caregiver checked "Loud or sudden sounds",
-   in place of that moment's read-aloud. Deliberately a slow two-cycle
-   background bloom, not a flash: the same avoid list that silences a
-   sound is the one that also asks for no fast/flashing animation, so the
-   substitute cue must be gentle on its own terms (and drops to a static
-   wash entirely under GAME2_REDUCED_MOTION_RULES). */
-.g2-celebrate { border-radius: var(--radius-lg); animation: g2-celebrate-pulse 1600ms ease-in-out 2; }
-@keyframes g2-celebrate-pulse {
-  0%, 100% { background-color: transparent; }
-  50% { background-color: var(--color-primary-soft); }
-}
-
 @media (prefers-reduced-motion: reduce) {
 ${GAME2_REDUCED_MOTION_RULES}
 }
@@ -455,25 +431,6 @@ function padCropsToMinimum(crops: TaggedCrop[], min: number): TaggedCrop[] {
     padded.push(fallback);
   }
   return padded;
-}
-
-/** §6.2/§6.4's Layer 4 hard exclusion, applied to OBJECT SELECTION rather
- * than just the rendered string. `avoidFilter.ts`'s own text filter
- * (installAvoidFilter, wired app-wide) is a defensive backstop -- it swaps
- * a whole sentence for one fixed neutral line if avoided content ever
- * reaches render, which reads as broken mid-story (a jarring, out-of-place
- * line sitting between two real sentences). The actual fix is upstream:
- * never offer an avoided object as a candidate in the first place, so
- * neither the real generator nor the template fallback can ever reference
- * it, and the photo shown never depicts an avoided colour either -- the
- * text filter alone never protected the IMAGE, only the string. */
-function isCropAvoided(crop: TaggedCrop, avoidList: ChildProfile['context']['avoidList']): boolean {
-  if (isColourAvoided(crop.colour, avoidList)) return true;
-  return containsAvoidedContent(`${crop.name} ${crop.category} ${crop.function}`, avoidList);
-}
-
-function filterAvoidedCrops(crops: TaggedCrop[], avoidList: ChildProfile['context']['avoidList']): TaggedCrop[] {
-  return crops.filter((c) => !isCropAvoided(c, avoidList));
 }
 
 /** UTF-8-safe base64 encode -- `btoa` alone throws on non-Latin1 text, and
@@ -551,22 +508,7 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
   // stretch is measured from the SESSION's own startedAt, not from
   // whenever this component happened to mount.
   const sessionStartedAtRef = useRef<number | null>(null);
-  // One spoken heads-up at a time -- a second tap (or React StrictMode
-  // double-invoking something) must never stack two lead-ins on top of
-  // each other, or on top of the narration that follows.
-  const announcingRef = useRef(false);
-
-  // §6.2/§6.4's NON-text exclusions. The colour/term half of the avoid
-  // list is applied to object selection in startRound (isCropAvoided);
-  // these three are the behavioural half -- previously read by nobody.
-  const avoidList = profile.context.avoidList;
-  const reduceMotion = shouldReduceAnimation(avoidList);
-  const pulseInsteadOfSound = shouldUseVisualPulseInsteadOfChime(avoidList);
-  const announceChanges = shouldAnnounceChangesInAdvance(avoidList);
-  // Same sheet for everyone, plus the reduced-motion rules served
-  // unconditioned when the avoid list asks for them (they are already in
-  // the sheet behind a prefers-reduced-motion query for the OS setting).
-  const styleSheet = reduceMotion ? `${GAME2_STYLES}\n${GAME2_REDUCED_MOTION_RULES}` : GAME2_STYLES;
+  const styleSheet = GAME2_STYLES;
 
   useEffect(() => {
     void startSession(profile.id, 'story').then((s) => {
@@ -579,27 +521,6 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
     onChildFacingChange?.(phase === 'blanks');
     return () => onChildFacingChange?.(false);
   }, [phase, onChildFacingChange]);
-
-  /** §6.2/§6.4's "Surprises and unannounced changes": a short spoken
-   * lead-in BEFORE a transition that would otherwise just happen, so the
-   * change is never the first thing the child notices. Audio only -- it
-   * adds nothing to the screen, so the zero-text rule the 'blanks' phase
-   * enforces is untouched. For every other profile this returns on its
-   * first line and each call site behaves exactly as it always did.
-   * A line that somehow collides with an avoided term is SKIPPED rather
-   * than swapped: a heads-up is additive, and avoidFilter's one neutral
-   * fallback line ("Let's try something else!") would read as a
-   * non-sequitur announcing a transition. */
-  async function announceChange(line: string) {
-    if (!announceChanges || announcingRef.current) return;
-    if (containsAvoidedContent(line, avoidList)) return;
-    announcingRef.current = true;
-    try {
-      await adapters.speechOut.say(line);
-    } finally {
-      announcingRef.current = false;
-    }
-  }
 
   /** §7.9's "longest focus stretch", which the caregiver dashboard's
    * focus-stretch trend reads. Called at this game's real-progress
@@ -643,22 +564,14 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
       return;
     }
 
-    // §6.2/§6.4 Layer 4 hard exclusion, applied BEFORE anything downstream
-    // ever sees these objects -- not as a post-hoc text swap. An avoided
-    // colour or term must never be offered as a candidate, so it can
-    // never end up as an object the story references OR a photo the
-    // child sees. See isCropAvoided's own comment for why the text-only
-    // filter (avoidFilter.ts, still installed app-wide as a defensive
-    // backstop) isn't sufficient on its own for a multi-step story.
     const rawCrops = outcome.kind === 'success' ? outcome.crops : [];
-    const baseCrops = filterAvoidedCrops(rawCrops, avoidList);
     // §11: capture-unavailable (non-cancel) / blur-failed / no-objects-found
     // all degrade the same way here -- padded up to a usable minimum
     // rather than shown as an error, so the flow always reaches a valid
     // game. Padded to the caregiver's chosen stepCount (not a hardcoded
     // 2), so there are always enough real crops for exactly the story
     // length they picked.
-    const padded = filterAvoidedCrops(padCropsToMinimum(baseCrops, stepCount), avoidList);
+    const padded = padCropsToMinimum(rawCrops, stepCount);
     setCrops(padded);
     setCaptureStage('writing');
 
@@ -670,7 +583,7 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
     }));
 
     let story: GeneratedStoryTemplate;
-    if (baseCrops.length === 0) {
+    if (rawCrops.length === 0) {
       // Vision/capture genuinely found nothing real this time -- go
       // straight to the never-fails template generator and skip caching
       // entirely, rather than routing through generateGame2Story. Caching
@@ -690,8 +603,6 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
         attentionSpan: profile.responseProfile.attentionSpan,
         communication: profile.responseProfile.communication,
         stepCount,
-        avoidedColour: avoidList?.avoidedColour,
-        avoidedTerms: avoidList?.avoidedTerms,
         perspective,
       });
     } else {
@@ -701,7 +612,7 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
         profile.ageMonths,
         profile.responseProfile.sameness,
         stepCount,
-        { colour: avoidList?.avoidedColour, terms: avoidList?.avoidedTerms },
+        undefined,
         perspective,
         profile.responseProfile.attentionSpan,
         profile.responseProfile.communication,
@@ -732,7 +643,6 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
     setResolvedSteps(resolved);
     setModelPlaybacksLeft(modelPlaybackCount(profile.responseProfile.sameness));
     setModelStepIndex(null);
-    await announceChange('The story is ready. Here it comes.');
     setPhase('modelling');
   }
 
@@ -756,26 +666,11 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
     const remaining = modelPlaybacksLeft - 1;
     setModelPlaybacksLeft(remaining);
     if (remaining <= 0) {
-      setTimeout(
-        () => {
-          void (async () => {
-            await announceChange('Next, we are going to act the story out together.');
-            setPhase('actItOut');
-          })();
-        },
-        // The 300ms settle before the screen changes is itself a piece of
-        // motion; drop it to an instant switch at the lowest tier.
-        reduceMotion ? 0 : 300,
-      );
+      setTimeout(() => setPhase('actItOut'), 300);
     }
   }
 
-  async function proceedToBlanks() {
-    // The heads-up lands before the board does, not after it -- that is
-    // the whole point of §6.2's "announce changes in advance". For every
-    // other profile announceChange returns immediately and this is the
-    // same instant switch it has always been.
-    await announceChange('In a moment, the pictures come up and you can put them where they go.');
+  function proceedToBlanks() {
     setSlots(resolvedSteps.map(() => null));
     setPoolIds(shuffled(resolvedSteps.map((rs) => rs.crop.id)));
     setPickedId(null);
@@ -912,14 +807,7 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
     // The whole story resolved -- the biggest real-progress moment there
     // is (§7.9).
     noteFocusProgress();
-    // §6.2: "Loud or sudden sounds" -> this success moment's audio becomes
-    // a purely visual pulse instead (the .g2-celebrate wash on the
-    // 'complete' screen below). Nothing is lost by staying silent here:
-    // that screen renders these very same schedule lines as text, so the
-    // read-aloud is the celebration CUE, not the content.
-    if (!pulseInsteadOfSound) {
-      void adapters.speechOut.say(lines.join('. '));
-    }
+    void adapters.speechOut.say(lines.join('. '));
     // No auto-advance -- this used to jump to reportingSupport on its own
     // after 600ms, which read as instant/abrupt. The caregiver now taps
     // "Continue" (below, in the 'complete' phase render) whenever they're
@@ -1128,7 +1016,7 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
         <p style={{ fontSize: '0.85rem', color: 'var(--color-ink-muted)' }}>
           Off-screen. This is where the learning happens.
         </p>
-        <button className="button-primary" style={{ minWidth: 88, minHeight: 88 }} onClick={() => void proceedToBlanks()}>
+        <button className="button-primary" style={{ minWidth: 88, minHeight: 88 }} onClick={proceedToBlanks}>
           They did it, now fill it in
         </button>
       </div>
@@ -1229,7 +1117,7 @@ export function Game2({ profile, onChildFacingChange }: Game2Props) {
 
   if (phase === 'complete') {
     return (
-      <div className={['screen', pulseInsteadOfSound && 'g2-celebrate'].filter(Boolean).join(' ')}>
+      <div className="screen">
         <style>{styleSheet}</style>
         <h2>🎉 That's your story!</h2>
         {schedule && (

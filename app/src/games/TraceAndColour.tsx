@@ -439,7 +439,7 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
     setCrayon(null);
     setPhase('tracing');
     void adapters.speechOut.say(
-      renderLine('Trace the shape with your finger.', slotValuesFromProfile(profile), profile.context),
+      renderLine('Trace the shape with your finger.', slotValuesFromProfile(profile)),
     );
   }
 
@@ -511,7 +511,7 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
           setTimeout(() => {
             setPhase('colouring');
             void adapters.speechOut.say(
-              renderLine('Now colour it in!', slotValuesFromProfile(profile), profile.context),
+              renderLine('Now colour it in!', slotValuesFromProfile(profile)),
             );
           }, 260);
         }
@@ -541,7 +541,7 @@ export function TraceAndColour({ profile, onChildFacingChange }: Props) {
   function finishRound() {
     setPhase('celebrating');
     void adapters.speechOut.say(
-      renderLine('Your {object.name}!', slotValuesFromProfile(profile, { 'object.name': object?.name ?? '' }), profile.context),
+      renderLine('Your {object.name}!', slotValuesFromProfile(profile, { 'object.name': object?.name ?? '' })),
     );
     setTimeout(() => setPhase('reportingSupport'), 900);
   }

@@ -4,10 +4,12 @@
 // the profile. Lookup-and-substitute, NEVER model generation at runtime —
 // see plan/features/F.005.md.
 //
-// The pipeline every child-facing line must go through:
-//   template string -> fillSlots() -> avoid-list filter -> renderLine()
-// Callers should use renderLine(), not fillSlots() directly, so the
-// avoid-list filter is never skippable by accident.
+// The pipeline every child-facing line goes through:
+//   template string -> fillSlots() -> renderLine()
+// renderLine() is a thin wrapper around fillSlots() -- kept as the call
+// site every game uses so filling a template stays one consistent name
+// across the codebase, rather than every caller reaching for fillSlots()
+// directly.
 
 import type { ChildContextProfile, ChildProfile } from '../types';
 
@@ -84,39 +86,12 @@ export function fillSlots(template: string, values: SlotValues): string {
   return filled.replace(/\s+/g, ' ').trim();
 }
 
-// ---------------------------------------------------------------------------
-// Avoid-list filter hook (§6.4 — "runs last, on the final filled output").
-// The filter's real content is F.018's job. This file only owns the hook:
-// somewhere to register it, and the guarantee that it's always the last
-// step before a line reaches the screen or the speaker.
-// ---------------------------------------------------------------------------
-
-export type AvoidFilter = (text: string, context: ChildContextProfile) => string;
-
-const noopAvoidFilter: AvoidFilter = (text) => text;
-
-let activeAvoidFilter: AvoidFilter = noopAvoidFilter;
-
-/** F.018 calls this once, at startup, to wire in the real avoid-list filter. */
-export function setAvoidFilter(filter: AvoidFilter): void {
-  activeAvoidFilter = filter;
-}
-
-/** Test-only escape hatch — do not call from feature code. */
-export function resetAvoidFilter(): void {
-  activeAvoidFilter = noopAvoidFilter;
-}
-
 /**
- * The one function feature code should actually call. Fills slots, then
- * runs the avoid-list filter as the last step, per §6.4. Never call
- * fillSlots() directly for anything that reaches a child.
+ * The one function feature code should actually call. A thin wrapper
+ * around fillSlots() -- kept so every child-facing line renders through
+ * one consistent name, rather than every game reaching for fillSlots()
+ * directly.
  */
-export function renderLine(
-  template: string,
-  values: SlotValues,
-  context: ChildContextProfile,
-): string {
-  const filled = fillSlots(template, values);
-  return activeAvoidFilter(filled, context);
+export function renderLine(template: string, values: SlotValues): string {
+  return fillSlots(template, values);
 }

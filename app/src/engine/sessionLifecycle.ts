@@ -84,7 +84,6 @@ export function childFacingHandoffLine(profile: ChildProfile, objectName: string
   return renderLine(
     '{companion} says go find your {object.name} with {caregiver}!',
     slotValuesFromProfile(profile, { 'object.name': objectName }),
-    profile.context,
   );
 }
 
