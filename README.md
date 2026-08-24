@@ -1,7 +1,7 @@
 # Hello World
 *Melbourne Hack 2026 · Accessible Education track · SDG 4*
 
-An early-learning app for children aged 3–5 who are pre-literate and pre- or
+An early-learning app for children aged 3–7 who are pre-literate and pre- or
 minimally verbal, autistic, ADHD, or still on a diagnosis waiting list. Two
 branches: **My World** turns a photo of the child's own room into activities
 built from their real objects, and **Worry to Question** turns a parent's
