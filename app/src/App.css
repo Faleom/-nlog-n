@@ -571,7 +571,12 @@
 html,
 body {
   margin: 0;
-  background: var(--color-surface-sunken);
+  /* Toki, not the old dark theme: this is the true page backdrop, visible
+     in any gap outside .app's own painted area -- the margin the fixed
+     tab bar leaves at the bottom, or the sides on a wider-than-mobile
+     viewport. Left dark after the Toki revamp otherwise moved everything
+     else to light, it showed as a jarring dark band under the tab bar. */
+  background: var(--toki-bg-bottom, var(--color-surface-sunken));
 }
 
 body {
