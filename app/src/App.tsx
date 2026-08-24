@@ -41,6 +41,8 @@ import { Game1 } from './games/Game1';
 import { Game2 } from './games/Game2';
 import { Game3ShadowMatch } from './games/Game3ShadowMatch';
 import { TraceAndColour } from './games/TraceAndColour';
+import { BlockStackMatch } from './games/BlockStackMatch';
+import { SortByRule } from './games/SortByRule';
 import { getActiveProfile } from './engine/profileStore';
 import { installAvoidFilter } from './engine/avoidFilter';
 import type { Branch2FlowResult } from './engine/branch2';
@@ -60,6 +62,8 @@ type Screen =
   | { kind: 'game2' }
   | { kind: 'game3' }
   | { kind: 'trace' }
+  | { kind: 'stack' }
+  | { kind: 'sort' }
   | { kind: 'dashboard' }
   | { kind: 'branch2Milestones' }
   | { kind: 'branch2Card'; answers: ConcernAnswers; childAgeMonths: number }
@@ -321,6 +325,30 @@ function App() {
     );
   }
 
+  if (screen.kind === 'stack') {
+    return (
+      <div className="app" key={screen.kind}>
+        <GameChrome eyebrow={`${MY_WORLD_FLOW} · Build the Same Tower`} onBack={goToBranch1Home}>
+          {(onChildFacingChange) => (
+            <BlockStackMatch profile={profile} onChildFacingChange={onChildFacingChange} />
+          )}
+        </GameChrome>
+      </div>
+    );
+  }
+
+  if (screen.kind === 'sort') {
+    return (
+      <div className="app" key={screen.kind}>
+        <GameChrome eyebrow={`${MY_WORLD_FLOW} · Put It Where It Goes`} onBack={goToBranch1Home}>
+          {(onChildFacingChange) => (
+            <SortByRule profile={profile} onChildFacingChange={onChildFacingChange} />
+          )}
+        </GameChrome>
+      </div>
+    );
+  }
+
   if (screen.kind === 'trace') {
     return (
       <div className="app" key={screen.kind}>
@@ -441,6 +469,24 @@ function App() {
                   ✏️
                 </span>
                 Trace and Colour
+              </button>
+              <button
+                className="button-primary home-play-button"
+                onClick={() => setScreen({ kind: 'stack' })}
+              >
+                <span className="home-play-icon" aria-hidden="true">
+                  🧱
+                </span>
+                Build the Same Tower
+              </button>
+              <button
+                className="button-primary home-play-button"
+                onClick={() => setScreen({ kind: 'sort' })}
+              >
+                <span className="home-play-icon" aria-hidden="true">
+                  🧺
+                </span>
+                Put It Where It Goes
               </button>
             </div>
           </div>
