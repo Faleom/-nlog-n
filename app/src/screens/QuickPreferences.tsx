@@ -8,6 +8,12 @@
 // setup step. `page` is local, throwaway UI state, same reasoning as
 // ResponseProfile's questionIndex — re-entering this screen always starts
 // back on page 1.
+//
+// Toki revamp (mockup screen 05): six colours in a 3-column swatch grid,
+// pink as a dashed-outline overflow row below (matching the mockup's own
+// treatment of an odd seventh option). Page 2 has no mockup of its own —
+// CompanionCapture.tsx carries the same toki-onboard-* chrome so the two
+// pages of one flow don't visually disagree with each other.
 
 import { useState } from 'react';
 import { saveQuickPreferences, shouldAskIsCompanionStillFavourite } from '../engine/quickPreferences';
@@ -17,11 +23,20 @@ import { CompanionCapture } from './CompanionCapture';
 interface QuickPreferencesProps {
   profile: ChildProfile;
   onComplete: (profile: ChildProfile) => void;
+  onBack?: () => void;
 }
 
-const COLOURS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'];
+const COLOURS: Array<{ value: string; label: string }> = [
+  { value: 'red', label: 'Red' },
+  { value: 'orange', label: 'Orange' },
+  { value: 'yellow', label: 'Yellow' },
+  { value: 'green', label: 'Green' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'purple', label: 'Purple' },
+];
+const PINK = { value: 'pink', label: 'Pink' };
 
-export function QuickPreferencesScreen({ profile, onComplete }: QuickPreferencesProps) {
+export function QuickPreferencesScreen({ profile, onComplete, onBack }: QuickPreferencesProps) {
   const existing = profile.context.quickPreferences ?? {};
   const [favColour, setFavColour] = useState(existing.favColour);
   const [saving, setSaving] = useState(false);
@@ -46,119 +61,78 @@ export function QuickPreferencesScreen({ profile, onComplete }: QuickPreferences
 
   if (page === 'companion') {
     return (
-      <div className="screen">
-        <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>Step 2 of 2</p>
-        <CompanionCapture
-          profile={profileAfterColour}
-          onComplete={(updatedProfile) => onComplete(updatedProfile)}
-          onSkip={() => onComplete(profileAfterColour)}
-        />
-        <button style={{ flex: '0 1 auto' }} onClick={() => setPage('colour')}>
-          Back
-        </button>
-      </div>
+      <CompanionCapture
+        profile={profileAfterColour}
+        onBack={() => setPage('colour')}
+        onComplete={(updatedProfile) => onComplete(updatedProfile)}
+        onSkip={() => onComplete(profileAfterColour)}
+      />
     );
   }
 
   return (
-    <div className="screen">
-      <h2>A few favourites</h2>
-      <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-        Step 1 of 2. Tap what fits, skip if you like.
+    <div className="toki-onboard-screen">
+      <div className="toki-onboard-blobs" aria-hidden="true" />
+      <div className="toki-onboard-header">
+        {onBack && (
+          <button type="button" className="toki-back-chevron" onClick={onBack} aria-label="Back">
+            ‹
+          </button>
+        )}
+        <div className="toki-progress">
+          <span className="toki-progress-label">A few favourites</span>
+          <div className="toki-progress-bar">
+            <span className="toki-progress-seg toki-progress-seg--filled" />
+            <span className="toki-progress-seg" />
+          </div>
+        </div>
+        <span className="toki-progress-count">Step 1 of 2</span>
+      </div>
+
+      <h2 className="toki-heading">Favourite colour</h2>
+      <p className="toki-lede">
+        Tap what fits, skip if you like. This is the colour the app leans on for your child.
       </p>
 
-      <ChipRow label="Favourite colour" options={COLOURS} value={favColour} onChange={setFavColour} />
-
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button
-          className="button-primary"
-          style={{ flex: 1 }}
-          disabled={saving}
-          onClick={() => void handleContinue()}
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** Same minimal treatment as ResponseProfile.tsx's QuestionBlock: a small
- * circular selector is the only "boxed" element, the label sits on the
- * bare background. Still a real full-row <button> (base rule's
- * touch-target floor intact) -- only the decoration shrank. Tapping the
- * already-selected option clears it (`undefined`), same toggle behaviour
- * the old chip grid had -- these are all optional favourites, not a
- * forced choice. */
-function ChipRow({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: string[];
-  value: string | undefined;
-  onChange: (v: string | undefined) => void;
-}) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <p>{label}</p>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {options.map((opt) => {
-          const selected = value === opt;
+      <div className="toki-swatch-grid">
+        {COLOURS.map((opt) => {
+          const selected = favColour === opt.value;
           return (
             <button
-              key={opt}
-              onClick={() => onChange(selected ? undefined : opt)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                width: '100%',
-                padding: '12px 4px',
-                textAlign: 'left',
-                fontSize: '1rem',
-                fontWeight: selected ? 600 : 400,
-                borderRadius: 0,
-                border: 'none',
-                borderBottom: '1px solid var(--color-border)',
-                background: 'transparent',
-                boxShadow: 'none',
-                backdropFilter: 'none',
-                WebkitBackdropFilter: 'none',
-                color: 'var(--color-ink)',
-              }}
+              key={opt.value}
+              type="button"
+              className={selected ? 'toki-swatch-btn toki-swatch-btn--selected' : 'toki-swatch-btn'}
+              onClick={() => setFavColour(selected ? undefined : opt.value)}
             >
-              <span
-                aria-hidden="true"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 24,
-                  height: 24,
-                  flexShrink: 0,
-                  borderRadius: '50%',
-                  border: `2px solid ${selected ? 'var(--color-primary)' : 'var(--color-border-strong)'}`,
-                  background: selected ? 'var(--color-primary)' : 'transparent',
-                }}
-              >
-                {selected && (
-                  <span
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: '50%',
-                      background: 'var(--color-primary-ink)',
-                    }}
-                  />
-                )}
-              </span>
-              {opt}
+              <span className={`toki-swatch-circle toki-swatch-circle--${opt.value}`} aria-hidden="true" />
+              <span className="toki-swatch-label">{opt.label}</span>
+              {selected && (
+                <span className="toki-swatch-check" aria-hidden="true">
+                  ✓
+                </span>
+              )}
             </button>
           );
         })}
+        <button
+          type="button"
+          className={
+            favColour === PINK.value
+              ? 'toki-swatch-btn toki-swatch-btn--overflow toki-swatch-btn--selected'
+              : 'toki-swatch-btn toki-swatch-btn--overflow'
+          }
+          onClick={() => setFavColour(favColour === PINK.value ? undefined : PINK.value)}
+        >
+          <span className="toki-swatch-circle toki-swatch-circle--pink" aria-hidden="true" />
+          {PINK.label}
+        </button>
+      </div>
+
+      <div className="toki-footer">
+        <button type="button" className="toki-cta" disabled={saving} onClick={() => void handleContinue()}>
+          Next
+        </button>
+        <p className="toki-caption">You can, but you don&rsquo;t have to, and nothing changes if you skip it.</p>
       </div>
     </div>
   );

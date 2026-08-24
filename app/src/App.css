@@ -2659,6 +2659,516 @@ textarea::placeholder {
   color: var(--toki-ink-faint);
 }
 
+/* ============================================================
+   TOKI REVAMP -- screens 2-5: Onboarding, Response profile,
+   Quick preferences. Shared chrome (header/progress, card, field,
+   selectable row, choice tile, note) all four screens draw from,
+   so they read as one system rather than four separate restyles. */
+
+.toki-onboard-screen {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 24px 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: linear-gradient(180deg, var(--toki-bg-top), var(--toki-bg-bottom));
+}
+
+.toki-onboard-blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 200px at 10% 8%, var(--toki-blob-blue), transparent 62%),
+    radial-gradient(circle 220px at 90% 86%, var(--toki-blob-violet), transparent 62%);
+  filter: blur(44px);
+}
+
+.toki-onboard-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toki-back-chevron {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--toki-border);
+  box-shadow: 0 4px 12px rgba(23, 86, 140, 0.07);
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #0b6fbf;
+  cursor: pointer;
+}
+.toki-back-chevron:active {
+  transform: scale(0.94);
+}
+
+.toki-progress {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.toki-progress-label {
+  font-weight: 800;
+  font-size: 0.66rem;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--toki-eyebrow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toki-progress-bar {
+  display: flex;
+  gap: 6px;
+}
+
+.toki-progress-seg {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--toki-border);
+  display: block;
+}
+.toki-progress-seg--filled {
+  background: var(--toki-eyebrow);
+}
+
+.toki-progress-count {
+  flex: none;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #6e88a3;
+}
+
+.toki-heading {
+  position: relative;
+  margin: 8px 0 0;
+  font-weight: 800;
+  font-size: 1.7rem;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  color: var(--toki-ink);
+  text-align: left;
+}
+
+.toki-heading--question {
+  font-size: 1.35rem;
+  line-height: 1.22;
+}
+
+.toki-lede {
+  position: relative;
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--toki-ink-muted);
+  text-align: left;
+}
+
+.toki-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 18px;
+  background: #fff;
+  border: 1px solid #e6f0fa;
+  border-radius: 24px;
+  box-shadow: 0 8px 20px rgba(23, 86, 140, 0.07);
+  margin-top: 6px;
+}
+
+.toki-hint {
+  position: relative;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--toki-ink-faint);
+  text-align: left;
+}
+
+.toki-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.toki-field-label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #3d5a76;
+}
+
+.toki-field input {
+  min-height: 56px;
+  padding: 0 16px;
+  border-radius: 16px;
+  border: 1px solid #dbeafb;
+  background: #f8fbfe;
+  font: 500 1rem var(--font-caregiver);
+  color: var(--toki-ink);
+}
+.toki-field input::placeholder {
+  color: #a7bcd3;
+}
+.toki-field input:focus-visible {
+  outline: 2px solid var(--toki-eyebrow);
+  outline-offset: 1px;
+  border-color: var(--toki-eyebrow);
+}
+
+.toki-footer {
+  position: relative;
+  padding: 18px 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toki-footer-row {
+  display: flex;
+  gap: 12px;
+}
+.toki-footer-row .toki-cta {
+  flex: 1;
+}
+
+.toki-secondary-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  min-height: var(--touch-min, 44px);
+  border: 1px solid var(--toki-border);
+  border-radius: 22px;
+  background: #fff;
+  color: #0b6fbf;
+  font-weight: 700;
+  font-size: 1.05rem;
+  box-shadow: 0 6px 14px rgba(23, 86, 140, 0.07);
+  cursor: pointer;
+}
+.toki-secondary-btn:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+.toki-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.toki-choice-tile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 22px 20px;
+  text-align: left;
+  border: 1px solid #d7e9fb;
+  border-radius: 26px;
+  background: linear-gradient(180deg, #ffffff, #f5fbff);
+  box-shadow: 0 10px 24px rgba(23, 86, 140, 0.09);
+  cursor: pointer;
+}
+.toki-choice-tile:active {
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+.toki-choice-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  flex: none;
+  border-radius: 20px;
+  font-size: 28px;
+  line-height: 1;
+}
+.toki-choice-icon--blue {
+  background: linear-gradient(180deg, #69bcff, #1e93ee);
+  box-shadow: 0 8px 16px rgba(20, 110, 190, 0.28);
+}
+.toki-choice-icon--purple {
+  background: linear-gradient(180deg, #c0a0f2, #a97bea);
+  box-shadow: 0 8px 16px rgba(120, 80, 190, 0.24);
+}
+
+.toki-choice-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.toki-choice-title {
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  color: var(--toki-ink);
+}
+.toki-choice-sub {
+  font-weight: 400;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #6e88a3;
+}
+
+.toki-selectable-group {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 18px 10px;
+  background: #fff;
+  border: 1px solid #e6f0fa;
+  border-radius: 24px;
+  box-shadow: 0 8px 20px rgba(23, 86, 140, 0.07);
+  margin-top: 4px;
+}
+
+.toki-selectable-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 56px;
+  padding: 14px 4px;
+  border: none;
+  border-top: 1px solid #f0f5fb;
+  background: transparent;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.98rem;
+  color: var(--toki-ink);
+  cursor: pointer;
+}
+.toki-selectable-row:first-child {
+  border-top: none;
+}
+
+.toki-selectable-radio {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid #cfe3f7;
+  display: grid;
+  place-items: center;
+}
+.toki-selectable-row--selected {
+  font-weight: 800;
+  color: #0b6fbf;
+}
+.toki-selectable-row--selected .toki-selectable-radio {
+  border-color: var(--toki-eyebrow);
+  background: var(--toki-eyebrow);
+}
+.toki-selectable-radio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.toki-note {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: #edf6fe;
+  border: 1px solid #dbeafb;
+}
+.toki-note p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--toki-ink-muted);
+  text-align: left;
+}
+
+.toki-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.toki-swatch-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 6px;
+  border: 1px solid #e6f0fa;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(23, 86, 140, 0.07);
+  cursor: pointer;
+}
+.toki-swatch-btn:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+.toki-swatch-btn--selected {
+  border: 2px solid var(--toki-eyebrow);
+  background: #f2f9ff;
+  box-shadow: 0 10px 20px rgba(20, 110, 190, 0.14);
+}
+
+.toki-swatch-circle {
+  display: block;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+}
+/* Same re-pitched, contrast-checked hues as --toki-cta-*, hardcoded
+   here rather than read from the data-accent-driven custom properties:
+   this grid shows all seven at once, not just the currently active one. */
+.toki-swatch-circle--red {
+  background: linear-gradient(180deg, #e14949, #dd3131);
+  box-shadow: 0 8px 16px rgba(200, 40, 40, 0.24);
+}
+.toki-swatch-circle--orange {
+  background: linear-gradient(180deg, #c06615, #b25f13);
+  box-shadow: 0 8px 16px rgba(180, 100, 20, 0.24);
+}
+.toki-swatch-circle--yellow {
+  background: linear-gradient(180deg, #a07900, #937000);
+  box-shadow: 0 8px 16px rgba(140, 110, 0, 0.22);
+}
+.toki-swatch-circle--green {
+  background: linear-gradient(180deg, #418f2b, #3c8528);
+  box-shadow: 0 8px 16px rgba(60, 130, 40, 0.24);
+}
+.toki-swatch-circle--blue {
+  background: linear-gradient(180deg, #1082da, #0f78ca);
+  box-shadow: 0 8px 16px rgba(20, 110, 190, 0.28);
+}
+.toki-swatch-circle--purple {
+  background: linear-gradient(180deg, #9c5fe8, #934fe6);
+  box-shadow: 0 8px 16px rgba(120, 60, 190, 0.24);
+}
+.toki-swatch-circle--pink {
+  background: linear-gradient(180deg, #e4378f, #dd1d7e);
+  box-shadow: 0 8px 16px rgba(200, 30, 120, 0.24);
+}
+
+.toki-swatch-label {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #3d5a76;
+}
+.toki-swatch-btn--selected .toki-swatch-label {
+  font-weight: 800;
+  color: #0b6fbf;
+}
+
+.toki-swatch-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--toki-eyebrow);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  box-shadow: 0 4px 10px rgba(20, 110, 190, 0.34);
+}
+
+.toki-swatch-btn--overflow {
+  grid-column: span 3;
+  flex-direction: row;
+  justify-content: center;
+  gap: 10px;
+  border-style: dashed;
+  border-color: #b9d5ef;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--toki-ink-muted);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.toki-swatch-btn--overflow .toki-swatch-circle {
+  width: 26px;
+  height: 26px;
+}
+
+.toki-segmented {
+  display: grid;
+  gap: 8px;
+}
+
+.toki-segment {
+  min-height: var(--touch-min, 44px);
+  padding: 10px 6px;
+  border-radius: 16px;
+  border: 1px solid var(--toki-border);
+  background: #fff;
+  color: var(--toki-ink);
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.toki-segment--selected {
+  border-color: var(--toki-eyebrow);
+  background: var(--toki-eyebrow);
+  color: #fff;
+}
+.toki-segment:active {
+  transform: scale(0.97);
+}
+
+.toki-textarea {
+  min-height: 88px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid #dbeafb;
+  background: #f8fbfe;
+  font: 500 0.95rem/1.5 var(--font-caregiver);
+  color: var(--toki-ink);
+  resize: vertical;
+}
+.toki-textarea::placeholder {
+  color: #a7bcd3;
+}
+.toki-textarea:focus-visible {
+  outline: 2px solid var(--toki-eyebrow);
+  outline-offset: 1px;
+  border-color: var(--toki-eyebrow);
+}
+
+.toki-photo-preview {
+  width: 100%;
+  border-radius: 24px;
+  border: 1px solid #e6f0fa;
+  box-shadow: 0 8px 20px rgba(23, 86, 140, 0.07);
+  display: block;
+}
+
 /* ---------------------------------------------------------------------
    HOME TABS
    Branch 1 home is two places behind one bottom bar. The shell is a flex

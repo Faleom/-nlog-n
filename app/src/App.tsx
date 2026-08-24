@@ -71,16 +71,6 @@ type Screen =
   | { kind: 'branch2Card'; answers: ConcernAnswers; childAgeMonths: number }
   | { kind: 'branch2Ended' };
 
-// The two flow names shown in every screen-header eyebrow -- this, plus
-// the back button and (during first-time setup) the step count, is the
-// whole answer to "where am I / where am I headed."
-const SETUP_FLOW = 'Setting up your child’s profile';
-// The two setup editors are reachable twice: inside first-time onboarding
-// (where they carry SETUP_FLOW and a step counter) and, later, one at a time
-// from the home hub's Setup tab. The second case used to show a bare
-// "My World" eyebrow; it now names the tab it was launched from, which is
-// the only thing about it the caregiver still needs told.
-const SETUP_TAB_FLOW = 'Setup';
 const WORRY_FLOW = 'Thinking about development';
 // Block-stack match and Sort by rule's own flow name, distinct from "My
 // World" -- taken directly from the source branch's own naming for this
@@ -398,9 +388,9 @@ function App() {
 
   if (screen.kind === 'onboarding') {
     return (
-      <div className="app">
-        <AppHeader />
+      <div className="app app--welcome">
         <Onboarding
+          onBack={() => setScreen({ kind: 'welcome' })}
           onComplete={(newProfile, branch) => {
             setProfile(newProfile);
             if (branch === 'worry-to-question') {
@@ -429,16 +419,10 @@ function App() {
 
   if (screen.kind === 'responseProfile') {
     return (
-      <div className="app" key={screen.kind}>
-        <AppHeader />
-        <ScreenHeader
-          eyebrow={screen.returnToHome ? SETUP_TAB_FLOW : SETUP_FLOW}
-          step={screen.returnToHome ? undefined : { current: 1, total: 2 }}
-          onBack={screen.returnToHome ? goToSetupHome : undefined}
-          backLabel="Setup"
-        />
+      <div className="app app--welcome" key={screen.kind}>
         <ResponseProfileScreen
           profile={profile}
+          onBack={screen.returnToHome ? goToSetupHome : undefined}
           onComplete={(next) => {
             updateProfile(next);
             if (screen.returnToHome) {
@@ -454,16 +438,10 @@ function App() {
 
   if (screen.kind === 'quickPreferences') {
     return (
-      <div className="app" key={screen.kind}>
-        <AppHeader />
-        <ScreenHeader
-          eyebrow={screen.returnToHome ? SETUP_TAB_FLOW : SETUP_FLOW}
-          step={screen.returnToHome ? undefined : { current: 2, total: 2 }}
-          onBack={screen.returnToHome ? goToSetupHome : undefined}
-          backLabel="Setup"
-        />
+      <div className="app app--welcome" key={screen.kind}>
         <QuickPreferencesScreen
           profile={profile}
+          onBack={screen.returnToHome ? goToSetupHome : undefined}
           onComplete={(updated) => {
             updateProfile(updated);
             // Last screen of the first-time chain, so its no-return exit is

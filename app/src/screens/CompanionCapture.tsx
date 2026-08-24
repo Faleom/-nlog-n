@@ -8,6 +8,11 @@
 // needs no special-casing downstream. Editable later from settings with
 // no re-onboarding: this component is just as valid called again from a
 // settings screen as it is at onboarding.
+//
+// Toki revamp: no mockup screen covers this one (the source file stops at
+// Quick preferences' page 1). Carries the same toki-onboard-* chrome as
+// the rest of the flow instead of inventing a different look for page 2
+// of the same screen.
 
 import { useState } from 'react';
 import { adapters } from '../adapters/registry';
@@ -22,6 +27,7 @@ interface CompanionCaptureProps {
   profile: ChildProfile;
   onComplete: (profile: ChildProfile) => void;
   onSkip: () => void;
+  onBack?: () => void;
 }
 
 type Stage = 'intro' | 'rejected' | 'details';
@@ -43,7 +49,27 @@ async function imageBitmapToDataUrl(image: ImageBitmap): Promise<string> {
   return canvas.toDataURL('image/png');
 }
 
-export function CompanionCapture({ profile, onComplete, onSkip }: CompanionCaptureProps) {
+function CompanionHeader({ onBack }: { onBack?: () => void }) {
+  return (
+    <div className="toki-onboard-header">
+      {onBack && (
+        <button type="button" className="toki-back-chevron" onClick={onBack} aria-label="Back">
+          ‹
+        </button>
+      )}
+      <div className="toki-progress">
+        <span className="toki-progress-label">A few favourites</span>
+        <div className="toki-progress-bar">
+          <span className="toki-progress-seg toki-progress-seg--filled" />
+          <span className="toki-progress-seg toki-progress-seg--filled" />
+        </div>
+      </div>
+      <span className="toki-progress-count">Step 2 of 2</span>
+    </div>
+  );
+}
+
+export function CompanionCapture({ profile, onComplete, onSkip, onBack }: CompanionCaptureProps) {
   const [stage, setStage] = useState<Stage>('intro');
   const [busy, setBusy] = useState(false);
   const [pendingImage, setPendingImage] = useState<ImageBitmap | null>(null);
@@ -77,72 +103,92 @@ export function CompanionCapture({ profile, onComplete, onSkip }: CompanionCaptu
 
   if (stage === 'rejected') {
     return (
-      <div className="screen">
-        <p>{COMPANION_REJECTION_MESSAGE}</p>
-        <button
-          onClick={() => {
-            setStage('intro');
-          }}
-        >
-          Try again
-        </button>
-        <button onClick={onSkip}>Skip for now</button>
+      <div className="toki-onboard-screen">
+        <div className="toki-onboard-blobs" aria-hidden="true" />
+        <CompanionHeader onBack={onBack} />
+        <h2 className="toki-heading">Let&rsquo;s use something else</h2>
+        <p className="toki-lede">{COMPANION_REJECTION_MESSAGE}</p>
+        <div className="toki-footer">
+          <div className="toki-footer-row">
+            <button type="button" className="toki-secondary-btn" onClick={onSkip}>
+              Skip for now
+            </button>
+            <button type="button" className="toki-cta" onClick={() => setStage('intro')}>
+              Try again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (stage === 'details') {
     return (
-      <div className="screen">
+      <div className="toki-onboard-screen">
+        <div className="toki-onboard-blobs" aria-hidden="true" />
+        <CompanionHeader onBack={() => setStage('intro')} />
+        <h2 className="toki-heading">Tell us about them</h2>
         {pendingDataUrl && (
-          <img
-            src={pendingDataUrl}
-            alt="Companion preview"
-            style={{ maxWidth: '100%', borderRadius: 12 }}
-          />
+          <img src={pendingDataUrl} alt="Companion preview" className="toki-photo-preview" />
         )}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          What&rsquo;s their name?
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Bunbun"
-            style={{ minHeight: 44, fontSize: '1rem' }}
-          />
-        </label>
-        <p>Pronoun</p>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${PRONOUNS.length}, 1fr)`, gap: 8 }}>
-          {PRONOUNS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPronoun(p.value)}
-              style={{
-                background: pronoun === p.value ? 'var(--color-primary)' : 'var(--color-surface)',
-                color: pronoun === p.value ? 'var(--color-primary-ink)' : 'var(--color-ink)',
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="toki-card">
+          <label className="toki-field">
+            <span className="toki-field-label">What&rsquo;s their name?</span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Bunbun"
+            />
+          </label>
+          <div className="toki-field">
+            <span className="toki-field-label">Pronoun</span>
+            <div className="toki-segmented" style={{ gridTemplateColumns: `repeat(${PRONOUNS.length}, 1fr)` }}>
+              {PRONOUNS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  className={pronoun === p.value ? 'toki-segment toki-segment--selected' : 'toki-segment'}
+                  onClick={() => setPronoun(p.value)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <button disabled={busy || name.trim() === ''} onClick={() => void handleSaveDetails()}>
-          Save
-        </button>
+        <div className="toki-footer">
+          <button
+            type="button"
+            className="toki-cta"
+            disabled={busy || name.trim() === ''}
+            onClick={() => void handleSaveDetails()}
+          >
+            Save
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="screen">
-      <h2>Their favourite toy</h2>
-      <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+    <div className="toki-onboard-screen">
+      <div className="toki-onboard-blobs" aria-hidden="true" />
+      <CompanionHeader onBack={onBack} />
+      <h2 className="toki-heading">Their favourite toy</h2>
+      <p className="toki-lede">
         Photograph a favourite toy or comfort object on its own. No people in the photo.
       </p>
-      <button disabled={busy} onClick={() => void handleTakePhoto()}>
-        Take a photo
-      </button>
-      <button onClick={onSkip}>Skip for now</button>
+      <div className="toki-footer">
+        <div className="toki-footer-row">
+          <button type="button" className="toki-secondary-btn" onClick={onSkip}>
+            Skip for now
+          </button>
+          <button type="button" className="toki-cta" disabled={busy} onClick={() => void handleTakePhoto()}>
+            Take a photo
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
