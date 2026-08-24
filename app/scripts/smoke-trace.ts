@@ -28,8 +28,21 @@ import {
   type TracePoint,
 } from '../src/games/trace/traceLogic';
 
-/** A deterministic stand-in for Math.random, so a shuffle can be asserted
- * exactly instead of sampled. */
+/** Reads a source file for a static string/regex check, normalising CRLF
+ * to LF first. Git on Windows can check this repo out with CRLF line
+ * endings (see TraceAndColour.tsx); a raw readFileSync then breaks any
+ * assertion here that searches for a literal '\n' -- the file is fine,
+ * only the search was line-ending-sensitive. Every static check in this
+ * suite reads through this rather than readFileSync directly, so none of
+ * them can fail on a Windows checkout for a reason that has nothing to do
+ * with the app. */
+function readSource(relativePath: string): string {
+  return readFileSync(fileURLToPath(new URL(relativePath, import.meta.url)), 'utf8').replace(
+    /\r\n/g,
+    '\n',
+  );
+}
+
 function seeded(seed: number): () => number {
   let s = seed >>> 0;
   return () => {
@@ -136,10 +149,7 @@ async function main() {
   });
 
   await test('the screen honours the sameness profile instead of always shuffling', () => {
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     assert.ok(/applyProfileTuning\(profile\)\.fixedLayout/.test(src),
       'the screen should read the sameness tuning');
     assert.ok(/wantsSameness \? fixedBag\(\) : shuffledBag\(\)/.test(src),
@@ -173,10 +183,7 @@ async function main() {
   await test('finishing the shapes ends the session as FINISHED, not as "time ran out"', () => {
     // The recap shows this to a parent. "We ran out of time" and "your
     // child worked through everything" are not the same sentence.
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     assert.ok(/isSessionFinished\(roundRef\.current\)/.test(src), 'the round limit is not checked');
     assert.ok(/handleEndSession\('finished'\)/.test(src), 'finishing should end the session as finished');
   });
@@ -184,10 +191,7 @@ async function main() {
   await test('the child is never shown how many rounds are left', () => {
     // A running total on the child's screen is exactly the score §13 rules
     // out, and would turn a finished picture into a tally.
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     // Everything below the child-facing marker must not mention the plan.
     const childFacing = src.slice(src.indexOf('// CHILD-FACING from here down'));
     assert.ok(!/ROUNDS_PER_SESSION|roundRef/.test(childFacing),
@@ -199,10 +203,7 @@ async function main() {
     // 1 and 3 get idle free from InteractionMachine; this one has none, so
     // without an explicit check a child who wandered off mid-picture left
     // the session running until the cap.
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     assert.ok(/SESSION_END_IDLE_MS/.test(src), 'no idle ending is implemented');
     assert.ok(/handleEndSession\('idle'\)/.test(src), 'idle never actually ends the session');
     assert.ok(/lastActivityRef\.current = Date\.now\(\)/.test(src), 'nothing records activity');
@@ -224,10 +225,7 @@ async function main() {
   });
 
   await test('the screen logs that id, rather than assembling one at the call site', () => {
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     assert.match(src, /skillId:\s*traceSkillId\(/, 'the screen should log traceSkillId(object)');
     assert.ok(
       !/skillId:\s*[`'"]/.test(src),
@@ -325,10 +323,7 @@ async function main() {
     // The whole point: any colour finishes the round. A comparison against
     // the object's real colour on the way out would quietly turn expression
     // into a test.
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     const finish = src.slice(src.indexOf('function finishRound'), src.indexOf('async function handleSupportTierReport'));
     assert.ok(!/===\s*ghost|ghost\s*===|realColourOf\(/.test(finish),
       'finishRound compares what was drawn against the real colour');
@@ -344,10 +339,7 @@ async function main() {
     // The revision that produced this: picking a swatch used to flood the
     // whole shape in one tap. Selecting a crayon must only pick the colour;
     // the picture appears from the strokes the child actually draws.
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     // Asserted on what the handler DOES, not how it is formatted — an
     // exact-syntax regex here broke the moment the handler grew a second
     // statement, while the behaviour was still correct.
@@ -366,10 +358,7 @@ async function main() {
     // abandoned the rest of the handler and the child's stroke never
     // existed. Capture is an enhancement; it must be attempted only AFTER
     // the drawing state is committed, and never allowed to escape.
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     assert.ok(/try\s*\{[^}]*setPointerCapture/.test(src.replace(/\n/g, ' ')),
       'setPointerCapture must be wrapped in try/catch');
     const down = src.slice(src.indexOf('function handlePointerDown'), src.indexOf('function handlePointerMove'));
@@ -378,10 +367,7 @@ async function main() {
   });
 
   await test('crayon strokes are clipped to the shape', () => {
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     assert.ok(/clipPath=\{`url\(#\$\{clipId\}\)`\}/.test(src), 'strokes are not clipped');
     // A hardcoded clip id would collide if the screen rendered twice and
     // the crayon would spill out of the wrong shape.
@@ -392,26 +378,17 @@ async function main() {
     // The revision that produced this: the round used to end itself once
     // enough of the inside was covered, and it kept snatching the picture
     // away mid-scribble. A child is finished when they say so.
-    const logic = readFileSync(
-      fileURLToPath(new URL('../src/games/trace/traceLogic.ts', import.meta.url)),
-      'utf8',
-    );
+    const logic = readSource('../src/games/trace/traceLogic.ts');
     assert.ok(!/isColourComplete|COLOUR_COMPLETE_AT/.test(logic),
       'a colouring completion rule still exists');
 
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     assert.ok(!/isPointInFill|fillPoints|setPainted/.test(src),
       'the screen still tracks colour coverage');
   });
 
   await test('the round ends only when the child presses done', () => {
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     assert.ok(/onClick=\{finishRound\}/.test(src), 'there must be a done button');
     // finishRound must not be reachable from a timer or a coverage check.
     assert.ok(!/setTimeout\(\(\) => finishRound/.test(src),
@@ -422,18 +399,12 @@ async function main() {
   });
 
   await test('there is no progress bar left anywhere', () => {
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     assert.ok(!/width:\s*`\$\{Math\.round\(/.test(src), 'a progress bar is still being rendered');
   });
 
   await test('a reference picture sits beside the colouring space', () => {
-    const src = readFileSync(
-      fileURLToPath(new URL('../src/games/TraceAndColour.tsx', import.meta.url)),
-      'utf8',
-    );
+    const src = readSource('../src/games/TraceAndColour.tsx');
     const ref = src.slice(src.indexOf("phase === 'colouring' && object"), src.indexOf('<svg\n          ref={svgRef}'));
     assert.ok(/<path d=\{object\.d\}/.test(ref), 'the reference should draw the shape');
     assert.ok(/fill=\{ghost\}/.test(ref), 'the reference should be in the real colour');
