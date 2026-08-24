@@ -38,12 +38,12 @@ export function slotValuesFromProfile(
     companion: context.companion?.name ?? 'your friend',
     companion_they: context.companion?.pronoun ?? 'they',
     fav_colour: context.quickPreferences?.favColour ?? 'a colour',
-    fav_animal: context.quickPreferences?.favAnimal ?? 'an animal',
-    fav_food: context.quickPreferences?.favFood ?? 'a snack',
-    fav_place: context.quickPreferences?.favPlace ?? 'the room',
+    fav_animal: 'an animal',
+    fav_food: 'a snack',
+    fav_place: 'the room',
     caregiver: context.peopleAndRoutine?.caregiverTerm ?? 'your grown-up',
     child: profile.nickname ?? 'you',
-    movement: context.quickPreferences?.movement ?? 'jump',
+    movement: 'jump',
     ...extra,
   };
 }
@@ -59,12 +59,12 @@ export function slotValuesFromContext(
     companion: context.companion?.name ?? 'your friend',
     companion_they: context.companion?.pronoun ?? 'they',
     fav_colour: context.quickPreferences?.favColour ?? 'a colour',
-    fav_animal: context.quickPreferences?.favAnimal ?? 'an animal',
-    fav_food: context.quickPreferences?.favFood ?? 'a snack',
-    fav_place: context.quickPreferences?.favPlace ?? 'the room',
+    fav_animal: 'an animal',
+    fav_food: 'a snack',
+    fav_place: 'the room',
     caregiver: context.peopleAndRoutine?.caregiverTerm ?? 'your grown-up',
     child: 'you',
-    movement: context.quickPreferences?.movement ?? 'jump',
+    movement: 'jump',
     ...extra,
   };
 }

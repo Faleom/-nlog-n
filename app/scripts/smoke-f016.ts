@@ -12,7 +12,7 @@ async function main() {
   const { createProfile, getProfile, updateProfile } = await import('../src/engine/profileStore');
   const { slotValuesFromProfile, renderLine } = await import('../src/engine/slots');
 
-  section('F.016 — real round trip through the store, one field at a time (tap-only, all skippable)');
+  section('F.016 — real round trip through the store (tap-only, skippable, colour-only now)');
 
   let profileId = '';
   await test('setup: a real profile exists', async () => {
@@ -20,36 +20,16 @@ async function main() {
     profileId = profile.id;
   });
 
-  await test('saving only favColour persists it and leaves everything else empty', async () => {
+  await test('saving favColour persists it', async () => {
     await saveQuickPreferences(profileId, { favColour: 'blue' });
     const reloaded = await getProfile(profileId);
     assert.equal(reloaded?.context.quickPreferences?.favColour, 'blue');
-    assert.equal(reloaded?.context.quickPreferences?.favAnimal, undefined);
   });
 
-  await test('a second save (favAnimal) does not clobber the first (favColour) — real deep merge', async () => {
-    await saveQuickPreferences(profileId, { favAnimal: 'rabbit' });
-    const reloaded = await getProfile(profileId);
-    assert.equal(reloaded?.context.quickPreferences?.favColour, 'blue', 'favColour was clobbered');
-    assert.equal(reloaded?.context.quickPreferences?.favAnimal, 'rabbit');
-  });
-
-  await test('all six fields save and load together', async () => {
-    await saveQuickPreferences(profileId, {
-      favColour: 'green',
-      favAnimal: 'duck',
-      favFood: 'banana',
-      favPlace: 'the kitchen',
-      favSound: 'chime',
-      movement: 'spin',
-    });
+  await test('a later save overwrites the earlier favColour — real round trip through the store', async () => {
+    await saveQuickPreferences(profileId, { favColour: 'green' });
     const reloaded = await getProfile(profileId);
     assert.equal(reloaded?.context.quickPreferences?.favColour, 'green');
-    assert.equal(reloaded?.context.quickPreferences?.favAnimal, 'duck');
-    assert.equal(reloaded?.context.quickPreferences?.favFood, 'banana');
-    assert.equal(reloaded?.context.quickPreferences?.favPlace, 'the kitchen');
-    assert.equal(reloaded?.context.quickPreferences?.favSound, 'chime');
-    assert.equal(reloaded?.context.quickPreferences?.movement, 'spin');
   });
 
   section('F.016 — changing a favourite visibly changes what the app says (real slot integration)');
@@ -91,9 +71,9 @@ async function main() {
   await test('saveQuickPreferences works identically on a profile created long ago (no special first-time path)', async () => {
     const oldProfile = await createProfile({ ageMonths: 50 });
     await updateProfile(oldProfile.id, { nickname: 'Already onboarded' });
-    await saveQuickPreferences(oldProfile.id, { favFood: 'apple' });
+    await saveQuickPreferences(oldProfile.id, { favColour: 'yellow' });
     const reloaded = await getProfile(oldProfile.id);
-    assert.equal(reloaded?.context.quickPreferences?.favFood, 'apple');
+    assert.equal(reloaded?.context.quickPreferences?.favColour, 'yellow');
     assert.equal(reloaded?.nickname, 'Already onboarded');
   });
 
