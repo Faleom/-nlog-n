@@ -281,6 +281,34 @@ async function main() {
     }
   });
 
+  section('F.020 (styling): neither answer to the neutral prompt is styled as the expected one');
+
+  // §10's "asks nothing, warns nothing" is a STYLING requirement here as
+  // much as a copy one: a primary-looking "Yes, save a note" next to a
+  // quiet "No" would tell the caregiver which answer the app is waiting
+  // for. NeutralNotePrompt.tsx has said so in a comment since it was
+  // written, but nothing enforced it until the Toki restyle put a real
+  // gradient CTA class within reach -- so the rule is a test now. Same
+  // shape as smoke-f002.ts's equal-doors check.
+  await test('the two answers carry byte-identical button styling (equal visual weight)', () => {
+    const source = readFileSync(path.join(APP_ROOT, 'src/components/NeutralNotePrompt.tsx'), 'utf8');
+    const buttons = [...source.matchAll(/<button[^>]*>/g)].map((m) => m[0]);
+    assert.equal(buttons.length, 2, `expected exactly two answer buttons, found ${buttons.length}`);
+    const classes = buttons.map((tag) => /className="([^"]*)"/.exec(tag)?.[1] ?? '');
+    assert.notEqual(classes[0], '', 'an answer button carries no class at all -- test needs updating');
+    assert.equal(
+      classes[0],
+      classes[1],
+      `both answers must carry the identical class, found "${classes[0]}" vs "${classes[1]}"`,
+    );
+    assert.ok(
+      !/primary|default|recommended|toki-cta/i.test(codeOnlyLines(
+        path.join(APP_ROOT, 'src/components/NeutralNotePrompt.tsx'),
+      ).join('\n')),
+      'one answer is dressed as the primary/expected choice',
+    );
+  });
+
   section('F.020 — a fresh SkillRecord[] type-checks through the real ignore path (no crash on real shape)');
 
   await test('getNeutralNotePromptState accepts a real SkillRecord[] shape without incident', () => {

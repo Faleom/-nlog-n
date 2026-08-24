@@ -10,6 +10,12 @@
 // real round-trip proof. Switching between "yes, save a note" and "no" here
 // never shows a confirmation dialog -- see §10's "asks nothing, warns
 // nothing" requirement.
+//
+// Toki revamp: no mockup covers this prompt (the source file's own footer
+// leaves the Notes tab and the worry-to-question branch out), so it carries
+// the light card/button vocabulary the revamped screens already share,
+// same as CompanionCapture did for onboarding. Both answers carry the one
+// identical button class, which is the §10 rule above made literal.
 
 import { getNeutralNotePromptState } from '../engine/branchHandoff';
 import type { SkillRecord } from '../types';
@@ -27,13 +33,17 @@ export function NeutralNotePrompt({ history = [], onSaveNote, onDismiss }: Neutr
   return (
     <div className="neutral-note-prompt">
       <p>{text}</p>
-      {/* Both buttons are plain base-glass and equal-width by design --
-          styling that made either answer look like the expected one would
-          break §10. The 88x88 floor comes from the base `button` rule, so
-          it no longer needs restating inline here. */}
+      {/* Both buttons carry the identical .toki-secondary-btn and are
+          equal-width by design -- styling that made either answer look
+          like the expected one would break §10. The touch floor comes from
+          that shared class, so it needs no restating inline here. */}
       <div className="neutral-note-prompt-actions">
-        <button onClick={onSaveNote}>Yes, save a note</button>
-        <button onClick={onDismiss}>No</button>
+        <button className="toki-secondary-btn" onClick={onSaveNote}>
+          Yes, save a note
+        </button>
+        <button className="toki-secondary-btn" onClick={onDismiss}>
+          No
+        </button>
       </div>
     </div>
   );
