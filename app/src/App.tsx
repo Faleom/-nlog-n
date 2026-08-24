@@ -607,21 +607,29 @@ function App() {
   const copy = homeCopy[homeTab];
 
   return (
-    <div className="app app--tabbed" key={screen.kind}>
-      <AppHeader />
-      {/* No ScreenHeader here, deliberately. It used to render a "MY WORLD ·
-          <tab>" eyebrow, and once "My World" went there was nothing left in
-          it: the eyebrow would have said "DASHBOARD" directly above an <h1>
-          saying "Dashboard", indented ~100px by the back-button spacer while
-          that h1 sat at the content edge -- redundant AND misaligned. This
-          is a root screen with nowhere to go back to; the tab bar says which
-          section is selected and the heading below names it. */}
-      <header className="home-greeting">
-        <h1>{copy.title}</h1>
-        <p>{copy.sub}</p>
-      </header>
+    <div className="app app--welcome" key={screen.kind}>
+      <div className="toki-home-screen">
+        <div className="toki-home-blobs" aria-hidden="true" />
+        <div className="toki-home-header">
+          <span className="toki-home-wordmark">
+            <span className="toki-home-wordmark-mark" aria-hidden="true">
+              🌱
+            </span>
+            Hello World
+          </span>
+          <span className="toki-home-avatar" aria-hidden="true">
+            👤
+          </span>
+        </div>
+        {/* No ScreenHeader/back button here, deliberately -- this is a root
+            screen with nowhere to go back to. The tab bar says which
+            section is selected and the heading below names it. */}
+        <header className="toki-home-greeting">
+          <h1>{copy.title}</h1>
+          <p>{copy.sub}</p>
+        </header>
 
-      <main className="home-main">
+      <main className="toki-home-main">
         {homeTab === 'play' && (
           <div className="screen">
             {/* Four boxes on a 2x2 grid. Each real tile carries its own
@@ -927,35 +935,34 @@ function App() {
         )}
       </main>
 
-      {/* Bottom tab bar. A <nav> with aria-current rather than a
-          role="tablist", because a tablist promises arrow-key traversal we
-          do not implement -- and these read as four places, not four views
-          of one thing. The bar is full-bleed and as short as the 88x88
-          UI-STANDARDS floor allows; each button still clears that floor on
-          its own, which is what sets the bar's height. */}
-      <nav className="tab-bar" aria-label="Sections">
-        {HOME_TABS.map((tab) => {
-          const isActive = tab.id === homeTab;
-          return (
-            <button
-              key={tab.id}
-              className={`tab-bar-button${isActive ? ' is-active' : ''}`}
-              aria-current={isActive ? 'page' : undefined}
-              onClick={() => {
-                // Leaving Setup with the confirm panel half-open and coming
-                // back to it later would be a stale, alarming state.
-                setConfirmLogout(false);
-                setHomeTab(tab.id);
-              }}
-            >
-              <span className="tab-bar-icon" aria-hidden="true">
-                {tab.icon}
-              </span>
-              <span className="tab-bar-label">{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+        {/* Bottom tab bar. A <nav> with aria-current rather than a
+            role="tablist", because a tablist promises arrow-key traversal we
+            do not implement -- and these read as four places, not four views
+            of one thing. */}
+        <nav className="toki-tab-bar" aria-label="Sections">
+          {HOME_TABS.map((tab) => {
+            const isActive = tab.id === homeTab;
+            return (
+              <button
+                key={tab.id}
+                className={`toki-tab-button${isActive ? ' is-active' : ''}`}
+                aria-current={isActive ? 'page' : undefined}
+                onClick={() => {
+                  // Leaving Setup with the confirm panel half-open and coming
+                  // back to it later would be a stale, alarming state.
+                  setConfirmLogout(false);
+                  setHomeTab(tab.id);
+                }}
+              >
+                <span className="toki-tab-icon" aria-hidden="true">
+                  {tab.icon}
+                </span>
+                <span className="toki-tab-label">{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
     </div>
   );
 }

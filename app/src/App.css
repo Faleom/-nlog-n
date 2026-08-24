@@ -3183,6 +3183,409 @@ textarea::placeholder {
   display: block;
 }
 
+/* ============================================================
+   TOKI REVAMP -- home shell: the header/greeting/tab-bar shared
+   by all four tabs (Play, Dashboard, Setup, Notes), plus a small
+   set of content primitives (card, list row, banner, tag, ladder
+   meter, status mark) the tab-specific screens build on. Mockup
+   screens 08-09 only show Dashboard and Setup; Notes has no
+   mockup of its own (flagged as such in the source file's own
+   footer), so it extends this same vocabulary without a literal
+   reference, same as CompanionCapture did for onboarding. */
+
+.toki-home-screen {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--toki-bg-top), var(--toki-bg-bottom));
+}
+
+.toki-home-blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 200px at 90% 8%, var(--toki-blob-blue), transparent 60%),
+    radial-gradient(circle 220px at 4% 76%, var(--toki-blob-violet), transparent 62%);
+  filter: blur(44px);
+}
+
+.toki-home-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px 0;
+}
+
+.toki-home-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0b6fbf;
+}
+.toki-home-wordmark-mark {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.toki-home-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e1edf9;
+  box-shadow: 0 4px 12px rgba(23, 86, 140, 0.07);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toki-home-greeting {
+  position: relative;
+  padding: 16px 22px 0;
+}
+.toki-home-greeting h1 {
+  margin: 0;
+  font-weight: 800;
+  font-size: 1.55rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--toki-ink);
+}
+.toki-home-greeting p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--toki-ink-muted);
+}
+
+.toki-home-main {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 22px 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.toki-tab-bar {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  margin: 12px 16px 26px;
+  padding: 8px;
+  border-radius: 28px;
+  background: #fff;
+  border: 1px solid #e6f0fa;
+  box-shadow: 0 10px 24px rgba(23, 86, 140, 0.1);
+}
+
+.toki-tab-button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: var(--touch-min, 44px);
+  padding: 9px 4px;
+  border: none;
+  border-radius: 20px;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  cursor: pointer;
+}
+.toki-tab-button:active {
+  transform: none;
+}
+.toki-tab-button.is-active {
+  background: #eaf5ff;
+}
+.toki-tab-icon {
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.55;
+}
+.toki-tab-button.is-active .toki-tab-icon {
+  opacity: 1;
+}
+.toki-tab-label {
+  font-weight: 700;
+  font-size: 0.68rem;
+  color: #7e95ad;
+}
+.toki-tab-button.is-active .toki-tab-label {
+  font-weight: 800;
+  color: #0b6fbf;
+}
+
+/* -- content primitives -- */
+
+.toki-dcard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #e6f0fa;
+  border-radius: 22px;
+  box-shadow: 0 8px 20px rgba(23, 86, 140, 0.07);
+}
+.toki-dcard-title {
+  margin: 0 0 6px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--toki-ink);
+}
+
+.toki-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #edf6fe;
+  border: 1px solid #dbeafb;
+}
+.toki-banner p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--toki-ink-muted);
+}
+
+.toki-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid #eef5fc;
+}
+.toki-list-row:first-child {
+  border-top: none;
+}
+.toki-list-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 13px;
+  background: #eaf5ff;
+  font-size: 16px;
+  line-height: 1;
+}
+.toki-list-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.86rem;
+  line-height: 1.3;
+  color: #21374e;
+}
+.toki-list-meta {
+  flex: none;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #3d5a76;
+}
+
+.toki-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eaf5ff;
+  color: #0b6fbf;
+  font-weight: 800;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.toki-skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 8px 0;
+  border-top: 1px solid #eef5fc;
+}
+.toki-skill-row:first-child {
+  border-top: none;
+}
+.toki-status-mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 2px solid #cfe3f7;
+  font-size: 0.7rem;
+  color: #fff;
+}
+.toki-status-mark--complete {
+  background: var(--toki-eyebrow);
+  border-color: var(--toki-eyebrow);
+}
+.toki-skill-name {
+  font-weight: 700;
+  font-size: 0.86rem;
+  line-height: 1.3;
+  color: #21374e;
+}
+.toki-skill-meter-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 5px;
+}
+.toki-ladder-meter {
+  width: 80px;
+  height: 4px;
+  border-radius: 999px;
+  background: #dbeafb;
+  overflow: hidden;
+  flex: none;
+}
+.toki-ladder-meter-fill {
+  height: 100%;
+  background: var(--toki-eyebrow);
+  border-radius: 999px;
+}
+.toki-skill-detail {
+  font-size: 0.72rem;
+  color: #7e95ad;
+}
+
+.toki-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+}
+.toki-week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.toki-week-day-label {
+  font-weight: 700;
+  font-size: 0.62rem;
+  color: #7e95ad;
+}
+.toki-week-day--today .toki-week-day-label {
+  font-weight: 800;
+  color: #0b6fbf;
+}
+.toki-week-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: #eaf3fb;
+  border: 1px solid #dbe9f8;
+}
+.toki-week-cell--played {
+  background: linear-gradient(180deg, #69bcff, #1e93ee);
+  border: none;
+}
+.toki-week-day--today .toki-week-cell {
+  box-shadow: 0 0 0 3px rgba(30, 147, 238, 0.22);
+}
+
+.toki-setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toki-setup-label {
+  font-weight: 800;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7e95ad;
+  padding: 0 4px;
+}
+.toki-setup-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e6f0fa;
+  border-radius: 22px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(23, 86, 140, 0.07);
+}
+.toki-setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 58px;
+  padding: 0 18px;
+  border: none;
+  border-top: 1px solid #eef5fc;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-weight: 700;
+  font-size: 0.94rem;
+  color: #21374e;
+  text-align: left;
+  cursor: pointer;
+}
+.toki-setup-row:first-child {
+  border-top: none;
+}
+.toki-setup-row:active {
+  background: rgba(30, 147, 238, 0.06);
+  transform: none;
+}
+.toki-setup-row-chevron {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #9fb8cf;
+}
+
+.toki-danger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--touch-min, 44px);
+  border: 1px solid #e6b3ab;
+  border-radius: 20px;
+  background: #fdedeb;
+  color: #c8402f;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  cursor: pointer;
+}
+.toki-danger-btn:active {
+  transform: scale(0.97);
+}
+
 /* ---------------------------------------------------------------------
    HOME TABS
    Branch 1 home is two places behind one bottom bar. The shell is a flex
