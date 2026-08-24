@@ -1966,6 +1966,11 @@ textarea::placeholder {
 .app--welcome {
   display: flex;
   flex-direction: column;
+  /* Edge-to-edge for the Toki panel: .app's own padding and surface-sunken
+     background would otherwise show as a frame around the .toki-screen
+     sitting inside it, which paints its own full-bleed gradient. */
+  padding: 0;
+  background: transparent;
 }
 
 .welcome {
