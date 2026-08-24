@@ -2728,6 +2728,20 @@ textarea::placeholder {
   line-height: 1;
 }
 
+.toki-mark--mascot {
+  position: relative;
+  width: 156px;
+  height: 156px;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.toki-mascot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .toki-eyebrow {
   margin: 14px 0 0;
   font-weight: 800;

@@ -7,3 +7,9 @@
 # break on their machine. Keep them locally, out of the repo.
 .claude/launch.json
 app/rundev.cmd
+
+# Raw design/animation source material. Whatever's actually needed gets
+# extracted into app/src/assets/ by hand -- these stay local, not in git,
+# since the mascot frame sequence alone is 200MB+.
+/App UI design update/
+/Cat_wizard_holding_coffee_cup_202608241534_frames/

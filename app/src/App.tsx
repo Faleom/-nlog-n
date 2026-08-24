@@ -51,6 +51,8 @@ import { clearActiveProfile, getActiveProfile } from './engine/profileStore';
 import type { Branch2FlowResult } from './engine/branch2';
 import type { ChildProfile, TrackId } from './types';
 import type { ConcernAnswers } from './types';
+import mascotEyesOpen from './assets/mascot/cat-wizard-eyes-open.png';
+import mascotIdleVideo from './assets/mascot/cat-wizard-idle.mp4';
 import './App.css';
 
 type Screen =
@@ -316,6 +318,28 @@ function App() {
   // No AppHeader here on purpose: this screen IS the app's identity, so the
   // identity strip would just say the same thing twice.
   if (screen.kind === 'welcome') {
+    // Still image under reduced motion rather than the idle loop, matching
+    // every other @media (prefers-reduced-motion: reduce) guard in this app.
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const mascotMark = (
+      <span className="toki-mark toki-mark--mascot" aria-hidden="true">
+        {prefersReducedMotion ? (
+          <img src={mascotEyesOpen} alt="" className="toki-mascot-img" />
+        ) : (
+          <video
+            className="toki-mascot-img"
+            src={mascotIdleVideo}
+            poster={mascotEyesOpen}
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
+        )}
+      </span>
+    );
     return (
       <div className="app app--welcome" key={screen.kind}>
         <main className="toki-screen">
@@ -327,9 +351,7 @@ function App() {
           </div>
           {profile ? (
             <div className="toki-welcome-body">
-              <span className="toki-mark" aria-hidden="true">
-                🌱
-              </span>
+              {mascotMark}
               <p className="toki-eyebrow">Hello World</p>
               <h1 className="toki-title">Welcome back, {profile.nickname ?? 'friend'}!</h1>
               <p className="toki-sub">
@@ -339,9 +361,7 @@ function App() {
             </div>
           ) : (
             <div className="toki-welcome-body">
-              <span className="toki-mark" aria-hidden="true">
-                🌱
-              </span>
+              {mascotMark}
               <p className="toki-eyebrow">Hello World</p>
               <h1 className="toki-title">
                 Small things,
