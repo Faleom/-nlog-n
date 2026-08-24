@@ -151,10 +151,10 @@ export function ResponseProfileScreen({ profile, onComplete, onBack }: ResponseP
               className={selected ? 'toki-selectable-row toki-selectable-row--selected' : 'toki-selectable-row'}
               onClick={() => setAnswer(current.key, opt.value)}
             >
-              {opt.label}
               <span className="toki-selectable-radio" aria-hidden="true">
                 {selected && <span className="toki-selectable-radio-dot" />}
               </span>
+              {opt.label}
             </button>
           );
         })}
