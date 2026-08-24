@@ -8,6 +8,8 @@
 import assert from 'node:assert/strict';
 import { section, test, summarize } from './testHarness';
 import type { TaggedCrop } from '../src/types';
+import { GENERIC_FALLBACK_CROPS } from '../src/games/genericFallbackCrops';
+import { iconKeyFor } from '../src/games/objectIconLogic';
 import type { Game1Level } from '../src/games/game1Level';
 import {
   buildQuest,
@@ -347,6 +349,38 @@ async function main() {
     assert.equal(fetch, 'Ask them to bring the blue cup.');
   });
 
+
+  // -------------------------------------------------------------------
+  section('the degraded path can still show every level');
+
+  await test('the generic fallback set supports a real quest at all five levels', () => {
+    // §11 sends a denied-camera or failed-recognition session to this set.
+    // If it cannot support levels 4-5, a caregiver who picks level 5 gets
+    // silently demoted with nothing on screen saying why -- so the set is
+    // required to carry two groups, not merely to avoid crashing.
+    for (const level of [1, 2, 3, 4, 5] as Game1Level[]) {
+      const q = buildQuest(level, GENERIC_FALLBACK_CROPS);
+      assert.ok(q, `level ${level} produced no quest from the fallback set`);
+      assert.ok(q.members.length >= 1);
+    }
+  });
+
+  await test('the fallback set really can pose an ADDING round, not just a collection', () => {
+    const q = buildQuest(4, GENERIC_FALLBACK_CROPS);
+    assert.ok(q);
+    assert.equal(q.kind, 'combine', 'the fallback set has no second group to add across');
+    assert.equal(q.rules.length, 2);
+  });
+
+  await test('every fallback object has artwork, so none renders as a blank tile', () => {
+    for (const c of GENERIC_FALLBACK_CROPS) {
+      assert.notEqual(
+        iconKeyFor(c.name, c.category),
+        'generic',
+        `"${c.name}" has no bundled artwork and would render as the placeholder`,
+      );
+    }
+  });
 
   // -------------------------------------------------------------------
   section('three walls joined into one room');

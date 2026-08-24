@@ -875,20 +875,32 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       return;
     }
 
-    // §8.1: "one photo per session, not per trial" — the NEXT trial reuses
+    // §8.1: "one photo per session, not per trial" — the NEXT round reuses
     // the same crop set rather than re-prompting for a capture. Only the
     // pre-capture 'idle' screen (before crops exist) shows the capture
-    // button; every trial after the first flows straight back into
+    // button; every round after the first flows straight back into
     // 'searching'.
-    startTrialWith(crops);
+    //
+    // startQuest, not startTrialWith: this is a NEW ROUND, so it needs a
+    // fresh quest. Reusing the finished one leaves a completed collection
+    // on screen -- the tray reading "4 of 4" and the brief still naming
+    // last round's groups, while the object actually being asked for came
+    // from somewhere else entirely.
+    startQuest(crops);
   }
 
   /** §7.7: "Return: always to a task one level easier than the one that
-   * triggered it." A one-trial-only override — does NOT persist as the
-   * child's new level (see startTrialWith's `effectiveLevel` param). */
+   * triggered it." A one-round-only override — does NOT persist as the
+   * child's new level (see startTrialWith's `effectiveLevel` param).
+   *
+   * A break ENDS the current round rather than resuming it. Dropping a
+   * level mid-collection has no coherent meaning -- the collection was
+   * built for the harder level and half of it is already in the child's
+   * hands -- so the honest reading of "return to a task one level easier"
+   * is a fresh, easier task. */
   function handleMovementBreakDone() {
     const easierLevel = Math.max(1, level - 1) as Game1Level;
-    startTrialWith(crops, easierLevel);
+    startQuest(crops, easierLevel);
   }
 
   if (phase === 'sessionEnded') {
