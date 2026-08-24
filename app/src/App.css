@@ -3203,20 +3203,23 @@ button.toki-week-cell {
   gap: 9px;
   margin-top: 5px;
 }
+/* Five discrete steps, not a continuous fill -- matches the design
+   system's own LadderMeter (components/feedback/feedback.css:
+   .hw-ladder/.hw-ladder-step), which the mockup only ever references by
+   name and never inlines. */
 .toki-ladder-meter {
-  display: block;
-  width: 80px;
-  height: 4px;
-  border-radius: 999px;
-  background: #dbeafb;
-  overflow: hidden;
+  display: flex;
+  gap: 3px;
   flex: none;
 }
-.toki-ladder-meter-fill {
-  display: block;
-  height: 100%;
+.toki-ladder-step {
+  width: 13px;
+  height: 4px;
+  border-radius: 2px;
+  background: #dbeafb;
+}
+.toki-ladder-step--filled {
   background: var(--toki-eyebrow);
-  border-radius: 999px;
 }
 .toki-skill-detail {
   font-size: 0.72rem;

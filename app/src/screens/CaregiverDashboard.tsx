@@ -306,12 +306,16 @@ function DayTrackRow({ slice, isTopPlayed }: { slice: TrackSlice; isTopPlayed: b
   );
 }
 
-/** Where an activity sits on F.010's five-tier ladder, drawn as the
- * mockup's thin meter filled to the tier. More filled = less help needed,
- * which is the direction the ladder itself runs. One hue at two weights:
- * a second colour here would invite reading the low end as a warning. The
- * tier's NAME is written out beside it in every row, so nothing here is
- * carried by the bar alone. */
+/** Where an activity sits on F.010's five-tier ladder, drawn as the real
+ * design-system LadderMeter: five discrete step segments (its own
+ * components/feedback/feedback.css, .hw-ladder/.hw-ladder-step), not a
+ * continuous filled bar -- a single smooth fill was this file's own first
+ * guess at the mockup's `<LadderMeter>` import, which the source .dc.html
+ * only ever references by name, never inlines. More steps filled = less
+ * help needed, which is the direction the ladder itself runs. One hue at
+ * two weights: a second colour here would invite reading the low end as a
+ * warning. The tier's NAME is written out beside it in every row, so
+ * nothing here is carried by the steps alone. */
 function LadderMeter({ tier, tierName }: { tier: SupportTier; tierName: string }) {
   return (
     <span
@@ -319,7 +323,12 @@ function LadderMeter({ tier, tierName }: { tier: SupportTier; tierName: string }
       role="img"
       aria-label={`${tierName}: step ${tier} of 5 on the support ladder`}
     >
-      <span className="toki-ladder-meter-fill" style={{ width: `${(tier / 5) * 100}%` }} />
+      {[1, 2, 3, 4, 5].map((step) => (
+        <span
+          key={step}
+          className={step <= tier ? 'toki-ladder-step toki-ladder-step--filled' : 'toki-ladder-step'}
+        />
+      ))}
     </span>
   );
 }
