@@ -32,6 +32,7 @@ import {
   SESSION_LENGTH_OPTIONS,
   calendarWeekdayLabels,
   firstPlayedMonth,
+  localDayKey,
   monthGrid,
   recentSessions,
   secondsPlayedOn,
@@ -266,10 +267,13 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
   const [sessions, setSessions] = useState<SessionLog[] | null>(null);
   const [lengthChoice, setLengthChoice] = useState(usualSessionMinutes(profile));
   const [openTrack, setOpenTrack] = useState<TrackId | null>(null);
-  // Which day of the week strip is expanded below it, if any. Tapping the
-  // same day again (or its close button) collapses it -- same toggle
-  // pattern as openTrack above, just one level up.
-  const [selectedDayIso, setSelectedDayIso] = useState<string | null>(null);
+  // Which day of the week strip is expanded below it, if any. Defaults to
+  // today, so the panel a caregiver most wants (what just happened) is
+  // already open on arrival -- no click needed. Tapping the same day
+  // again (or its close button) collapses it, same toggle pattern as
+  // openTrack above; tapping any day (including today's, once closed)
+  // reopens it, exactly like clicking it the first time.
+  const [selectedDayIso, setSelectedDayIso] = useState<string | null>(() => localDayKey(new Date()));
   // "View more"'s full-history calendar -- collapsed by default, since a
   // brand-new tab opening straight onto a whole month grid would bury the
   // rolling week strip that answers "how's this week" at a glance.
@@ -351,7 +355,6 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
 
   const today = new Date();
   const week = weekStrip(sessions, today);
-  const playedTodaySeconds = secondsPlayedOn(sessions, today);
   const slices = timeByTrackOn(sessions, today);
   const skills = skillProgress(sessions);
   // Two groups, not a ranked list: what is being done alone, and what
@@ -497,12 +500,15 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
       )}
 
       {/* ---- Day detail -------------------------------------------------
-          Same day-math as "Played today" and "Time by track, today"
-          below, just aimed at whichever day was tapped above -- in the
-          week strip or the calendar -- instead of always today. A quiet
-          day gets the same neutral "nothing played" line the other empty
-          states on this screen use -- no arithmetic, no colour, that
-          treats it as a gap (see this file's own header comment). */}
+          Defaults OPEN on today (see selectedDayIso's initial state
+          above) -- this IS "played today", not a duplicate of it, which
+          is why there is no separate standalone figure for that any
+          more. Same day-math as "Time by track, today" below, just aimed
+          at whichever day was tapped -- in the week strip or the
+          calendar -- instead of always today. A quiet day gets the same
+          neutral "nothing played" line the other empty states on this
+          screen use -- no arithmetic, no colour, that treats it as a gap
+          (see this file's own header comment). */}
       {selectedDayIso && (
         <section className="dashboard-card dashboard-day-detail">
           <div className="dashboard-day-detail-head">
@@ -604,15 +610,6 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
           ))}
         </div>
       </section>
-
-      {/* ---- Played today ------------------------------------------------ */}
-      <div className="dashboard-card dashboard-metric">
-        <span className="dashboard-metric-label">Played today</span>
-        <span className="dashboard-metric-value">
-          {minutes(playedTodaySeconds)}
-          <span className="dashboard-metric-unit">min</span>
-        </span>
-      </div>
 
       {/* ---- Time by track, today -------------------------------------- */}
       <section className="dashboard-card">
