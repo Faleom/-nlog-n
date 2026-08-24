@@ -353,3 +353,94 @@ export const SESSION_LENGTH_OPTIONS: readonly number[] = [
 export function usualSessionMinutes(profile: ChildProfile): number {
   return profile.usualSessionMinutes ?? INTERACTION_CONFIG.SESSION_CAP_FIRST_MINUTES;
 }
+
+// ---------------------------------------------------------------------------
+// Full-history calendar ("This week"'s View more)
+// ---------------------------------------------------------------------------
+
+/** Every distinct local day a session was played, earliest first. */
+function playedDayKeys(sessions: SessionLog[]): string[] {
+  const keys = new Set(sessions.map((s) => localDayKey(new Date(s.startedAt))));
+  return [...keys].sort();
+}
+
+/** How many distinct days a session was EVER logged, across all history --
+ * a plain count, not a streak: it never resets, is never compared against
+ * a target, and does not care whether those days were consecutive. */
+export function totalDaysPracticed(sessions: SessionLog[]): number {
+  return playedDayKeys(sessions).length;
+}
+
+/** The local calendar month (year + 0-indexed month) of the very first
+ * ever session, or null with no history yet -- the month the calendar
+ * view should refuse to page back past. */
+export function firstPlayedMonth(sessions: SessionLog[]): { year: number; month: number } | null {
+  const keys = playedDayKeys(sessions);
+  if (keys.length === 0) return null;
+  const [y, m] = keys[0].split('-').map(Number);
+  return { year: y, month: m - 1 };
+}
+
+export interface CalendarDay {
+  /** Local `YYYY-MM-DD`. */
+  iso: string;
+  dayOfMonth: number;
+  /** False for the padding days from the adjacent month that fill out the
+   * grid's leading/trailing weeks -- rendered dimmed, never tappable, and
+   * never marked played regardless of that day's real history (paging to
+   * the month it actually belongs to is where it counts). */
+  inMonth: boolean;
+  played: boolean;
+  isToday: boolean;
+}
+
+/**
+ * One calendar month as whole weeks (always a multiple of 7), Sunday-
+ * first, padded with the adjacent months' dates so every row is a
+ * complete week -- the same shape a wall calendar takes, which is the
+ * whole point of a "view more" next to the rolling 7-day strip above it.
+ */
+export function monthGrid(
+  sessions: SessionLog[],
+  year: number,
+  month: number,
+  today: Date,
+): CalendarDay[] {
+  const playedKeys = new Set(playedDayKeys(sessions));
+  const todayKey = localDayKey(today);
+
+  const firstOfMonth = new Date(year, month, 1);
+  const start = new Date(firstOfMonth);
+  start.setDate(start.getDate() - firstOfMonth.getDay());
+
+  const lastOfMonth = new Date(year, month + 1, 0);
+  const end = new Date(lastOfMonth);
+  end.setDate(end.getDate() + (6 - lastOfMonth.getDay()));
+
+  const days: CalendarDay[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const iso = localDayKey(cursor);
+    const inMonth = cursor.getMonth() === month && cursor.getFullYear() === year;
+    days.push({
+      iso,
+      dayOfMonth: cursor.getDate(),
+      inMonth,
+      played: inMonth && playedKeys.has(iso),
+      isToday: iso === todayKey,
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
+/** Sunday-first two-letter weekday labels for the calendar's column
+ * header -- fixed columns, unlike weekStrip's rolling seven, so these
+ * can't be read off any real week and are computed from a known-Sunday
+ * reference date instead (4 Jan 2024 was a Sunday). Same two-letter,
+ * locale-aware shape as weekStrip's own labels. */
+export function calendarWeekdayLabels(): string[] {
+  return Array.from({ length: 7 }, (_, i) =>
+    new Date(2024, 0, 7 + i).toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 2),
+  );
+}

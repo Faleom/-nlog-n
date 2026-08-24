@@ -30,13 +30,18 @@ import { getSessionsForChild, updateProfile } from '../engine/profileStore';
 import { NON_DIAGNOSTIC_BANNER } from '../engine/caregiverDashboard';
 import {
   SESSION_LENGTH_OPTIONS,
+  calendarWeekdayLabels,
+  firstPlayedMonth,
   longestFocusOn,
+  monthGrid,
   recentSessions,
   secondsPlayedOn,
   skillProgress,
   timeByTrackOn,
+  totalDaysPracticed,
   usualSessionMinutes,
   weekStrip,
+  type CalendarDay,
   type SkillProgressRow,
   type TrackSlice,
 } from '../engine/dashboardSummary';
@@ -81,6 +86,14 @@ function spokenDate(iso: string): string {
   });
 }
 
+/** The same "tap for a summary" label built once, shared by the week
+ * strip's cells and the calendar's -- two grids, one day-detail panel. */
+function dayCellAriaLabel(iso: string, isToday: boolean, played: boolean): string {
+  return `${spokenDate(iso)}${isToday ? ', today' : ''}: ${
+    played ? 'a session happened' : 'no session'
+  }. Tap for a summary.`;
+}
+
 function CheckMark() {
   return (
     <svg viewBox="0 0 14 14" width="14" height="14" fill="none" aria-hidden="true">
@@ -121,6 +134,63 @@ function CloseIcon() {
         strokeLinecap="round"
       />
     </svg>
+  );
+}
+
+/** Same chevron shape Chevron/TrackRow already use, just pointed either
+ * way for month paging rather than expand/collapse. */
+function CalendarNavIcon({ direction }: { direction: 'prev' | 'next' }) {
+  return (
+    <svg viewBox="0 0 12 12" width="12" height="12" fill="none" aria-hidden="true">
+      <path
+        d={direction === 'prev' ? 'M7.75 2 L3.75 6 L7.75 10' : 'M4.25 2 L8.25 6 L4.25 10'}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** One cell of the month calendar. A padding day (the adjacent month's
+ * dates that fill out the grid's leading/trailing weeks) is not a button
+ * at all -- there is nothing to tap it open to, it exists only so every
+ * row is a complete week. */
+function CalendarDayCell({
+  day,
+  selected,
+  onSelect,
+}: {
+  day: CalendarDay;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  if (!day.inMonth) {
+    return (
+      <span className="dashboard-calendar-cell dashboard-calendar-cell--pad" aria-hidden="true">
+        {day.dayOfMonth}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={[
+        'dashboard-calendar-cell',
+        day.played ? 'is-played' : '',
+        day.isToday ? 'is-today' : '',
+        selected ? 'is-selected' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      aria-pressed={selected}
+      aria-label={dayCellAriaLabel(day.iso, day.isToday, day.played)}
+      {...(day.isToday ? { 'aria-current': 'date' as const } : {})}
+      onClick={onSelect}
+    >
+      {day.dayOfMonth}
+    </button>
   );
 }
 
@@ -197,6 +267,21 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
   // same day again (or its close button) collapses it -- same toggle
   // pattern as openTrack above, just one level up.
   const [selectedDayIso, setSelectedDayIso] = useState<string | null>(null);
+  // "View more"'s full-history calendar -- collapsed by default, since a
+  // brand-new tab opening straight onto a whole month grid would bury the
+  // rolling week strip that answers "how's this week" at a glance.
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [viewedMonth, setViewedMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+
+  function shiftViewedMonth(delta: number) {
+    setViewedMonth(({ year, month }) => {
+      const total = year * 12 + month + delta;
+      return { year: Math.floor(total / 12), month: ((total % 12) + 12) % 12 };
+    });
+  }
 
   useEffect(() => {
     void getSessionsForChild(profile.id).then(setSessions);
@@ -283,6 +368,27 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
   const selectedDayFocusSeconds = selectedDate ? longestFocusOn(sessions, selectedDate) : 0;
   const selectedDaySlices = selectedDate ? timeByTrackOn(sessions, selectedDate) : [];
 
+  // The calendar itself, and the paging limits around it: never past the
+  // current month (there is nothing to show there yet), never before the
+  // month of the very first session (there is nothing to show there
+  // either). No history at all means no "View more" to offer -- there
+  // would be nothing behind it but empty months.
+  const daysPracticed = totalDaysPracticed(sessions);
+  const firstMonth = firstPlayedMonth(sessions);
+  const currentMonthKey = today.getFullYear() * 12 + today.getMonth();
+  const viewedMonthKey = viewedMonth.year * 12 + viewedMonth.month;
+  const canGoNextMonth = viewedMonthKey < currentMonthKey;
+  const canGoPrevMonth = firstMonth
+    ? viewedMonthKey > firstMonth.year * 12 + firstMonth.month
+    : false;
+  const calendarDays = showCalendar
+    ? monthGrid(sessions, viewedMonth.year, viewedMonth.month, today)
+    : [];
+  const calendarMonthLabel = new Date(viewedMonth.year, viewedMonth.month, 1).toLocaleDateString(
+    undefined,
+    { month: 'long', year: 'numeric' },
+  );
+
   return (
     <div className="screen dashboard">
       <Banner />
@@ -310,9 +416,7 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
                     .filter(Boolean)
                     .join(' ')}
                   aria-pressed={isSelected}
-                  aria-label={`${spokenDate(cell.iso)}${cell.isToday ? ', today' : ''}: ${
-                    cell.played ? 'a session happened' : 'no session'
-                  }. Tap for a summary.`}
+                  aria-label={dayCellAriaLabel(cell.iso, cell.isToday, cell.played)}
                   {...(cell.isToday ? { 'aria-current': 'date' as const } : {})}
                   onClick={() =>
                     setSelectedDayIso((current) => (current === cell.iso ? null : cell.iso))
@@ -324,15 +428,78 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
             );
           })}
         </ul>
+        {daysPracticed > 0 && (
+          <button
+            type="button"
+            className="dashboard-view-more"
+            aria-expanded={showCalendar}
+            onClick={() => setShowCalendar((open) => !open)}
+          >
+            {showCalendar ? 'Hide calendar' : 'View more'}
+          </button>
+        )}
       </section>
+
+      {/* ---- Full-history calendar ("View more") -----------------------
+          Same played/not-played fact the week strip shows, over every
+          month there is history for instead of just the last seven days.
+          Paging is capped at both ends: never past the current month, and
+          never before the month of the very first-ever session. */}
+      {showCalendar && (
+        <section className="dashboard-card">
+          <p className="dashboard-caption">
+            {daysPracticed} {daysPracticed === 1 ? 'day' : 'days'} played so far.
+          </p>
+          <div className="dashboard-calendar-head">
+            <button
+              type="button"
+              className="dashboard-calendar-nav"
+              disabled={!canGoPrevMonth}
+              onClick={() => shiftViewedMonth(-1)}
+              aria-label="Previous month"
+            >
+              <CalendarNavIcon direction="prev" />
+            </button>
+            <h3 className="dashboard-card-title dashboard-calendar-month-label">
+              {calendarMonthLabel}
+            </h3>
+            <button
+              type="button"
+              className="dashboard-calendar-nav"
+              disabled={!canGoNextMonth}
+              onClick={() => shiftViewedMonth(1)}
+              aria-label="Next month"
+            >
+              <CalendarNavIcon direction="next" />
+            </button>
+          </div>
+          <div className="dashboard-calendar-grid">
+            {calendarWeekdayLabels().map((label, i) => (
+              <span key={i} className="dashboard-calendar-weekday" aria-hidden="true">
+                {label}
+              </span>
+            ))}
+            {calendarDays.map((day) => (
+              <CalendarDayCell
+                key={day.iso}
+                day={day}
+                selected={selectedDayIso === day.iso}
+                onSelect={() =>
+                  setSelectedDayIso((current) => (current === day.iso ? null : day.iso))
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ---- Day detail -------------------------------------------------
           Same day-math as "Today's two figures" and "Time by track,
-          today" below, just aimed at whichever day was tapped above
-          instead of always today. A quiet day gets the same neutral
-          "nothing played" line the other empty states on this screen use
-          -- no arithmetic, no colour, that treats it as a gap (see this
-          file's own header comment). */}
+          today" below, just aimed at whichever day was tapped above --
+          in the week strip or the calendar -- instead of always today. A
+          quiet day gets the same neutral "nothing played" line the other
+          empty states on this screen use -- no arithmetic, no colour,
+          that treats it as a gap (see this file's own header comment). */}
       {selectedDayIso && (
         <section className="dashboard-card dashboard-day-detail">
           <div className="dashboard-day-detail-head">

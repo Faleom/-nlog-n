@@ -1848,6 +1848,130 @@ textarea::placeholder {
   cursor: default;
 }
 
+/* ---- View more / full-history calendar -------------------------------- */
+
+/* A plain text link, not a full button -- "View more" opens a whole
+   month grid below it, which is enough visual weight of its own without
+   also drawing a glass button around three words. */
+.dashboard-view-more {
+  align-self: flex-start;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  color: var(--color-primary-bright);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.dashboard-view-more:active {
+  transform: none;
+  opacity: 0.7;
+}
+
+.dashboard-calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dashboard-calendar-month-label {
+  text-align: center;
+}
+
+.dashboard-calendar-nav {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-wash);
+  color: var(--color-ink);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.dashboard-calendar-nav:active {
+  transform: none;
+  background: var(--surface-wash-active);
+}
+
+.dashboard-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.dashboard-calendar-weekday {
+  padding-bottom: 2px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--color-ink-muted);
+}
+
+/* Same button-reset reasoning as .dashboard-week-box: a small grid cell,
+   not a full-sized touch target, so every size/surface default the
+   global `button` rule would add gets zeroed out here. Unlike the week
+   strip's boxes, the number itself is always visible -- a month view has
+   no separate weekday label per cell to carry that job. */
+.dashboard-calendar-cell {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-ink);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The adjacent month's dates, filling out the grid's leading/trailing
+   weeks -- present so every row is a full week, faint so the eye still
+   finds the current month's own dates first. Never a button: there is
+   nothing to open here (see CalendarDayCell). */
+.dashboard-calendar-cell--pad {
+  color: var(--color-ink-muted);
+  opacity: 0.35;
+}
+
+.dashboard-calendar-cell.is-played {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+  font-weight: 700;
+}
+
+.dashboard-calendar-cell.is-today {
+  border-color: var(--color-primary-bright);
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
+}
+
+.dashboard-calendar-cell.is-selected {
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 2px var(--color-ink-muted);
+}
+
 /* ---- Usual session length ------------------------------------------- */
 
 .dashboard-length-row {
