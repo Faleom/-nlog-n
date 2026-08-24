@@ -378,7 +378,7 @@
 /* ---- Accent-by-favColour --------------------------------------------
    Onboarding's "A few favourites" screen (QuickPreferences.tsx) captures
    the child's favColour as one of COLOURS = red/orange/yellow/green/blue/
-   purple/pink. This block is the ONLY place that colour touches the
+   purple. This block is the ONLY place that colour touches the
    design system: it re-points the four "Interactive" accent tokens
    (--color-primary, --color-primary-bright, --color-primary-ink,
    --color-primary-soft) per favColour. Nothing else in :root moves —
@@ -482,19 +482,8 @@
   --color-border: #474d76;
   --color-border-strong: #7373a3;
 }
-:root[data-accent='pink'] {
-  --color-primary: #ff33aa;
-  --color-primary-bright: #ff66bf;
-  --color-primary-ink: #26121e;
-  --color-primary-soft: rgba(255, 51, 170, 0.24);
-  --color-surface-sunken: #261022;
-  --color-bg: #2d152b;
-  --color-surface: #382039;
-  --color-border: #6a3965;
-  --color-border-strong: #8f6396;
-}
 
-/* Accent-by-favColour, light-theme pitch. The seven blocks above were
+/* Accent-by-favColour, light-theme pitch. The six blocks above were
    tuned for contrast against a BLACK ground (Nightshade) and read as
    near-invisible on Parchment -- e.g. the dark-pitch yellow #ccbb00 drops
    to 1.75:1 against Parchment, well under the 4.5:1 floor every other
@@ -570,17 +559,6 @@
   --color-surface: #e8eff8;
   --color-border: #b6c3e8;
   --color-border-strong: #7578a7;
-}
-:root[data-theme='light'][data-accent='pink'] {
-  --color-primary: #d4007b;
-  --color-primary-bright: #bd006e;
-  --color-primary-ink: #faf7ff;
-  --color-primary-soft: rgba(212, 0, 123, 0.16);
-  --color-surface-sunken: #e8cbcd;
-  --color-bg: #f3d9de;
-  --color-surface: #fbe6ee;
-  --color-border: #e1aed1;
-  --color-border-strong: #976894;
 }
 /* No light-theme override for 'purple': the light theme's own default
    --color-primary (#5b52e8) already IS the light pitch of Periwink, so
@@ -2298,11 +2276,6 @@ button.toki-week-cell {
   --toki-cta-bottom: #0f78ca;
   --toki-cta-shadow: rgba(20, 110, 190, 0.3);
 }
-:root[data-accent='pink'] {
-  --toki-cta-top: #e4378f;
-  --toki-cta-bottom: #dd1d7e;
-  --toki-cta-shadow: rgba(200, 30, 120, 0.3);
-}
 
 .toki-screen {
   position: relative;
@@ -2871,11 +2844,6 @@ button.toki-week-cell {
   background: linear-gradient(180deg, #9c5fe8, #934fe6);
   box-shadow: 0 8px 16px rgba(120, 60, 190, 0.24);
 }
-.toki-swatch-circle--pink {
-  background: linear-gradient(180deg, #e4378f, #dd1d7e);
-  box-shadow: 0 8px 16px rgba(200, 30, 120, 0.24);
-}
-
 .toki-swatch-label {
   font-weight: 700;
   font-size: 0.8rem;
@@ -2900,23 +2868,6 @@ button.toki-week-cell {
   font-weight: 800;
   font-size: 0.8rem;
   box-shadow: 0 4px 10px rgba(20, 110, 190, 0.34);
-}
-
-.toki-swatch-btn--overflow {
-  grid-column: span 3;
-  flex-direction: row;
-  justify-content: center;
-  gap: 10px;
-  border-style: dashed;
-  border-color: #b9d5ef;
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--toki-ink-muted);
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-.toki-swatch-btn--overflow .toki-swatch-circle {
-  width: 26px;
-  height: 26px;
 }
 
 .toki-segmented {
@@ -3058,17 +3009,25 @@ button.toki-week-cell {
 
 .toki-home-main {
   position: relative;
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 16px 22px 0;
-  min-height: 0;
-  overflow-y: auto;
 }
 
+/* Sticky, not a flex sibling relying on container height math -- an
+   earlier version gave .toki-home-main its own overflow-y:auto scroll
+   region, which meant the PAGE never scrolled and this bar (outside that
+   region) just sat at the bottom of an ever-taller box, only reachable by
+   scrolling all the way down. The actual page/viewport is the scroll
+   container here (.app is overflow:clip, deliberately never its own
+   scroll container -- see .app's own comment), and position:sticky keeps
+   this pinned to the viewport bottom as that page scrolls underneath it,
+   the same mechanism the pre-Toki .tab-bar used. */
 .toki-tab-bar {
-  position: relative;
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
   display: flex;
   gap: 6px;
   margin: 12px 16px 26px;

@@ -9,11 +9,12 @@
 // ResponseProfile's questionIndex — re-entering this screen always starts
 // back on page 1.
 //
-// Toki revamp (mockup screen 05): six colours in a 3-column swatch grid,
-// pink as a dashed-outline overflow row below (matching the mockup's own
-// treatment of an odd seventh option). Page 2 has no mockup of its own —
-// CompanionCapture.tsx carries the same toki-onboard-* chrome so the two
-// pages of one flow don't visually disagree with each other.
+// Toki revamp (mockup screen 05): six colours in a 3-column swatch grid.
+// Pink dropped per explicit product direction, leaving a clean 2x3 grid
+// with no leftover seventh option to give special treatment to. Page 2
+// has no mockup of its own — CompanionCapture.tsx carries the same
+// toki-onboard-* chrome so the two pages of one flow don't visually
+// disagree with each other.
 
 import { useState } from 'react';
 import { saveQuickPreferences, shouldAskIsCompanionStillFavourite } from '../engine/quickPreferences';
@@ -34,7 +35,6 @@ const COLOURS: Array<{ value: string; label: string }> = [
   { value: 'blue', label: 'Blue' },
   { value: 'purple', label: 'Purple' },
 ];
-const PINK = { value: 'pink', label: 'Pink' };
 
 export function QuickPreferencesScreen({ profile, onComplete, onBack }: QuickPreferencesProps) {
   const existing = profile.context.quickPreferences ?? {};
@@ -114,18 +114,6 @@ export function QuickPreferencesScreen({ profile, onComplete, onBack }: QuickPre
             </button>
           );
         })}
-        <button
-          type="button"
-          className={
-            favColour === PINK.value
-              ? 'toki-swatch-btn toki-swatch-btn--overflow toki-swatch-btn--selected'
-              : 'toki-swatch-btn toki-swatch-btn--overflow'
-          }
-          onClick={() => setFavColour(favColour === PINK.value ? undefined : PINK.value)}
-        >
-          <span className="toki-swatch-circle toki-swatch-circle--pink" aria-hidden="true" />
-          {PINK.label}
-        </button>
       </div>
 
       <div className="toki-footer">
