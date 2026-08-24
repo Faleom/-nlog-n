@@ -89,16 +89,9 @@ export interface Companion {
   pronoun: 'he' | 'she' | 'they' | 'it';
 }
 
-export type MotivatingMovement = 'jump' | 'spin' | 'stomp' | 'clap' | 'splash';
-
-/** Layer 2 quick preferences (§6.2), all tap-only, all skippable. */
+/** Layer 2 quick preferences (§6.2), tap-only, skippable. */
 export interface QuickPreferences {
   favColour?: string;
-  favAnimal?: string;
-  favFood?: string;
-  favPlace?: string;
-  favSound?: string;
-  movement?: MotivatingMovement;
 }
 
 /** Layer 3 — people and routine (§6.2). Tier 2/3. */

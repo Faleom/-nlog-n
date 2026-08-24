@@ -4,9 +4,9 @@
 // The shape, in order:
 //   Onboarding (age + nickname + two equal doors)
 //     -> Branch 1 ("my-world"): a ONE-TIME chain through response profile
-//        -> Companion capture -> quick preferences -> avoid list, then
-//        Branch 1 home (both games, dashboard, switch-branch always
-//        available)
+//        -> quick preferences (favourite colour, then Companion capture
+//        folded in as its own second page) -> avoid list, then Branch 1
+//        home (both games, dashboard, switch-branch always available)
 //     -> Branch 2 ("worry-to-question"): milestones -> (no concern: back
 //        to the two doors, nothing recorded) or (concern: the question
 //        card -> immediately offered a Branch 1 activity, per §9.3 step 9)
@@ -17,9 +17,9 @@
 // intro into Onboarding. That greeting is local device recognition only --
 // no account, no password, no network -- it is a presentation layer over the
 // getActiveProfile() storage read and must stay that way.
-// From Branch 1 home on: the four Branch-1 onboarding screens only chain forward
+// From Branch 1 home on: the Branch-1 onboarding screens only chain forward
 // automatically the moment Onboarding.onComplete fires. Each Screen variant
-// for those four carries its own `returnToHome: boolean`: false while
+// for those carries its own `returnToHome: boolean`: false while
 // still inside that first forward chain (advance to the next screen),
 // true when reached later from Branch 1 home's "Edit: ..." buttons (go
 // straight back to home instead). Same components either way, just a
@@ -35,7 +35,6 @@ import { AppHeader } from './components/AppHeader';
 import { ScreenHeader } from './components/ScreenHeader';
 import { Onboarding } from './screens/Onboarding';
 import { ResponseProfileScreen } from './screens/ResponseProfile';
-import { CompanionCapture } from './screens/CompanionCapture';
 import { QuickPreferencesScreen } from './screens/QuickPreferences';
 import { AvoidListScreen } from './screens/AvoidList';
 import { CaregiverDashboard } from './screens/CaregiverDashboard';
@@ -62,7 +61,6 @@ type Screen =
   | { kind: 'welcome' }
   | { kind: 'onboarding' }
   | { kind: 'responseProfile'; returnToHome: boolean }
-  | { kind: 'companionCapture'; returnToHome: boolean }
   | { kind: 'quickPreferences'; returnToHome: boolean }
   | { kind: 'avoidList'; returnToHome: boolean }
   | { kind: 'branch1Home' }
@@ -80,7 +78,7 @@ type Screen =
 // the back button and (during first-time setup) the step count, is the
 // whole answer to "where am I / where am I headed."
 const SETUP_FLOW = 'Setting up your child’s profile';
-// The four setup editors are reachable twice: inside first-time onboarding
+// The setup editors are reachable twice: inside first-time onboarding
 // (where they carry SETUP_FLOW and a step counter) and, later, one at a time
 // from the home hub's Setup tab. The second case used to show a bare
 // "My World" eyebrow; it now names the tab it was launched from, which is
@@ -195,20 +193,19 @@ function App() {
   // is silence, never a distinct sound) and the "Coming soon" tile stay
   // silent for free, not via special-casing here.
   //
-  // `favSound` personalises the tone's pitch/timbre to whichever favourite
-  // sound QuickPreferences captured (profile.context.quickPreferences);
-  // undefined for a profile that hasn't done that screen yet, or has no
-  // profile at all, in which case webClickSound.ts falls back to the
-  // original default click. `quiet` is computed the same way it always
-  // was, first and independently of favSound, since the calm accommodation
-  // must win regardless of which tone would otherwise play.
+  // `quiet` softens the tap sound for a profile whose response profile
+  // says calm/quiet suits them best; undefined for a profile that hasn't
+  // done that screen yet, or has no profile at all, in which case
+  // webClickSound.ts falls back to its original default click. (This used
+  // to also pass a `favSound` pulled from QuickPreferences to personalise
+  // the tone's pitch/timbre -- QuickPreferences no longer captures a
+  // favourite sound, so that personalisation has nothing left to read.)
   useEffect(() => {
     function handleClick(event: MouseEvent) {
       if (!(event.target instanceof Element)) return;
       if (!event.target.closest('button')) return;
       adapters.sound.playClick({
         quiet: profile?.responseProfile.soundMovement === 'calm',
-        favSound: profile?.context.quickPreferences?.favSound,
       });
     }
     document.addEventListener('click', handleClick);
@@ -424,7 +421,7 @@ function App() {
         <AppHeader />
         <ScreenHeader
           eyebrow={screen.returnToHome ? SETUP_TAB_FLOW : SETUP_FLOW}
-          step={screen.returnToHome ? undefined : { current: 1, total: 4 }}
+          step={screen.returnToHome ? undefined : { current: 1, total: 2 }}
           onBack={screen.returnToHome ? goToSetupHome : undefined}
           backLabel="Setup"
         />
@@ -435,34 +432,9 @@ function App() {
             if (screen.returnToHome) {
               goToSetupHome();
             } else {
-              setScreen({ kind: 'companionCapture', returnToHome: false });
+              setScreen({ kind: 'quickPreferences', returnToHome: false });
             }
           }}
-        />
-      </div>
-    );
-  }
-
-  if (screen.kind === 'companionCapture') {
-    const advance = screen.returnToHome
-      ? goToSetupHome
-      : () => setScreen({ kind: 'quickPreferences', returnToHome: false });
-    return (
-      <div className="app" key={screen.kind}>
-        <AppHeader />
-        <ScreenHeader
-          eyebrow={screen.returnToHome ? SETUP_TAB_FLOW : SETUP_FLOW}
-          step={screen.returnToHome ? undefined : { current: 2, total: 4 }}
-          onBack={screen.returnToHome ? goToSetupHome : undefined}
-          backLabel="Setup"
-        />
-        <CompanionCapture
-          profile={profile}
-          onComplete={(updated) => {
-            updateProfile(updated);
-            advance();
-          }}
-          onSkip={advance}
         />
       </div>
     );
@@ -474,7 +446,7 @@ function App() {
         <AppHeader />
         <ScreenHeader
           eyebrow={screen.returnToHome ? SETUP_TAB_FLOW : SETUP_FLOW}
-          step={screen.returnToHome ? undefined : { current: 3, total: 4 }}
+          step={screen.returnToHome ? undefined : { current: 2, total: 2 }}
           onBack={screen.returnToHome ? goToSetupHome : undefined}
           backLabel="Setup"
         />
@@ -886,12 +858,6 @@ function App() {
                   onClick={() => setScreen({ kind: 'responseProfile', returnToHome: true })}
                 >
                   How {profile.nickname ?? 'they'} do best
-                </button>
-                <button
-                  className="home-edit-button"
-                  onClick={() => setScreen({ kind: 'companionCapture', returnToHome: true })}
-                >
-                  Companion
                 </button>
                 <button
                   className="home-edit-button"

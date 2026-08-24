@@ -1,19 +1,18 @@
 // F.016 — Context profile: quick preferences. Tap-only, no typing
-// anywhere (§6.2's "favourite place" table entry says "text or tap", but
-// F.016's own Done-when is stricter — "tap-only, no typing required" — so
-// place is a tappable list here too, not a text field).
+// anywhere.
 //
-// One category per screen, in the same minimal radio-list style as
-// ResponseProfile.tsx's questions — product-owner feedback was that
-// showing all six categories (colour/animal/food/place/sound/movement) at
-// once, each as a grid of filled chips, read as crowded next to that
-// screen's now-simpler one-question-at-a-time layout. `categoryIndex` is
-// local, throwaway UI state, same reasoning as ResponseProfile's
-// questionIndex — re-entering this screen always starts back at category 1.
+// Now a two-page flow: page 1 is the single remaining quick-preference
+// question (favourite colour); page 2 folds in the Companion capture flow
+// (F.004) that used to be its own separate top-level screen, since the
+// product direction collapsed "Favourites" and "Companion" into one
+// setup step. `page` is local, throwaway UI state, same reasoning as
+// ResponseProfile's questionIndex — re-entering this screen always starts
+// back on page 1.
 
 import { useState } from 'react';
 import { saveQuickPreferences, shouldAskIsCompanionStillFavourite } from '../engine/quickPreferences';
-import type { ChildProfile, MotivatingMovement, QuickPreferences as QuickPreferencesType } from '../types';
+import type { ChildProfile } from '../types';
+import { CompanionCapture } from './CompanionCapture';
 
 interface QuickPreferencesProps {
   profile: ChildProfile;
@@ -21,80 +20,63 @@ interface QuickPreferencesProps {
 }
 
 const COLOURS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'];
-const ANIMALS = ['rabbit', 'dog', 'cat', 'elephant', 'lion', 'duck'];
-const FOODS = ['banana', 'apple', 'biscuit', 'pasta', 'yoghurt'];
-const PLACES = ['the kitchen', 'the living room', 'their bedroom', 'the backyard', 'the bathroom'];
-const SOUNDS = ['bell', 'chime', 'giggle', 'drum', 'xylophone'];
-const MOVEMENTS: MotivatingMovement[] = ['jump', 'spin', 'stomp', 'clap', 'splash'];
 
 export function QuickPreferencesScreen({ profile, onComplete }: QuickPreferencesProps) {
   const existing = profile.context.quickPreferences ?? {};
   const [favColour, setFavColour] = useState(existing.favColour);
-  const [favAnimal, setFavAnimal] = useState(existing.favAnimal);
-  const [favFood, setFavFood] = useState(existing.favFood);
-  const [favPlace, setFavPlace] = useState(existing.favPlace);
-  const [favSound, setFavSound] = useState(existing.favSound);
-  const [movement, setMovement] = useState<MotivatingMovement | undefined>(existing.movement);
   const [saving, setSaving] = useState(false);
-  const [categoryIndex, setCategoryIndex] = useState(0);
-
-  const categories: Array<{
-    label: string;
-    options: string[];
-    value: string | undefined;
-    onChange: (v: string | undefined) => void;
-  }> = [
-    { label: 'Favourite colour', options: COLOURS, value: favColour, onChange: setFavColour },
-    { label: 'Favourite animal', options: ANIMALS, value: favAnimal, onChange: setFavAnimal },
-    { label: 'Favourite food', options: FOODS, value: favFood, onChange: setFavFood },
-    { label: 'Favourite place at home', options: PLACES, value: favPlace, onChange: setFavPlace },
-    { label: 'Favourite sound', options: SOUNDS, value: favSound, onChange: setFavSound },
-    {
-      label: 'Motivating movement',
-      options: MOVEMENTS,
-      value: movement,
-      onChange: (v) => setMovement(v as MotivatingMovement | undefined),
-    },
-  ];
-  const total = categories.length;
-  const isLastCategory = categoryIndex === total - 1;
-  const current = categories[categoryIndex];
+  const [page, setPage] = useState<'colour' | 'companion'>('colour');
+  // The profile as of the end of page 1 -- companion capture (page 2)
+  // needs the freshest profile, and skipping page 2 finishes the whole
+  // flow with whatever that save produced (or the original prop if page 1
+  // was never reached/saved, though in practice page 1 always saves
+  // before advancing -- see handleContinue).
+  const [profileAfterColour, setProfileAfterColour] = useState(profile);
 
   async function handleContinue() {
     setSaving(true);
-    const patch: QuickPreferencesType = { favColour, favAnimal, favFood, favPlace, favSound, movement };
-    const updated = await saveQuickPreferences(profile.id, patch);
+    // Preserves the old behaviour: "Continue" always saves, even if
+    // favColour is still undefined (nothing tapped) -- colour was never a
+    // forced choice, only the act of advancing was unconditional.
+    const updated = await saveQuickPreferences(profile.id, { favColour });
     setSaving(false);
-    onComplete(updated);
+    setProfileAfterColour(updated);
+    setPage('companion');
+  }
+
+  if (page === 'companion') {
+    return (
+      <div className="screen">
+        <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>Step 2 of 2</p>
+        <CompanionCapture
+          profile={profileAfterColour}
+          onComplete={(updatedProfile) => onComplete(updatedProfile)}
+          onSkip={() => onComplete(profileAfterColour)}
+        />
+        <button style={{ flex: '0 1 auto' }} onClick={() => setPage('colour')}>
+          Back
+        </button>
+      </div>
+    );
   }
 
   return (
     <div className="screen">
       <h2>A few favourites</h2>
       <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-        Category {categoryIndex + 1} of {total}. Tap what fits, skip anything.
+        Step 1 of 2. Tap what fits, skip if you like.
       </p>
 
-      <ChipRow
-        label={current.label}
-        options={current.options}
-        value={current.value}
-        onChange={current.onChange}
-      />
+      <ChipRow label="Favourite colour" options={COLOURS} value={favColour} onChange={setFavColour} />
 
       <div style={{ display: 'flex', gap: 8 }}>
-        {categoryIndex > 0 && (
-          <button style={{ flex: '0 1 auto' }} onClick={() => setCategoryIndex((i) => i - 1)}>
-            Back
-          </button>
-        )}
         <button
           className="button-primary"
           style={{ flex: 1 }}
-          disabled={isLastCategory && saving}
-          onClick={() => (isLastCategory ? void handleContinue() : setCategoryIndex((i) => i + 1))}
+          disabled={saving}
+          onClick={() => void handleContinue()}
         >
-          {isLastCategory ? 'Continue' : 'Next'}
+          Next
         </button>
       </div>
     </div>
