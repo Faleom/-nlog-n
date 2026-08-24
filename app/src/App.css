@@ -576,6 +576,14 @@ body {
 
 body {
   min-height: 100vh;
+  /* dvh tracks the ACTUAL visible viewport as a mobile browser's toolbar
+     shows/hides on scroll; plain vh is fixed to the "large" (toolbar-
+     hidden) viewport, which is part of why a fixed-position element
+     anchored near the bottom edge could read as flush against nothing,
+     or briefly clipped, once a real toolbar changed the visible area
+     underneath it. Kept after the vh line, not instead of it, for
+     browsers that don't support dvh yet. */
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
 }
@@ -590,6 +598,7 @@ body {
   width: 100%;
   max-width: 480px;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
   padding: 20px 20px 20px;
   font-family: var(--font-caregiver);
@@ -3017,29 +3026,27 @@ button.toki-week-cell {
   padding: 16px 22px 110px;
 }
 
-/* Sticky, not a flex sibling relying on container height math -- an
-   earlier version gave .toki-home-main its own overflow-y:auto scroll
-   region, which meant the PAGE never scrolled and this bar (outside that
-   region) just sat at the bottom of an ever-taller box, only reachable by
-   scrolling all the way down. The actual page/viewport is the scroll
-   container here (.app is overflow:clip, deliberately never its own
-   scroll container -- see .app's own comment), and position:sticky keeps
-   this pinned to the viewport bottom as that page scrolls underneath it,
-   the same mechanism the pre-Toki .tab-bar used. */
+/* Fixed, not sticky: sticky only pins once the content ahead of it would
+   otherwise scroll past its box, so on a short tab (little scrollable
+   content) it just sat in normal flow right after that content --
+   visibly floating mid-screen instead of at the bottom, only reaching
+   the true bottom once there was enough content to push it there. Fixed
+   to the viewport is unconditional: same position whether the tab has
+   one card or ten. left/right + max-width + auto margin centers it the
+   same way .app's own max-width:480px column centers on a
+   wider-than-mobile viewport. */
 .toki-tab-bar {
-  /* Fixed, not sticky: sticky only pins once the content ahead of it
-     would otherwise scroll past its box, so on a short screen (little
-     scrollable content) it just sat in normal flow right after that
-     content -- visibly floating mid-screen instead of at the bottom, and
-     only reaching the true bottom once there was enough content to push
-     it there. Fixed to the viewport is unconditional: same position
-     whether the tab has one card or ten. left/right + max-width + auto
-     margin centers it the same way .app's own max-width:480px column
-     centers on a wider-than-mobile viewport. */
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: 26px;
+  /* max(), not a flat 26px: on a phone with a home-indicator gesture bar
+     (env(safe-area-inset-bottom), reported once index.html declares
+     viewport-fit=cover), 26px alone left the bar sitting flush against
+     -- sometimes under -- that system chrome, with no real margin to
+     spare. This keeps at least 26px of breathing room from the safe
+     area on notched phones and falls back to plain 26px from the true
+     viewport edge everywhere else (env() resolves to 0 there). */
+  bottom: max(26px, calc(env(safe-area-inset-bottom, 0px) + 16px));
   max-width: 448px;
   margin: 0 auto;
   z-index: 3;
