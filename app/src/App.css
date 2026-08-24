@@ -2346,6 +2346,11 @@ textarea::placeholder {
 .app--welcome {
   display: flex;
   flex-direction: column;
+  /* Edge-to-edge for the new Toki panel: .app's own 20px padding and dark
+     background/blob pseudo-elements would otherwise show as a dark frame
+     around the light .toki-screen sitting inside it. */
+  padding: 0;
+  background: transparent;
 }
 
 .welcome {
@@ -2433,6 +2438,225 @@ textarea::placeholder {
      min-height: var(--touch-min) on the base rule still floors it at the
      88px UI-STANDARDS minimum, so only the horizontal padding shrinks. */
   padding: 9px 10px;
+}
+
+/* ============================================================
+   TOKI REVAMP -- screen 1 of many: Welcome.
+   New light visual system, replacing the dark-first one one
+   screen at a time per explicit product direction. Source spec:
+   "App UI design update/Hello World - Toki palette.dc.html".
+
+   Not copied verbatim from that file: its own two CTA gradients
+   (green #6cc94a/#4fae34, blue #4fb3ff/#1e93ee) carry WHITE text
+   at as low as 2.1:1 contrast at the lighter end, computed here
+   and well under this project's 4.5:1 floor everywhere else.
+   Same hues below, re-pitched so white text stays legible across
+   the whole gradient, not just at its darkest point. CTA colour
+   is the child's own favColour (data-accent, already wired app-
+   wide) rather than a fixed green or blue.
+
+   The mockup's phone-frame chrome (rounded device outline, fake
+   9:41 status bar) is mockup presentation, not part of the
+   screen itself -- the real app already runs inside a real
+   device's real status bar, so neither is reproduced here. */
+
+:root {
+  --toki-bg-top: #f4fafe;
+  --toki-bg-bottom: #e3f0fd;
+  --toki-border: #cfe3f7;
+  --toki-shadow: rgba(18, 74, 122, 0.16);
+  --toki-blob-blue: rgba(79, 179, 255, 0.34);
+  --toki-blob-teal: rgba(47, 199, 199, 0.24);
+  --toki-blob-violet: rgba(169, 123, 234, 0.16);
+  --toki-cloud-1: rgba(255, 255, 255, 0.85);
+  --toki-cloud-2: rgba(255, 255, 255, 0.6);
+  --toki-cloud-3: rgba(255, 255, 255, 0.7);
+  --toki-eyebrow: #1e93ee;
+  --toki-ink: #1b3450;
+  --toki-ink-muted: #5c7691;
+  --toki-ink-faint: #7e95ad;
+  --toki-mark-shadow: rgba(23, 86, 140, 0.14);
+  /* Purple is the accent system's own default/unset case (favColour
+     'purple' or no profile yet) -- same convention the dark accent
+     blocks already use, so no :root[data-accent='purple'] block exists
+     either, here or there. */
+  --toki-cta-top: #9c5fe8;
+  --toki-cta-bottom: #934fe6;
+  --toki-cta-shadow: rgba(120, 60, 190, 0.3);
+}
+
+:root[data-accent='red'] {
+  --toki-cta-top: #e14949;
+  --toki-cta-bottom: #dd3131;
+  --toki-cta-shadow: rgba(200, 40, 40, 0.3);
+}
+:root[data-accent='orange'] {
+  --toki-cta-top: #c06615;
+  --toki-cta-bottom: #b25f13;
+  --toki-cta-shadow: rgba(180, 100, 20, 0.3);
+}
+:root[data-accent='yellow'] {
+  --toki-cta-top: #a07900;
+  --toki-cta-bottom: #937000;
+  --toki-cta-shadow: rgba(140, 110, 0, 0.28);
+}
+:root[data-accent='green'] {
+  --toki-cta-top: #418f2b;
+  --toki-cta-bottom: #3c8528;
+  --toki-cta-shadow: rgba(60, 130, 40, 0.3);
+}
+:root[data-accent='blue'] {
+  --toki-cta-top: #1082da;
+  --toki-cta-bottom: #0f78ca;
+  --toki-cta-shadow: rgba(20, 110, 190, 0.3);
+}
+:root[data-accent='pink'] {
+  --toki-cta-top: #e4378f;
+  --toki-cta-bottom: #dd1d7e;
+  --toki-cta-shadow: rgba(200, 30, 120, 0.3);
+}
+
+.toki-screen {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--toki-bg-top), var(--toki-bg-bottom));
+}
+
+.toki-blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 210px at 14% 8%, var(--toki-blob-blue), transparent 62%),
+    radial-gradient(circle 170px at 90% 16%, var(--toki-blob-teal), transparent 60%),
+    radial-gradient(circle 250px at 76% 92%, var(--toki-blob-violet), transparent 64%);
+  filter: blur(44px);
+}
+
+.toki-clouds {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.toki-cloud-1,
+.toki-cloud-2,
+.toki-cloud-3 {
+  position: absolute;
+  border-radius: 999px;
+}
+.toki-cloud-1 {
+  left: -40px;
+  top: 30%;
+  width: 210px;
+  height: 44px;
+  background: var(--toki-cloud-1);
+}
+.toki-cloud-2 {
+  left: 36px;
+  top: 37%;
+  width: 130px;
+  height: 36px;
+  background: var(--toki-cloud-2);
+}
+.toki-cloud-3 {
+  right: -56px;
+  top: 23%;
+  width: 190px;
+  height: 40px;
+  background: var(--toki-cloud-3);
+}
+
+.toki-welcome-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 30px 30px;
+  text-align: center;
+}
+
+.toki-mark {
+  display: grid;
+  place-items: center;
+  width: 132px;
+  height: 132px;
+  border-radius: 44px;
+  background: #fff;
+  box-shadow: 0 16px 34px var(--toki-mark-shadow);
+  font-size: 66px;
+  line-height: 1;
+}
+
+.toki-eyebrow {
+  margin: 14px 0 0;
+  font-weight: 800;
+  font-size: 0.7rem;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--toki-eyebrow);
+}
+
+.toki-title {
+  margin: 0;
+  font-weight: 800;
+  font-size: 2.4rem;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  color: var(--toki-ink);
+}
+
+.toki-sub {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 0.97rem;
+  line-height: 1.55;
+  color: var(--toki-ink-muted);
+}
+
+.toki-actions {
+  position: relative;
+  padding: 0 26px 42px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.toki-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--touch-min, 44px);
+  border: none;
+  border-radius: 22px;
+  background: linear-gradient(180deg, var(--toki-cta-top), var(--toki-cta-bottom));
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.25rem;
+  line-height: 1;
+  box-shadow: 0 12px 24px var(--toki-cta-shadow), inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+.toki-cta:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+.toki-caption {
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--toki-ink-faint);
 }
 
 /* ---------------------------------------------------------------------

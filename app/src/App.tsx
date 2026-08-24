@@ -344,45 +344,53 @@ function App() {
   if (screen.kind === 'welcome') {
     return (
       <div className="app app--welcome" key={screen.kind}>
-        <main className="welcome">
+        <main className="toki-screen">
+          <div className="toki-blobs" aria-hidden="true" />
+          <div className="toki-clouds" aria-hidden="true">
+            <span className="toki-cloud-1" />
+            <span className="toki-cloud-2" />
+            <span className="toki-cloud-3" />
+          </div>
           {profile ? (
-            <>
-              <p className="welcome-wordmark">
-                <span className="welcome-wordmark-mark" aria-hidden="true">
-                  🌱
-                </span>
-                Hello World
-              </p>
-              <h1 className="welcome-title">Welcome back, {profile.nickname ?? 'friend'}!</h1>
-              <p className="welcome-sub">
+            <div className="toki-welcome-body">
+              <span className="toki-mark" aria-hidden="true">
+                🌱
+              </span>
+              <p className="toki-eyebrow">Hello World</p>
+              <h1 className="toki-title">Welcome back, {profile.nickname ?? 'friend'}!</h1>
+              <p className="toki-sub">
                 Everything is where you left it. This device remembers you on its own. No
                 account, nothing saved anywhere else.
               </p>
-              <button
-                className="button-primary welcome-action"
-                onClick={() => setScreen({ kind: 'branch1Home' })}
-              >
-                Continue
-              </button>
-            </>
+            </div>
           ) : (
-            <>
-              <span className="welcome-mark" aria-hidden="true">
+            <div className="toki-welcome-body">
+              <span className="toki-mark" aria-hidden="true">
                 🌱
               </span>
-              <h1 className="welcome-title welcome-title--brand">Hello World</h1>
-              <p className="welcome-sub">
+              <p className="toki-eyebrow">Hello World</p>
+              <h1 className="toki-title">
+                Small things,
+                <br />
+                their own world
+              </h1>
+              <p className="toki-sub">
                 Small activities built from your own child's room, toys and favourite things. No
                 account. What's saved stays only on this device.
               </p>
-              <button
-                className="button-primary welcome-action"
-                onClick={() => setScreen({ kind: 'onboarding' })}
-              >
-                Get started
-              </button>
-            </>
+            </div>
           )}
+          <div className="toki-actions">
+            <button
+              className="toki-cta"
+              onClick={() =>
+                setScreen({ kind: profile ? 'branch1Home' : 'onboarding' })
+              }
+            >
+              {profile ? 'Continue' : 'Get started'}
+            </button>
+            <p className="toki-caption">Nothing to sign up for. Nothing leaves the device.</p>
+          </div>
         </main>
       </div>
     );
