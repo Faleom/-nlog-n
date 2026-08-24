@@ -3463,6 +3463,138 @@ button.toki-week-cell {
   box-shadow: 0 10px 20px rgba(150, 90, 190, 0.26);
 }
 
+/* ============================================================
+   TOKI REVAMP -- shared CHILD-FACING vocabulary for all six games.
+   Only one screen in the whole mockup shows this side of the app
+   (screen 07, "Game moment"), and it's generic, not per-game -- its
+   own caption: "Calmest screen in the set, on purpose: no chrome,
+   no words, no tab bar, one warm ring as the whole reward." Every
+   game keeps that spirit: zero text, no score/streak/count, and the
+   ONE reserved reward hue is the only accent, never chrome, exactly
+   as this app's design tokens already require. --color-reward is
+   already #ffc93c -- the same hex the mockup uses -- so the ring
+   below reuses that existing token rather than a new one.
+
+   These are primitives (background/border/shadow/radius), not a
+   fixed layout -- each game keeps its own real markup (photo
+   capture, canvas, SVG panorama, drag targets) and applies these
+   classes to it, rather than being forced into one shape. */
+
+.toki-child-stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  padding: 0 26px 34px;
+  overflow: hidden;
+}
+/* Calm: one soft blob, dead centre-top, low contrast -- for a profile
+   whose response-profile soundMovement reads 'calm'. */
+.toki-child-stage--calm {
+  background: linear-gradient(180deg, #f7fbfe, #e9f3fb);
+}
+.toki-child-stage--calm::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle 240px at 50% 22%, rgba(79, 179, 255, 0.14), transparent 66%);
+  filter: blur(46px);
+}
+/* Bright: three blobs, more saturated -- 'lively', or no profile set yet
+   (the livelier default, same reasoning .toki-onboard-blobs already
+   uses for not-yet-known profiles). */
+.toki-child-stage--bright {
+  background: linear-gradient(180deg, #f7fbfe, #e9f3fb);
+}
+.toki-child-stage--bright::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 220px at 16% 10%, rgba(79, 179, 255, 0.42), transparent 62%),
+    radial-gradient(circle 200px at 88% 16%, rgba(47, 199, 199, 0.34), transparent 60%),
+    radial-gradient(circle 230px at 78% 90%, rgba(255, 201, 60, 0.3), transparent 62%);
+  filter: blur(42px);
+}
+
+/* A warm white card any game can drop a photo/canvas/SVG into. Plain by
+   default; add .toki-child-card--target for the one reward/target
+   moment a screen actually has (see below). */
+.toki-child-card {
+  position: relative;
+  border-radius: 34px;
+  background: #fff;
+  box-shadow: 0 18px 38px rgba(23, 86, 140, 0.16);
+}
+/* The reward ring: Sunburst, and ONLY Sunburst -- this is the single
+   place in a game's child-facing view a fully saturated reserved hue is
+   allowed to appear (design-tokens' own rule, unchanged by this
+   revamp). Never apply this class to more than one element on screen
+   at once, and never as a permanent/default state -- it marks the one
+   thing that's currently correct/wanted, the same job the dark
+   theme's own g1-crop--highlighted ring already does elsewhere. */
+.toki-child-card--target {
+  border: 3px solid var(--color-reward);
+  box-shadow: 0 0 0 6px rgba(255, 201, 60, 0.22), 0 18px 38px rgba(23, 86, 140, 0.16);
+}
+/* The soft colour bloom sitting behind a card, echoing the Room Frame's
+   own "the photo lights the room behind it" idea in Toki's flatter
+   material. Optional -- most object-icon buttons don't need one, only
+   a single large focal card (a captured photo, a big canvas) does. */
+.toki-child-card-bloom {
+  position: absolute;
+  inset: -14px;
+  z-index: -1;
+  border-radius: 34px;
+  background: linear-gradient(150deg, #bfe4ff, #8fd6cf);
+  filter: blur(34px);
+  transform: scale(1.1);
+  opacity: 0.55;
+}
+
+/* The object-icon grid: plain 3-column by default (matches the mockup),
+   a game with more or fewer real choices sets its own
+   grid-template-columns inline rather than forcing a new class per
+   count. */
+.toki-object-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  width: 100%;
+}
+.toki-object-btn {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 12px;
+  border: 1px solid rgba(33, 55, 78, 0.1);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(23, 86, 140, 0.08);
+  cursor: pointer;
+}
+.toki-object-btn:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+.toki-object-btn--target {
+  border: 3px solid var(--color-reward);
+  background: #fffaeb;
+  box-shadow: 0 0 0 5px rgba(255, 201, 60, 0.2), 0 8px 18px rgba(23, 86, 140, 0.08);
+}
+/* A wrong/dead choice fades rather than disappearing -- same F.007/§7.7
+   "wrong tap is silence, never a distinct sound or a vanished option"
+   rule the dark theme's g1-crop--dead already encodes. */
+.toki-object-btn--dead {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
 /* Setup tab's own content column. flex:1 so the "This device" section can
    sit at the foot of the screen the way the mockup places it, with the
    list of things activities are built from staying at the top. */
