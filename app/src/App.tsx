@@ -112,7 +112,7 @@ type HomeTab = 'play' | 'dashboard' | 'setup' | 'notes';
 // tab cannot drift apart the way four parallel ternaries would.
 const HOME_TABS: { id: HomeTab; label: string; icon: string }[] = [
   { id: 'play', label: 'Play', icon: '\u{1F388}' },
-  { id: 'dashboard', label: 'Dashboard', icon: '\u{1F4CB}' },
+  { id: 'dashboard', label: 'Caregiver Dashboard', icon: '\u{1F4CB}' },
   { id: 'setup', label: 'Setup', icon: '\u{2699}\u{FE0F}' },
   { id: 'notes', label: 'Notes', icon: '\u{1F4DD}' },
 ];
@@ -655,7 +655,7 @@ function App() {
       sub: "Everything built from your child's own room and toys.",
     },
     dashboard: {
-      title: 'Dashboard',
+      title: 'Caregiver Dashboard',
       sub: `What you and ${profile.nickname ?? 'your child'} have been doing lately.`,
     },
     setup: {
