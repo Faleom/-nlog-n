@@ -63,12 +63,18 @@ function minutes(seconds: number): string {
   return String(Math.round(seconds / 60));
 }
 
-/** `YYYY-MM-DD` -> "Monday 24 August", built from the parts rather than
- * `new Date(iso)`: that parses a bare date string as UTC midnight, which
- * is the day before anywhere west of Greenwich. */
-function spokenDate(iso: string): string {
+/** `YYYY-MM-DD` -> a local Date at midnight. Not `new Date(iso)`, which
+ * parses a bare date string as UTC midnight -- a day early anywhere west
+ * of Greenwich, and exactly the bug this app's other day-math already
+ * works around (see engine/caregiverDashboard.ts's own localDayKey). */
+function dateFromIso(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+  return new Date(y, m - 1, d);
+}
+
+/** `YYYY-MM-DD` -> "Monday 24 August". */
+function spokenDate(iso: string): string {
+  return dateFromIso(iso).toLocaleDateString(undefined, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -102,6 +108,42 @@ function Chevron({ open }: { open: boolean }) {
         />
       </svg>
     </span>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 12 12" width="12" height="12" fill="none" aria-hidden="true">
+      <path
+        d="M2 2 L10 10 M10 2 L2 10"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** A read-only track row for the day-detail panel -- same look as
+ * TrackRow's inset button, but nothing here expands: the day is already
+ * the drill-down, so a second layer of disclosure underneath it would be
+ * disclosure for its own sake. */
+function DayTrackRow({ slice }: { slice: TrackSlice }) {
+  return (
+    <li className="dashboard-track-row">
+      <div className="dashboard-track-toggle dashboard-day-detail-row">
+        <span
+          className="dashboard-dot"
+          style={{ background: `var(${slice.colorVar})` }}
+          aria-hidden="true"
+        />
+        <span className="dashboard-track-text">
+          <span className="dashboard-track-name">{slice.label}</span>
+          {slice.detail && <span className="dashboard-track-detail">{slice.detail}</span>}
+        </span>
+        <span className="dashboard-figure-value">{minutes(slice.seconds)} min</span>
+      </div>
+    </li>
   );
 }
 
@@ -151,6 +193,10 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
   const [sessions, setSessions] = useState<SessionLog[] | null>(null);
   const [lengthChoice, setLengthChoice] = useState(usualSessionMinutes(profile));
   const [openTrack, setOpenTrack] = useState<TrackId | null>(null);
+  // Which day of the week strip is expanded below it, if any. Tapping the
+  // same day again (or its close button) collapses it -- same toggle
+  // pattern as openTrack above, just one level up.
+  const [selectedDayIso, setSelectedDayIso] = useState<string | null>(null);
 
   useEffect(() => {
     void getSessionsForChild(profile.id).then(setSessions);
@@ -228,6 +274,15 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
   const withSupport = skills.filter((skill) => !skill.mastered);
   const recent = recentSessions(sessions, RECENT_LIMIT);
 
+  // The day-detail panel's own figures -- same functions the "today"
+  // figures above use, just handed whichever date is selected instead of
+  // always today. Undefined/empty when nothing is selected, so this work
+  // only happens on the day a caregiver actually asks for it.
+  const selectedDate = selectedDayIso ? dateFromIso(selectedDayIso) : null;
+  const selectedDaySeconds = selectedDate ? secondsPlayedOn(sessions, selectedDate) : 0;
+  const selectedDayFocusSeconds = selectedDate ? longestFocusOn(sessions, selectedDate) : 0;
+  const selectedDaySlices = selectedDate ? timeByTrackOn(sessions, selectedDate) : [];
+
   return (
     <div className="screen dashboard">
       <Banner />
@@ -237,31 +292,113 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
       <section className="dashboard-card">
         <h3 className="dashboard-card-title">This week</h3>
         <ul className="dashboard-week">
-          {week.map((cell) => (
-            <li key={cell.iso} className="dashboard-week-cell">
-              <span className="dashboard-week-label" aria-hidden="true">
-                {cell.label}
-              </span>
-              <span
-                className={[
-                  'dashboard-week-box',
-                  cell.played ? 'is-played' : '',
-                  cell.isToday ? 'is-today' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                role="img"
-                aria-label={`${spokenDate(cell.iso)}${cell.isToday ? ', today' : ''}: ${
-                  cell.played ? 'a session happened' : 'no session'
-                }`}
-                {...(cell.isToday ? { 'aria-current': 'date' as const } : {})}
-              >
-                {cell.played && <CheckMark />}
-              </span>
-            </li>
-          ))}
+          {week.map((cell) => {
+            const isSelected = selectedDayIso === cell.iso;
+            return (
+              <li key={cell.iso} className="dashboard-week-cell">
+                <span className="dashboard-week-label" aria-hidden="true">
+                  {cell.label}
+                </span>
+                <button
+                  type="button"
+                  className={[
+                    'dashboard-week-box',
+                    cell.played ? 'is-played' : '',
+                    cell.isToday ? 'is-today' : '',
+                    isSelected ? 'is-selected' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  aria-pressed={isSelected}
+                  aria-label={`${spokenDate(cell.iso)}${cell.isToday ? ', today' : ''}: ${
+                    cell.played ? 'a session happened' : 'no session'
+                  }. Tap for a summary.`}
+                  {...(cell.isToday ? { 'aria-current': 'date' as const } : {})}
+                  onClick={() =>
+                    setSelectedDayIso((current) => (current === cell.iso ? null : cell.iso))
+                  }
+                >
+                  {cell.played && <CheckMark />}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </section>
+
+      {/* ---- Day detail -------------------------------------------------
+          Same day-math as "Today's two figures" and "Time by track,
+          today" below, just aimed at whichever day was tapped above
+          instead of always today. A quiet day gets the same neutral
+          "nothing played" line the other empty states on this screen use
+          -- no arithmetic, no colour, that treats it as a gap (see this
+          file's own header comment). */}
+      {selectedDayIso && (
+        <section className="dashboard-card dashboard-day-detail">
+          <div className="dashboard-day-detail-head">
+            <h3 className="dashboard-card-title">{spokenDate(selectedDayIso)}</h3>
+            <button
+              type="button"
+              className="dashboard-day-detail-close"
+              onClick={() => setSelectedDayIso(null)}
+              aria-label="Close this day's summary"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+
+          {selectedDaySeconds === 0 ? (
+            <p className="dashboard-empty">Nothing played this day.</p>
+          ) : (
+            <>
+              <div className="dashboard-metrics">
+                <div className="dashboard-metric">
+                  <span className="dashboard-metric-label">Played</span>
+                  <span className="dashboard-metric-value">
+                    {minutes(selectedDaySeconds)}
+                    <span className="dashboard-metric-unit">min</span>
+                  </span>
+                </div>
+                <div className="dashboard-metric">
+                  <span className="dashboard-metric-label">Longest focus</span>
+                  <span className="dashboard-metric-value">
+                    {minutes(selectedDayFocusSeconds)}
+                    <span className="dashboard-metric-unit">min</span>
+                  </span>
+                </div>
+              </div>
+
+              {selectedDaySlices.length > 0 && (
+                <>
+                  <div
+                    className="dashboard-bar"
+                    role="img"
+                    aria-label={selectedDaySlices
+                      .map((s) => `${s.label}, ${minutes(s.seconds)} minutes, ${s.sharePercent}%`)
+                      .join('. ')}
+                  >
+                    {selectedDaySlices.map((slice) => (
+                      <span
+                        key={slice.track}
+                        className="dashboard-bar-segment"
+                        style={{
+                          flexGrow: slice.sharePercent,
+                          background: `var(${slice.colorVar})`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <ul className="dashboard-list">
+                    {selectedDaySlices.map((slice) => (
+                      <DayTrackRow key={slice.track} slice={slice} />
+                    ))}
+                  </ul>
+                </>
+              )}
+            </>
+          )}
+        </section>
+      )}
 
       {/* ---- Usual session length -------------------------------------- */}
       <section className="dashboard-card">

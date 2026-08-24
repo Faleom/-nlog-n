@@ -1769,14 +1769,26 @@ textarea::placeholder {
   color: var(--color-ink-muted);
 }
 
+/* A <button> now (tapping a day opens its summary below), so this resets
+   every size/surface default the global `button` rule would otherwise
+   force onto a small calendar cell -- the 88px touch floor would blow out
+   a 7-column grid, and the glass fill/backdrop-filter would turn a plain
+   outline square into a little card. */
 .dashboard-week-box {
   display: grid;
   place-items: center;
   width: 100%;
   aspect-ratio: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
   border: 1px solid var(--color-border-strong);
   border-radius: 9px;
+  background: transparent;
   color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
 .dashboard-week-box.is-played {
@@ -1790,6 +1802,50 @@ textarea::placeholder {
 .dashboard-week-box.is-today {
   border-color: var(--color-primary-bright);
   box-shadow: 0 0 0 2px var(--color-primary-soft);
+}
+
+/* Last in source order on purpose: whichever day's summary is open below
+   is the thing the eye needs to find first, even on today's own cell. */
+.dashboard-week-box.is-selected {
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 2px var(--color-ink-muted);
+}
+
+/* ---- Day detail ------------------------------------------------------ */
+
+.dashboard-day-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dashboard-day-detail-close {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-wash);
+  color: var(--color-ink-muted);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.dashboard-day-detail-close:active {
+  background: var(--surface-wash-active);
+}
+
+/* The day-detail rows reuse .dashboard-track-toggle's look without being
+   a button themselves -- there is nothing left for them to expand into,
+   the day itself already was the drill-down. */
+.dashboard-day-detail-row {
+  cursor: default;
 }
 
 /* ---- Usual session length ------------------------------------------- */
