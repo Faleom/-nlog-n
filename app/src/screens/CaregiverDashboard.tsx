@@ -46,7 +46,7 @@ import {
   type SkillProgressRow,
   type TrackSlice,
 } from '../engine/dashboardSummary';
-import type { ChildProfile, SessionLog, SupportTier, TrackId } from '../types';
+import type { ChildProfile, SessionLog, SupportTier } from '../types';
 
 interface CaregiverDashboardProps {
   profile: ChildProfile;
@@ -109,22 +109,6 @@ function CheckMark() {
   );
 }
 
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <span className={open ? 'dashboard-chevron is-open' : 'dashboard-chevron'} aria-hidden="true">
-      <svg viewBox="0 0 12 12" width="12" height="12" fill="none">
-        <path
-          d="M4.25 2 L8.25 6 L4.25 10"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-  );
-}
-
 function CloseIcon() {
   return (
     <svg viewBox="0 0 12 12" width="12" height="12" fill="none" aria-hidden="true">
@@ -138,8 +122,7 @@ function CloseIcon() {
   );
 }
 
-/** Same chevron shape Chevron/TrackRow already use, just pointed either
- * way for month paging rather than expand/collapse. */
+/** A chevron pointed either way for month paging. */
 function CalendarNavIcon({ direction }: { direction: 'prev' | 'next' }) {
   return (
     <svg viewBox="0 0 12 12" width="12" height="12" fill="none" aria-hidden="true">
@@ -266,13 +249,12 @@ function SkillRow({ skill }: { skill: SkillProgressRow }) {
 export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashboardProps) {
   const [sessions, setSessions] = useState<SessionLog[] | null>(null);
   const [lengthChoice, setLengthChoice] = useState(usualSessionMinutes(profile));
-  const [openTrack, setOpenTrack] = useState<TrackId | null>(null);
   // Which day of the week strip is expanded below it, if any. Defaults to
   // today, so the panel a caregiver most wants (what just happened) is
   // already open on arrival -- no click needed. Tapping the same day
-  // again (or its close button) collapses it, same toggle pattern as
-  // openTrack above; tapping any day (including today's, once closed)
-  // reopens it, exactly like clicking it the first time.
+  // again (or its close button) collapses it; tapping any day (including
+  // today's, once closed) reopens it, exactly like clicking it the first
+  // time.
   const [selectedDayIso, setSelectedDayIso] = useState<string | null>(() => localDayKey(new Date()));
   // "View more"'s full-history calendar -- collapsed by default, since a
   // brand-new tab opening straight onto a whole month grid would bury the
@@ -355,7 +337,6 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
 
   const today = new Date();
   const week = weekStrip(sessions, today);
-  const slices = timeByTrackOn(sessions, today);
   const skills = skillProgress(sessions);
   // Two groups, not a ranked list: what is being done alone, and what
   // still has a hand on it. Both are facts from the ladder; neither is a
@@ -611,47 +592,6 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
         </div>
       </section>
 
-      {/* ---- Time by track, today -------------------------------------- */}
-      <section className="dashboard-card">
-        <h3 className="dashboard-card-title">Time by track, today</h3>
-        {slices.length === 0 ? (
-          <p className="dashboard-empty">Nothing played yet today.</p>
-        ) : (
-          <>
-            <div
-              className="dashboard-bar"
-              role="img"
-              aria-label={slices
-                .map((s) => `${s.label}, ${minutes(s.seconds)} minutes, ${s.sharePercent}%`)
-                .join('. ')}
-            >
-              {slices.map((slice) => (
-                <span
-                  key={slice.track}
-                  className="dashboard-bar-segment"
-                  style={{
-                    flexGrow: slice.sharePercent,
-                    background: `var(${slice.colorVar})`,
-                  }}
-                />
-              ))}
-            </div>
-            <ul className="dashboard-list">
-              {slices.map((slice) => (
-                <TrackRow
-                  key={slice.track}
-                  slice={slice}
-                  open={openTrack === slice.track}
-                  onToggle={() =>
-                    setOpenTrack((current) => (current === slice.track ? null : slice.track))
-                  }
-                />
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
-
       {/* ---- Skills and support ---------------------------------------- */}
       <section className="dashboard-card">
         <h3 className="dashboard-card-title">Skills and support</h3>
@@ -711,45 +651,5 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
         )}
       </section>
     </div>
-  );
-}
-
-/** One track's row under the bar. The chevron is real: it opens the
- * sitting-by-sitting breakdown behind that segment, which is the only
- * place the "three sittings, not one" detail exists. A chevron that
- * navigated nowhere would be a lie about what the row does. */
-function TrackRow({
-  slice,
-  open,
-  onToggle,
-}: {
-  slice: TrackSlice;
-  open: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <li className="dashboard-track-row">
-      <button type="button" className="dashboard-track-toggle" aria-expanded={open} onClick={onToggle}>
-        <span
-          className="dashboard-dot"
-          style={{ background: `var(${slice.colorVar})` }}
-          aria-hidden="true"
-        />
-        <span className="dashboard-track-text">
-          <span className="dashboard-track-name">{slice.label}</span>
-          {slice.detail && <span className="dashboard-track-detail">{slice.detail}</span>}
-        </span>
-        <span className="dashboard-figure-value">{minutes(slice.seconds)} min</span>
-        <Chevron open={open} />
-      </button>
-      {open && (
-        <p className="dashboard-track-expanded">
-          {slice.sessionCount === 1
-            ? 'One sitting today.'
-            : `${slice.sessionCount} sittings today.`}{' '}
-          {slice.sharePercent}% of today&rsquo;s time.
-        </p>
-      )}
-    </li>
   );
 }

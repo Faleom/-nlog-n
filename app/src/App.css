@@ -1312,10 +1312,10 @@ textarea::placeholder {
 }
 
 /* Every row opens a screen, and with the individual slabs gone there is
-   nothing left saying so. A drawn chevron rather than a text glyph, for
-   the same reason .dashboard-chevron is drawn: identical on every
-   device. 3.5 -- Periwink as a mark on --glass-bg-strong steps up to
-   Periwink Bright. */
+   nothing left saying so. A drawn chevron rather than a "▾" text glyph
+   falling through to whatever the system stack happens to supply --
+   identical on every device. 3.5 -- Periwink as a mark on
+   --glass-bg-strong steps up to Periwink Bright. */
 .home-edit-button::after {
   content: '';
   flex: none;
@@ -2057,13 +2057,7 @@ textarea::placeholder {
   color: var(--color-primary-bright);
 }
 
-/* ---- Today's two figures -------------------------------------------- */
-
-.dashboard-metrics {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-caregiver-gap);
-}
+/* ---- Played figures --------------------------------------------------- */
 
 .dashboard-metric {
   gap: 4px;
@@ -2227,35 +2221,6 @@ textarea::placeholder {
   color: var(--color-ink);
 }
 
-/* Drawn, not a "▾" text glyph falling through to whatever the system
-   stack happens to supply -- same shape on every device, and it rotates
-   rather than swapping character. */
-.dashboard-chevron {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--glass-border);
-  border-radius: 50%;
-  /* §3.5: Periwink as a mark on --glass-bg-strong steps up to Bright. */
-  color: var(--color-primary-bright);
-  transition: transform 160ms var(--ease-out);
-}
-
-.dashboard-chevron.is-open {
-  transform: rotate(90deg);
-}
-
-.dashboard-track-expanded {
-  margin: 6px 0 0;
-  padding: 0 12px;
-  font-size: 0.76rem;
-  line-height: 1.45;
-  color: var(--color-ink-muted);
-}
-
 /* ---- Skills and support ---------------------------------------------- */
 
 /* Two groups, both plain: what is being done alone, and what still has a
@@ -2323,17 +2288,8 @@ textarea::placeholder {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dashboard-chevron,
   .dashboard-length-option {
     transition: none;
-  }
-}
-
-/* Narrow phones: the two figures stack rather than squeezing a 2rem
-   number into half of a 320px screen. */
-@media (max-width: 359px) {
-  .dashboard-metrics {
-    grid-template-columns: 1fr;
   }
 }
 
