@@ -1596,20 +1596,28 @@ textarea::placeholder {
 
 /* ---------------------------------------------------------------------
    CAREGIVER DASHBOARD
-   The one screen in the app that is purely information. DESIGN-TOKENS
-   §4.2: caregiver surfaces are DENSER than child ones, not different in
-   kind -- the same glass, at --glass-bg-strong + --radius-md +
-   --space-caregiver-gap, Periwink tint, muted secondary text.
+   The one screen in the app that is purely information, re-skinned onto
+   Toki (mockup screen 08). It renders inside App.tsx's
+   <main class="toki-home-main">, so the shell already owns the ground,
+   the wordmark, the "Caregiver Dashboard" title and the tab bar. What is
+   left for this block is the content: white cards on the shell's blue
+   ground, #e6f0fa rims, rgba(23,86,140,x) shadows, one blue accent family
+   (#1e93ee / #0b6fbf) and the #21374e / #5c7691 / #7e95ad ink hierarchy.
 
-   §4.3's leak rule holds: no Sunburst, no Blush, no Ember, no child
-   tokens. That is also why the four track colours below are a violet-cool
-   family rather than the red/amber/green a chart usually reaches for --
-   nothing on a screen about a child in early intervention should be able
-   to read as a red/green verdict on them.
+   Most of the vocabulary is NOT here: the card, banner, tag, list row,
+   week grid, ladder meter and status mark are the shared .toki-*
+   primitives further down this file (see "TOKI REVAMP -- home shell").
+   This block holds only the pieces the dashboard alone needs, plus the
+   handful of dashboard-scoped tweaks to those primitives. Those tweaks
+   are all written as `.dashboard .toki-*` on purpose: the primitives are
+   defined LATER in the file, so a bare class selector here would lose to
+   them on source order.
 
-   Six carded groups where §4.2 suggests three to five: a knowing
-   deviation to match the approved mockup, kept in hand by making every
-   card a flat list with one heading, never a nested panel.
+   The leak rule holds: no reserved hues, no child tokens. That is also
+   why the six track colours are a violet-cool family rather than the
+   red/amber/green a chart usually reaches for -- nothing on a screen
+   about a child in early intervention should be able to read as a
+   red/green verdict on them.
 
    NO HOVER STATES ANYWHERE in this block. Every control here is
    touch-first, and a hover style on a tablet fires on tap and then
@@ -1618,334 +1626,257 @@ textarea::placeholder {
    full-width row visibly detaches it from the card it sits in.
    --------------------------------------------------------------------- */
 
+/* Matches .toki-home-main's own 12px rhythm, so the dashboard's cards sit
+   on the same spacing the other three tabs' content does. */
 .dashboard {
-  gap: var(--space-caregiver-gap);
+  gap: 12px;
+  padding-bottom: 4px;
 }
 
-/* Permanent, undismissable (§7.9). Pitched as a standing note, not a
-   warning: muted ink, one Periwink rule down the leading edge, and none
-   of the danger palette -- nothing here is wrong, this is simply what
-   the screen is. */
-.dashboard-banner {
-  padding: 10px 14px;
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-primary);
-  border-radius: var(--radius-sm);
-  background: var(--color-info-soft);
-  color: var(--color-ink-muted);
-  font-size: 0.78rem;
-}
+/* ---- Header: whose log this is --------------------------------------
+   Deliberately quiet, and deliberately AFTER the banner in the source.
+   The shell's own greeting already carries the page title at h1 size and
+   names the child in its subtitle, so a second big name here would read
+   as two competing titles. This is an identity strip instead: the
+   Companion at thumbnail size, the child's name at card-title size. */
 
-/* ---- Header: whose log this is -------------------------------------- */
-
-.dashboard-head {
+.toki-dhead {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   padding: 2px 4px;
 }
 
-.dashboard-head-text {
+.toki-dhead-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
-.dashboard-head-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+.toki-dhead-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--color-ink-muted);
+  color: #7e95ad;
 }
 
-.dashboard-head-name {
+.toki-dhead-name {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: var(--weight-caregiver-strong);
+  font-size: 0.95rem;
+  font-weight: 800;
   line-height: 1.2;
+  color: #21374e;
   overflow-wrap: anywhere;
 }
 
 /* The Companion, at identity size rather than portrait size: this says
    "this is their log", it is not a photo to look at. */
-.dashboard-avatar {
+.toki-dhead-avatar {
   flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  border-radius: 13px;
   object-fit: cover;
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid #e1edf9;
+  background: #eaf5ff;
+  box-shadow: 0 4px 12px rgba(23, 86, 140, 0.07);
 }
 
-.dashboard-avatar--empty {
+.toki-dhead-avatar--empty {
   display: grid;
   place-items: center;
-  background: var(--color-primary-soft);
-  color: var(--color-primary-bright);
+  color: #1e93ee;
 }
 
-/* ---- The card ------------------------------------------------------- */
+/* ---- Shared card copy ------------------------------------------------ */
 
-.dashboard-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px 16px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  /* The caregiver temperature: a Periwink wash laid over the stronger
-     glass fill, as one background shorthand so the tint travels with the
-     fill rather than needing a second element. */
-  background:
-    linear-gradient(var(--glass-tint-caregiver), var(--glass-tint-caregiver)),
-    var(--glass-bg-strong);
-  backdrop-filter: var(--glass-filter);
-  -webkit-backdrop-filter: var(--glass-filter);
-  box-shadow: var(--glass-shadow), var(--glass-highlight);
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .dashboard-card {
-    background: var(--color-surface);
-    border-color: var(--color-border-strong);
-  }
-}
-
-.dashboard-card-title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: var(--weight-caregiver-strong);
-}
-
-.dashboard-caption {
-  margin: -2px 0 2px;
-  font-size: 0.78rem;
+.toki-dcaption {
+  margin: -2px 0 4px;
+  font-size: 0.76rem;
   line-height: 1.5;
-  color: var(--color-ink-muted);
+  color: #5c7691;
 }
 
-.dashboard-empty {
-  font-size: 0.85rem;
-  color: var(--color-ink-muted);
-}
-
-/* ---- This week ------------------------------------------------------ */
-
-/* Seven cells, oldest to today. An unplayed day is an EMPTY OUTLINE and
-   nothing else: no red, no cross, no dimming, no gap language anywhere
-   near it. The only cell that is called out is today's, and it is called
-   out whether or not anything has been played in it -- so the accent
-   reads as "you are here", never as a verdict on the day. */
-.dashboard-week {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+.toki-dempty {
   margin: 0;
-  padding: 0;
-  list-style: none;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #5c7691;
 }
 
-.dashboard-week-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.dashboard-week-label {
+/* Two groups, both plain: what is being done alone, and what still has a
+   hand on it. Neither heading is coloured, sized or ordered to make one
+   the good half -- the ladder runs both ways and a tier that moved down
+   is information, not an event. */
+.toki-dgroup-label {
+  margin: 8px 0 0;
   font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-weight: 800;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--color-ink-muted);
+  color: #7e95ad;
 }
 
-/* A <button> now (tapping a day opens its summary below), so this resets
-   every size/surface default the global `button` rule would otherwise
-   force onto a small calendar cell -- the 88px touch floor would blow out
-   a 7-column grid, and the glass fill/backdrop-filter would turn a plain
-   outline square into a little card. */
-.dashboard-week-box {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  aspect-ratio: 1;
+/* A plain text link, not a filled button -- "View more" opens a whole
+   month grid below it, which is enough visual weight of its own without
+   also drawing a button around three words. It still clears the touch
+   floor: the 44px box is padding above and below the label, so the
+   affordance stays small while the target does not. */
+.toki-dlink {
+  align-self: flex-start;
   min-width: 0;
-  min-height: 0;
-  padding: 0;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 9px;
+  min-height: var(--touch-min);
+  margin-top: 2px;
+  padding: 0 2px;
+  border: none;
+  border-radius: 12px;
   background: transparent;
-  color: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
+  color: #0b6fbf;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: left;
 }
 
-.dashboard-week-box.is-played {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-bright);
+.toki-dlink:active {
+  transform: none;
+  opacity: 0.65;
 }
 
-/* After .is-played on purpose: on a day that is both, "today" is the
-   thing the eye needs to find first. */
-.dashboard-week-box.is-today {
-  border-color: var(--color-primary-bright);
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
+/* ---- This week -------------------------------------------------------
+   The grid, the day column, the labels and the played/today treatments
+   are all the shared .toki-week-* primitives. What is dashboard-specific
+   is that every cell is a BUTTON here (tapping a day opens its summary
+   below) rather than the mockup's inert div, so the global button rule
+   has to be unwound: its 44px floor would blow out a 7-column grid and
+   its glass fill would turn a flat square into a little card.
+
+   An unplayed day stays an empty pale square and nothing else: no red,
+   no cross, no dimming, no gap language anywhere near it. Today is
+   called out whether or not anything has been played in it, so the ring
+   reads as "you are here", never as a verdict on the day. */
+
+button.toki-week-cell {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  color: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transition: none;
+}
+
+/* The tick is redundant with the fill on purpose -- the played/not-played
+   fact is also in every cell's aria-label, so it is never carried by
+   colour alone. An empty day has nothing to draw, so the mark is simply
+   absent rather than drawn in a "missing" state. */
+.dashboard .toki-week-cell:not(.toki-week-cell--played) {
+  color: transparent;
+}
+
+.dashboard button.toki-week-cell:active {
+  transform: none;
 }
 
 /* Last in source order on purpose: whichever day's summary is open below
    is the thing the eye needs to find first, even on today's own cell. */
-.dashboard-week-box.is-selected {
-  border-color: var(--color-ink);
-  box-shadow: 0 0 0 2px var(--color-ink-muted);
+.dashboard .toki-week-cell.is-selected {
+  box-shadow: 0 0 0 3px rgba(11, 111, 191, 0.55);
 }
 
-/* ---- Day detail ------------------------------------------------------ */
+/* ---- View more / full-history calendar ------------------------------- */
 
-.dashboard-day-detail-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.dashboard-day-detail-close {
-  display: grid;
-  place-items: center;
-  min-width: 28px;
-  min-height: 28px;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: var(--surface-wash);
-  color: var(--color-ink-muted);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-}
-
-.dashboard-day-detail-close:active {
-  background: var(--surface-wash-active);
-}
-
-/* The day-detail rows reuse .dashboard-track-toggle's look without being
-   a button themselves -- there is nothing left for them to expand into,
-   the day itself already was the drill-down. */
-.dashboard-day-detail-row {
-  cursor: default;
-}
-
-/* ---- View more / full-history calendar -------------------------------- */
-
-/* A plain text link, not a full button -- "View more" opens a whole
-   month grid below it, which is enough visual weight of its own without
-   also drawing a glass button around three words. */
-.dashboard-view-more {
-  align-self: flex-start;
-  min-width: 0;
-  min-height: 0;
-  padding: 2px 0;
-  border: none;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  color: var(--color-primary-bright);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.dashboard-view-more:active {
-  transform: none;
-  opacity: 0.7;
-}
-
-/* The one number on this card worth the eye landing on first -- same
-   size/weight/colour treatment as .dashboard-metric-value elsewhere on
-   this screen, so "big coloured figure" reads as this app's own way of
-   drawing attention, not a borrowed streak-counter look. */
-.dashboard-days-practiced {
+/* The one number on this card worth the eye landing on first. Blue and
+   large because it is the answer to "how much has there been", not
+   because it is a total to keep up -- there is nothing here to reset. */
+.toki-dfigure {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 5px;
-  margin: -2px 0 2px;
-  font-size: 0.95rem;
-  color: var(--color-ink-muted);
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  color: #5c7691;
 }
 
-.dashboard-days-practiced-value {
+.toki-dfigure-value {
   font-size: 2rem;
-  font-weight: var(--weight-caregiver-strong);
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  color: var(--color-primary-bright);
+  color: #0b6fbf;
 }
 
-.dashboard-calendar-head {
+.toki-cal-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.dashboard-calendar-month-label {
+.toki-cal-month {
   text-align: center;
+  margin: 0;
 }
 
-.dashboard-calendar-nav {
+.toki-cal-nav {
   display: grid;
   place-items: center;
-  min-width: 32px;
-  min-height: 32px;
-  width: 32px;
-  height: 32px;
+  flex: none;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
   padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: var(--surface-wash);
-  color: var(--color-ink);
+  border: 1px solid #e6f0fa;
+  border-radius: 14px;
+  background: #f4fafe;
+  color: #0b6fbf;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
+  transition: none;
 }
 
-.dashboard-calendar-nav:active {
+.toki-cal-nav:active {
   transform: none;
-  background: var(--surface-wash-active);
+  background: #eaf5ff;
 }
 
-.dashboard-calendar-grid {
+.toki-cal-nav:disabled {
+  color: #9fb8cf;
+  opacity: 1;
+}
+
+.toki-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
+  margin-top: 8px;
 }
 
-.dashboard-calendar-weekday {
+.toki-cal-weekday {
   padding-bottom: 2px;
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-align: center;
-  color: var(--color-ink-muted);
+  color: #7e95ad;
 }
 
-/* Same button-reset reasoning as .dashboard-week-box: a small grid cell,
-   not a full-sized touch target, so every size/surface default the
-   global `button` rule would add gets zeroed out here. Unlike the week
-   strip's boxes, the number itself is always visible -- a month view has
-   no separate weekday label per cell to carry that job. */
-.dashboard-calendar-cell {
+/* Same button-unwinding as the week strip's cells, for the same reason:
+   a small grid cell, not a full-sized touch target. Unlike the week
+   strip, the number itself is always visible -- a month view has no
+   separate weekday label per cell to carry that job. */
+.toki-cal-cell {
   display: grid;
   place-items: center;
   width: 100%;
@@ -1954,54 +1885,274 @@ textarea::placeholder {
   min-height: 0;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--color-ink);
+  border-radius: 10px;
+  background: #f4fafe;
+  color: #21374e;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  transition: none;
+}
+
+.toki-cal-cell:active {
+  transform: none;
 }
 
 /* The adjacent month's dates, filling out the grid's leading/trailing
    weeks -- present so every row is a full week, faint so the eye still
    finds the current month's own dates first. Never a button: there is
    nothing to open here (see CalendarDayCell). */
-.dashboard-calendar-cell--pad {
-  color: var(--color-ink-muted);
-  opacity: 0.35;
+.toki-cal-cell--pad {
+  background: transparent;
+  color: #9fb8cf;
+  font-weight: 400;
 }
 
-.dashboard-calendar-cell.is-played {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-bright);
+.toki-cal-cell.is-played {
+  background: linear-gradient(180deg, #69bcff, #1e93ee);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 800;
+}
+
+.toki-cal-cell.is-today {
+  box-shadow: 0 0 0 3px rgba(30, 147, 238, 0.22);
+}
+
+.toki-cal-cell.is-selected {
+  box-shadow: 0 0 0 3px rgba(11, 111, 191, 0.55);
+}
+
+/* ---- Day detail ------------------------------------------------------ */
+
+/* A card like the others; the only difference is that its title shares a
+   row with a close button, so the title's own bottom margin would push
+   the two out of line. */
+.toki-dday .toki-dcard-title {
+  margin-bottom: 0;
+}
+
+.toki-dday-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.toki-dday-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+  border: 1px solid #e6f0fa;
+  border-radius: 14px;
+  background: #f4fafe;
+  color: #5c7691;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transition: none;
+}
+
+.toki-dday-close:active {
+  transform: none;
+  background: #eaf5ff;
+}
+
+/* ---- Played figures --------------------------------------------------- */
+
+.toki-dmetric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toki-dmetric-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #7e95ad;
+}
+
+/* Tabular figures: this changes every session, and proportional digits
+   make the number jitter as it does. */
+.toki-dmetric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: #0b6fbf;
+}
+
+.toki-dmetric-unit {
+  font-size: 0.78rem;
   font-weight: 700;
+  color: #5c7691;
 }
 
-.dashboard-calendar-cell.is-today {
-  border-color: var(--color-primary-bright);
-  box-shadow: 0 0 0 2px var(--color-primary-soft);
+/* ---- Time by track --------------------------------------------------- */
+
+/* ONE bar, segmented -- not one bar per track. Several bars invite
+   reading them as several progress bars against several targets; one bar
+   can only be read as "this is how the day divided up", which is all it
+   is. */
+.toki-dbar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  margin: 8px 0 2px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #eaf3fb;
 }
 
-.dashboard-calendar-cell.is-selected {
-  border-color: var(--color-ink);
-  box-shadow: 0 0 0 2px var(--color-ink-muted);
+.toki-dbar-seg {
+  flex-basis: 0;
+  /* A track with no time that day is not rendered at all (see
+     dashboardSummary.timeByTrackOn), so this floor only ever protects a
+     genuinely tiny slice from disappearing -- it can never manufacture a
+     sliver for a track that was not played. */
+  min-width: 10px;
 }
 
-/* ---- Usual session length ------------------------------------------- */
+/* ---- Lists ------------------------------------------------------------
+   The rows themselves are the shared .toki-list-row / .toki-skill-row
+   primitives: hairline-separated, flush to the card, no inset plate. Only
+   the <ul> reset and the two-line row body live here. */
+
+.toki-dlist {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toki-ddot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.toki-list-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Inside a stacked row the title is one line of a column, not the row's
+   own flexible child, so it gives its flex-grow back. */
+.dashboard .toki-list-text .toki-list-title {
+  flex: none;
+}
+
+.toki-list-detail {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #7e95ad;
+  overflow-wrap: anywhere;
+}
+
+/* Skill ids arrive kebab-cased and lowercase; capitalising the whole
+   phrase would Title Case A Sentence, so only the first letter moves. */
+.toki-skill-name::first-letter,
+.toki-list-detail::first-letter {
+  text-transform: uppercase;
+}
+
+.dashboard .toki-list-title,
+.dashboard .toki-skill-name {
+  overflow-wrap: anywhere;
+}
+
+.dashboard .toki-list-meta {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Skills and support ----------------------------------------------- */
+
+.toki-skill-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+/* The detail line is a whole sentence, so it has to be allowed under the
+   meter on a narrow phone rather than squeezing it. */
+.dashboard .toki-skill-meter-row {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+/* ---- Recently played --------------------------------------------------
+   Each row names a GAME (not a sitting), so it carries the same painted
+   scene its own Play-tab tile shows (TRACK_THUMBNAIL, a small crop of the
+   exact tile art), drawn in that track's own colour on the shared Toki
+   icon plate, plus a "View" button that is also "play this again". */
+
+.toki-drecent-icon {
+  overflow: hidden;
+}
+
+.toki-drecent-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.toki-drecent-view {
+  flex: none;
+  min-width: 0;
+  min-height: var(--touch-min);
+  padding: 6px 16px;
+  border: 1px solid #cfe3f7;
+  border-radius: 999px;
+  background: #eaf5ff;
+  color: #0b6fbf;
+  font-size: 0.78rem;
+  font-weight: 800;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transition: none;
+}
+
+.toki-drecent-view:active {
+  transform: none;
+  background: #d7ecff;
+}
+
+/* ---- Usual session length --------------------------------------------- */
 
 .dashboard-length-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+  margin-top: 2px;
 }
 
 /* The one place on this screen that keeps the original 88px floor rather
    than --touch-min's 44px: these three are the only real touch targets on
    a caregiver screen that a caregiver taps while holding a child, and the
-   number inside them wants the room anyway. */
+   number inside them wants the room anyway. Kept under its original class
+   name too -- smoke-dashboard.ts asserts this exact rule still carries the
+   88px, and renaming it would have moved the assertion off the live
+   control. */
 .dashboard-length-option {
   display: flex;
   flex-direction: column;
@@ -2010,10 +2161,10 @@ textarea::placeholder {
   gap: 2px;
   min-height: 88px;
   padding: 8px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  background: var(--surface-wash);
-  color: var(--color-ink);
+  border: 1px solid #e6f0fa;
+  border-radius: 18px;
+  background: #f4fafe;
+  color: #21374e;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
@@ -2021,312 +2172,32 @@ textarea::placeholder {
 }
 
 .dashboard-length-option.is-selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
+  border-color: #1e93ee;
+  background: #eaf5ff;
 }
 
 .dashboard-length-option:active {
   transform: none;
-  background: var(--surface-wash-active);
+  background: #d7ecff;
 }
 
 .dashboard-length-value {
   font-size: 1.5rem;
-  font-weight: var(--weight-caregiver-strong);
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .dashboard-length-unit {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-ink-muted);
+  color: #7e95ad;
 }
 
 .dashboard-length-option.is-selected .dashboard-length-unit {
-  color: var(--color-primary-bright);
-}
-
-/* ---- Played figures --------------------------------------------------- */
-
-.dashboard-metric {
-  gap: 4px;
-}
-
-.dashboard-metric-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--color-ink-muted);
-}
-
-/* Tabular figures: these two sit side by side and change every session,
-   and proportional digits make them jitter against each other. */
-.dashboard-metric-value {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  font-size: 2rem;
-  font-weight: var(--weight-caregiver-strong);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-
-.dashboard-metric-unit {
-  font-size: 0.8rem;
-  font-weight: var(--weight-caregiver-body);
-  color: var(--color-ink-muted);
-}
-
-/* ---- Time by track --------------------------------------------------- */
-
-/* ONE bar, segmented -- not one bar per track. Three bars invite reading
-   them as three progress bars against three targets; one bar can only be
-   read as "this is how today divided up", which is all it is. */
-.dashboard-bar {
-  display: flex;
-  gap: 2px;
-  height: 12px;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.dashboard-bar-segment {
-  flex-basis: 0;
-  /* A track with no time today is not rendered at all (see
-     dashboardSummary.timeByTrackOn), so this floor only ever protects a
-     genuinely tiny slice from disappearing -- it can never manufacture a
-     sliver for a track that was not played. */
-  min-width: 10px;
-}
-
-.dashboard-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dashboard-track-row {
-  display: flex;
-  flex-direction: column;
-}
-
-/* An inset row ON the card, not a second glass panel -- the card stays
-   the only surface the eye has to parse. */
-.dashboard-track-toggle,
-.dashboard-skill-row,
-.dashboard-recent-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-wash);
-}
-
-.dashboard-track-toggle {
-  min-height: var(--touch-min);
-  text-align: left;
-  color: var(--color-ink);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-}
-
-.dashboard-track-toggle:active {
-  transform: none;
-  background: var(--surface-wash-active);
-}
-
-.dashboard-dot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.dashboard-track-text,
-.dashboard-skill-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.dashboard-track-name,
-.dashboard-skill-name,
-.dashboard-recent-name {
-  font-size: 0.88rem;
-  font-weight: var(--weight-caregiver-strong);
-  overflow-wrap: anywhere;
-}
-
-/* Sits directly in the row (no wrapping .dashboard-recent-text -- there
-   is only ever one line here, unlike the track/skill rows' name+detail
-   pairs), so it needs its own flex sizing to take the row's spare width
-   and push the icon/View button to their fixed slots either side. */
-.dashboard-recent-name {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Skill ids arrive kebab-cased and lowercase; capitalising the whole
-   phrase would Title Case A Sentence, so only the first letter moves. */
-.dashboard-skill-name::first-letter,
-.dashboard-track-detail::first-letter {
-  text-transform: uppercase;
-}
-
-/* A day-detail-only marker on whichever track had the most time that
-   day (see CaregiverDashboard.tsx's DayTrackRow) -- a plain fact from
-   the same sort the bar already uses, not a rank across days. */
-.dashboard-tag {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--color-primary-soft);
-  color: var(--color-primary-bright);
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  vertical-align: middle;
-}
-
-.dashboard-track-detail,
-.dashboard-skill-context {
-  font-size: 0.74rem;
-  line-height: 1.35;
-  color: var(--color-ink-muted);
-  overflow-wrap: anywhere;
-}
-
-.dashboard-figure-value {
-  flex: none;
-  font-size: 0.85rem;
-  font-weight: var(--weight-caregiver-strong);
-  font-variant-numeric: tabular-nums;
-  color: var(--color-ink);
-}
-
-/* ---- Recently played --------------------------------------------------
-   Each row names a GAME (not a sitting), so it carries the same painted
-   scene its own Play-tab tile shows (TRACK_THUMBNAIL, a small crop of
-   the exact tile art) on a plate tinted with that track's own colour --
-   the same legend the calendar's bar/dot already use elsewhere on this
-   screen -- and a "View" button that is also "play this again". */
-
-.dashboard-recent-icon {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-  color: var(--color-ink);
-}
-
-.dashboard-recent-icon svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.dashboard-recent-view {
-  flex: none;
-  min-width: 0;
-  min-height: 0;
-  padding: 6px 14px;
-  border: 1px solid var(--color-primary);
-  border-radius: 999px;
-  background: var(--color-primary-soft);
-  color: var(--color-primary-bright);
-  font-size: 0.78rem;
-  font-weight: 700;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-}
-
-.dashboard-recent-view:active {
-  transform: none;
-  background: var(--color-primary);
-  color: var(--color-primary-ink);
-}
-
-/* ---- Skills and support ---------------------------------------------- */
-
-/* Two groups, both plain: what is being done alone, and what still has a
-   hand on it. Neither heading is coloured, sized or ordered to make one
-   the good half -- the ladder runs both ways and a tier that moved down
-   is information, not an event. */
-.dashboard-group-label {
-  margin: 4px 0 -2px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--color-ink-muted);
-}
-
-.dashboard-skill-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* Five steps, filled up to the current tier: more filled means less help
-   needed, the direction the ladder itself runs. One hue at two weights --
-   a second colour here would invite reading the low end as a warning,
-   which is exactly what §10 keeps off this screen. The tier's name is
-   written out beside every meter, so the bars are never the only telling. */
-.dashboard-ladder {
-  display: flex;
-  gap: 3px;
-  flex: none;
-}
-
-.dashboard-ladder-step {
-  width: 13px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--color-border);
-}
-
-.dashboard-ladder-step.is-filled {
-  background: var(--color-primary-bright);
-}
-
-/* ---- Skills ---------------------------------------------------------- */
-
-/* Filled with a tick, or an empty outline. The state is ALSO written out
-   in the row's context line ("2 of 2 places"), so nothing here is carried
-   by colour alone. */
-.dashboard-mark {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 50%;
-  color: transparent;
-}
-
-.dashboard-mark.is-complete {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-bright);
+  color: #0b6fbf;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3457,6 +3328,7 @@ textarea::placeholder {
   margin-top: 5px;
 }
 .toki-ladder-meter {
+  display: block;
   width: 80px;
   height: 4px;
   border-radius: 999px;
@@ -3465,6 +3337,7 @@ textarea::placeholder {
   flex: none;
 }
 .toki-ladder-meter-fill {
+  display: block;
   height: 100%;
   background: var(--toki-eyebrow);
   border-radius: 999px;
