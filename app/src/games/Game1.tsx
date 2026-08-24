@@ -46,6 +46,26 @@ import { ObjectIcon } from './objectIcons';
 import { pickNextTarget } from './game1Trial';
 import { getGame1Level, setGame1Level, type Game1Level } from './game1Level';
 import {
+  buildQuest,
+  isQuestComplete,
+  remainingFor,
+  questBrief,
+  questSkillId,
+  type Quest,
+} from './game1/quests';
+import {
+  WALLS,
+  WALL_SHORT,
+  canStart,
+  cropsOf,
+  directionFor,
+  placeCrops,
+  type PlacedCrop,
+  type WallCapture,
+  type WallIndex,
+} from './game1/walls';
+import { RoomPanorama, PANORAMA_STYLES } from './game1/RoomPanorama';
+import {
   applyProfileTuning,
   buildConfirmationGrid,
   buildSearchPromptTemplate,
@@ -423,6 +443,28 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const [showCaregiverRecap, setShowCaregiverRecap] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+  // ---- the room as three walls (games/game1/walls.ts) ----
+  const [captures, setCaptures] = useState<WallCapture[]>([]);
+  const [placed, setPlaced] = useState<PlacedCrop[]>([]);
+  const [activeWall, setActiveWall] = useState<WallIndex | null>(null);
+
+  // ---- what this round is asking for (games/game1/quests.ts) ----
+  // A fetch quest holds one object; a collect/combine quest holds several
+  // and the child makes one trip to the shelf per member.
+  const [quest, setQuest] = useState<Quest | null>(null);
+  const [broughtIds, setBroughtIds] = useState<Set<string>>(new Set());
+
+  // Mirrors of the three above. The celebration -> next-object hop runs
+  // inside a setTimeout, and a timeout callback closes over the state from
+  // the render that scheduled it -- so reading `quest` or `broughtIds`
+  // there would see the values from before the object arrived, and a
+  // collection would either repeat one object forever or end a trip early.
+  const questRef = useRef<Quest | null>(null);
+  const broughtIdsRef = useRef<Set<string>>(new Set());
+  const placedRef = useRef<PlacedCrop[]>([]);
+  /** Walks buildQuest's group list so consecutive rounds differ. */
+  const questIndexRef = useRef<number>(0);
+
   const machineRef = useRef<InteractionMachine>(new InteractionMachine());
   // Seeded with a static value, not Date.now() -- useRef's initial-value
   // argument is evaluated on every render even though only the first call
@@ -526,8 +568,16 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
    * it") passes a one-lower override for exactly one trial without
    * persisting that as the child's new level.
    */
-  function startTrialWith(pool: TaggedCrop[], effectiveLevel: Game1Level = level) {
-    const picked = pickNextTarget(pool, lastTargetIdRef.current);
+  function startTrialWith(
+    pool: TaggedCrop[],
+    effectiveLevel: Game1Level = level,
+    forcedTarget?: TaggedCrop,
+  ) {
+    // A collecting round names the object it still wants; only a free
+    // fetch gets to pick. Without this, the child could be asked for the
+    // same red ball twice while a red cup sits unfetched, and the
+    // collection would never close.
+    const picked = forcedTarget ?? pickNextTarget(pool, lastTargetIdRef.current);
     lastTargetIdRef.current = picked.id;
     setTarget(picked);
     setCompanionHuntActive(false);
@@ -597,7 +647,78 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
   }
 
-  async function handleCapturePress() {
+  /** Recomputes the joined room from whatever walls have been shot. */
+  function commitCaptures(next: WallCapture[]) {
+    const nextPlaced = placeCrops(next);
+    setCaptures(next);
+    setPlaced(nextPlaced);
+    placedRef.current = nextPlaced;
+    setCrops(cropsOf(nextPlaced));
+  }
+
+  /**
+   * Opens a round at the caregiver-set level.
+   *
+   * Falls back down the ladder when the room cannot support the level --
+   * a room with no colour appearing twice cannot pose a counting task, and
+   * §11's posture is to degrade quietly rather than show an error or ask
+   * for objects the child does not own.
+   */
+  function startQuest(pool: TaggedCrop[], effectiveLevel: Game1Level = level) {
+    let q = buildQuest(effectiveLevel, pool, questIndexRef.current);
+    if (!q) q = buildQuest(1, pool, questIndexRef.current);
+    questIndexRef.current += 1;
+
+    const fresh = new Set<string>();
+    setQuest(q);
+    questRef.current = q;
+    setBroughtIds(fresh);
+    broughtIdsRef.current = fresh;
+
+    if (!q) {
+      // Nothing recognised at all. startTrialWith still runs so the child
+      // gets the generic fallback set rather than a dead screen.
+      startTrialWith(pool, effectiveLevel);
+      return;
+    }
+    startTrialWith(pool, effectiveLevel, q.members[0]);
+  }
+
+  /**
+   * One object just arrived in the child's hands.
+   *
+   * For a fetch that ends the round. For a collection it ticks one member
+   * off and sends them back for the next one. What the caregiver sees is
+   * a record of trips that ended in an object arriving, never a number
+   * shown to the child.
+   */
+  function advanceOrFinish(broughtCropId: string) {
+    const q = questRef.current;
+    const delay = tuning.fasterCelebration ? 400 : 800;
+
+    if (!q || q.kind === 'fetch') {
+      setTimeout(() => setPhase('reportingSupport'), delay);
+      return;
+    }
+
+    const next = new Set(broughtIdsRef.current);
+    next.add(broughtCropId);
+    broughtIdsRef.current = next;
+    setBroughtIds(next);
+
+    if (isQuestComplete(q, next)) {
+      setTimeout(() => setPhase('reportingSupport'), delay);
+      return;
+    }
+
+    const stillWanted = remainingFor(q, next)[0];
+    setTimeout(() => {
+      startTrialWith(cropsOf(placedRef.current), level, stillWanted);
+    }, delay);
+  }
+
+  async function handleCapturePress(wall: WallIndex) {
+    setActiveWall(wall);
     setPhase('capturing');
     setCaptureNotice(null);
     setSlowCapture(false);
@@ -622,7 +743,15 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // "found in your room" reveal below — showing it for the generic
     // fallback set would misrepresent placeholder crops as real detections.
     if (outcome.kind === 'success') {
-      setCrops(outcome.crops);
+      // One wall of the room, added to whatever has been shot already.
+      // Re-shooting a wall REPLACES it rather than appending -- otherwise a
+      // caregiver correcting a blurry photo would leave the old wall's
+      // objects in the room, and the child would be sent to fetch things
+      // that are no longer on screen.
+      commitCaptures([
+        ...captures.filter((c) => c.wall !== wall),
+        { wall, crops: outcome.crops, scene: outcome.scene },
+      ]);
       setScene(outcome.scene);
       setFallbackReason(null);
       setPhase('foundObjects');
@@ -641,7 +770,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
           : 'no-photo',
     );
     setCrops(GENERIC_FALLBACK_CROPS);
-    startTrialWith(GENERIC_FALLBACK_CROPS);
+    startQuest(GENERIC_FALLBACK_CROPS);
   }
 
   function handleTheyBroughtIt() {
@@ -666,8 +795,10 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
         profile.context,
       );
       void adapters.speechOut.say(line);
-      // §8.1 lively/short-attention tuning: "faster celebration".
-      setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
+      // §8.1 lively/short-attention tuning: "faster celebration". On a
+      // collecting round this hop goes back out for the next object
+      // instead of straight to the support report.
+      advanceOrFinish(crop.id);
       return;
     }
 
@@ -690,7 +821,15 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   async function handleSupportTierReport(tier: SupportTier) {
     if (!sessionId) return;
     if (!companionHuntActive && !target) return;
-    const skillId = companionHuntActive ? 'find-companion' : `find-${target?.category}`;
+    // A collecting round is a different skill from a single fetch, so it
+    // logs as one -- otherwise five trips to gather the red things would
+    // be recorded as five separate "find a toy" events and the caregiver
+    // dashboard would show a burst of activity that never happened.
+    const skillId = companionHuntActive
+      ? 'find-companion'
+      : quest && quest.kind !== 'fetch'
+        ? questSkillId(quest.kind)
+        : `find-${target?.category}`;
 
     await logActivityOutcome({
       sessionId,
@@ -806,7 +945,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     const capSeconds = sessionNumber ? sessionCapSeconds(sessionNumber) : null;
     return (
       <div className="screen" style={accentStyle}>
-        <style>{GAME1_STYLES}</style>
+        <style>{GAME1_STYLES + PANORAMA_STYLES}</style>
         <h2>Find It In Your World</h2>
         {sessionNumber && capSeconds && (
           <p style={{ fontSize: '0.75rem', opacity: 0.5 }}>
@@ -835,7 +974,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
             file's header for why. */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>Level:</span>
-          {([1, 2, 3, 4] as const).map((l) => (
+          {([1, 2, 3, 4, 5] as const).map((l) => (
             <button
               key={l}
               className={l === level ? 'g1-btn-accent' : undefined}
@@ -851,13 +990,51 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
             </button>
           ))}
         </div>
-        <button
-          className="g1-btn-accent"
-          style={{ minWidth: 88, minHeight: 88 }}
-          onClick={() => void handleCapturePress()}
-        >
-          Choose a photo of the room
-        </button>
+        {/* THREE WALLS, not one photo (games/game1/walls.ts). The
+            caregiver stands in one spot and shoots left, ahead, right --
+            only the part of the room they want the child moving around
+            in. Any one wall is enough to start; three just gives more to
+            turn towards. */}
+        <p style={{ fontSize: '0.8rem', opacity: 0.7, margin: '4px 0 0' }}>
+          Photograph the sides of the room you want to use:
+        </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {WALLS.map((wall) => {
+            const shot = captures.find((c) => c.wall === wall);
+            return (
+              <button
+                key={wall}
+                className={shot ? undefined : 'g1-btn-accent'}
+                style={{
+                  minWidth: 96,
+                  minHeight: 96,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  border: shot ? '1px solid #bbb' : undefined,
+                }}
+                onClick={() => void handleCapturePress(wall)}
+              >
+                <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>{WALL_SHORT[wall]}</span>
+                <span style={{ fontSize: '0.72rem', opacity: 0.75 }}>
+                  {shot ? `${shot.crops.length} found — retake` : 'add photo'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {captures.length > 0 && (
+          <button
+            className="g1-btn-accent"
+            style={{ minWidth: 88, minHeight: 88 }}
+            disabled={!canStart(captures)}
+            onClick={() => startQuest(cropsOf(placed))}
+          >
+            {canStart(captures) ? "Let’s play!" : 'Nothing found yet — try another photo'}
+          </button>
+        )}
         <button style={{ minWidth: 88, minHeight: 88 }} onClick={() => void handleEndSession('caregiver')}>
           End session
         </button>
@@ -876,9 +1053,10 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // final report.
     return (
       <div className="screen" style={accentStyle}>
-        <style>{GAME1_STYLES}</style>
+        <style>{GAME1_STYLES + PANORAMA_STYLES}</style>
         <p style={{ fontSize: '1rem', opacity: 0.8 }}>
-          {slowCapture ? "Still looking around the room..." : 'Looking around the room...'}
+          {slowCapture ? 'Still looking...' : 'Looking...'}
+          {activeWall !== null && ` (${WALL_SHORT[activeWall].toLowerCase()})`}
         </p>
       </div>
     );
@@ -894,20 +1072,32 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // phase is only reached on a real 'success' outcome).
     return (
       <div className="screen" style={accentStyle}>
-        <style>{GAME1_STYLES}</style>
+        <style>{GAME1_STYLES + PANORAMA_STYLES}</style>
         <h2>Found in your room!</h2>
         <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-          {crops.length} object{crops.length === 1 ? '' : 's'} recognised from the photo:
+          {crops.length} object{crops.length === 1 ? '' : 's'} across{' '}
+          {captures.length} side{captures.length === 1 ? '' : 's'} of the room:
         </p>
-        {scene && <RoomMap scene={scene} crops={crops} />}
+        {/* The joined room. Object NAMES stay in the legend underneath --
+            nothing is captioned onto a photo, where it would cover the
+            very objects it describes. Wall direction is carried by
+            position: the left wall is the panel on the left. */}
+        <RoomPanorama placed={placed} captures={captures} />
         <ObjectLegend crops={crops} />
-        <button
-          className="g1-btn-accent"
-          style={{ minWidth: 88, minHeight: 88 }}
-          onClick={() => startTrialWith(crops)}
-        >
-          Let&rsquo;s play!
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {WALLS.some((w) => !captures.find((c) => c.wall === w)) && (
+            <button style={{ minHeight: 56 }} onClick={() => setPhase('idle')}>
+              Add another side
+            </button>
+          )}
+          <button
+            className="g1-btn-accent"
+            style={{ minWidth: 88, minHeight: 88 }}
+            onClick={() => startQuest(cropsOf(placed))}
+          >
+            Let&rsquo;s play!
+          </button>
+        </div>
       </div>
     );
   }
@@ -917,7 +1107,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
 
   return (
     <div className="screen" style={accentStyle}>
-      <style>{GAME1_STYLES}</style>
+      <style>{GAME1_STYLES + PANORAMA_STYLES}</style>
 
       {phase === 'searching' && (
         <>
@@ -926,10 +1116,82 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
               Caregiver view: help them find {profile.context.companion?.name ?? 'their Companion'}!
             </p>
           ) : (
-            <p>
-              Caregiver view: find {target && targetDescriptionForLevel(level, target)} —{' '}
-              {searchScopeLabelForLevel(level)}. (Level {level})
-            </p>
+            <>
+              <p>
+                Caregiver view: find {target && targetDescriptionForLevel(level, target)} —{' '}
+                {searchScopeLabelForLevel(level)}. (Level {level})
+                {target && directionFor(placed, target.id) && (
+                  <>
+                    {' '}
+                    <strong>{directionFor(placed, target.id)}.</strong>
+                  </>
+                )}
+              </p>
+              {/* The whole round, stated once, so the caregiver knows what
+                  they are steering towards before the first trip. */}
+              {quest && quest.kind !== 'fetch' && (
+                <p style={{ fontSize: '0.85rem', opacity: 0.8 }}>{questBrief(quest)}</p>
+              )}
+              {/* WHAT ARRIVED IS SHOWN AS A TRAY, NOT AS A NUMERAL.
+                  A pre-literate child cannot read "3 of 5" -- that is
+                  reading, not counting. So what has arrived is shown as a
+                  row that gets longer, the same way the tower game shows
+                  quantity. The digits in the caption are for the grown-up,
+                  who is the only person reading this half of the screen. */}
+              {quest && quest.kind !== 'fetch' && (
+                <div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      flexWrap: 'wrap',
+                      alignItems: 'center',
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      background: 'rgba(0,0,0,.05)',
+                      minHeight: 56,
+                    }}
+                  >
+                    {quest.members.map((m) => {
+                      const here = broughtIds.has(m.id);
+                      return (
+                        <div
+                          key={m.id}
+                          title={`${m.colour} ${m.name}`}
+                          style={{
+                            width: 40,
+                            height: 40,
+                            display: 'grid',
+                            placeItems: 'center',
+                            borderRadius: 10,
+                            padding: 3,
+                            background: here ? 'rgba(255,255,255,.95)' : 'transparent',
+                            border: here ? '2px solid var(--g1-accent, #5b52e8)' : '2px dashed rgba(0,0,0,.18)',
+                            opacity: here ? 1 : 0.4,
+                          }}
+                        >
+                          <ObjectIcon name={m.name} category={m.category} size={30} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p style={{ fontSize: '0.75rem', opacity: 0.6, margin: '6px 0 0' }}>
+                    {broughtIds.size} of {quest.members.length} brought so far
+                  </p>
+                </div>
+              )}
+              {/* Where everything is, so the caregiver can gesture
+                  towards it instead of describing it. F.009's gesture
+                  tier is unusable without this. */}
+              {placed.length > 0 && (
+                <RoomPanorama
+                  placed={placed}
+                  captures={captures}
+                  wantedIds={target ? new Set([target.id]) : undefined}
+                  doneIds={broughtIds}
+                />
+              )}
+            </>
           )}
           <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
             Support tier {suggestedTierInfo.tier} — {suggestedTierInfo.name}:{' '}

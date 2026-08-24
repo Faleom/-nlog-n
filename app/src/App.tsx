@@ -430,27 +430,28 @@ function App() {
           <div className="home-section">
             <p className="home-section-label">Play</p>
             <div className="home-play-grid">
+              {/* Game 1 is back: it now carries the three-wall room and
+                  the counting/adding levels (games/game1/). Game 2 stays
+                  behind the flag -- it has had no equivalent pass. */}
+              <button
+                className="button-primary home-play-button"
+                onClick={() => setScreen({ kind: 'game1' })}
+              >
+                <span className="home-play-icon" aria-hidden="true">
+                  🔍
+                </span>
+                Find It In Your World
+              </button>
               {SHOW_ALL_GAMES && (
-                <>
-                  <button
-                    className="button-primary home-play-button"
-                    onClick={() => setScreen({ kind: 'game1' })}
-                  >
-                    <span className="home-play-icon" aria-hidden="true">
-                      🔍
-                    </span>
-                    Find It In Your World
-                  </button>
-                  <button
-                    className="button-primary home-play-button"
-                    onClick={() => setScreen({ kind: 'game2' })}
-                  >
-                    <span className="home-play-icon" aria-hidden="true">
-                      🧸
-                    </span>
-                    Toy Story Sequencing
-                  </button>
-                </>
+                <button
+                  className="button-primary home-play-button"
+                  onClick={() => setScreen({ kind: 'game2' })}
+                >
+                  <span className="home-play-icon" aria-hidden="true">
+                    🧸
+                  </span>
+                  Toy Story Sequencing
+                </button>
               )}
               <button
                 className="button-primary home-play-button"

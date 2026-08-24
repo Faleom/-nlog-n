@@ -19,13 +19,13 @@
 
 import { adapters } from '../adapters/registry';
 
-export type Game1Level = 1 | 2 | 3 | 4;
+export type Game1Level = 1 | 2 | 3 | 4 | 5;
 
 const KEY_PREFIX = 'game1-level-';
 
 export async function getGame1Level(childId: string): Promise<Game1Level> {
   const stored = await adapters.storage.get<number>(KEY_PREFIX + childId);
-  if (stored === 1 || stored === 2 || stored === 3 || stored === 4) return stored;
+  if (stored === 1 || stored === 2 || stored === 3 || stored === 4 || stored === 5) return stored;
   return 1;
 }
 

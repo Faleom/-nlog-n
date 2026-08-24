@@ -60,25 +60,35 @@ async function main() {
     assert.equal(targetDescriptionForLevel(2, c), 'something red');
   });
 
-  await test('L3: category/function — "something you {function}"', () => {
-    const c = crop({ function: 'drink from' });
-    assert.equal(targetDescriptionForLevel(3, c), 'something you drink from');
+  // LEVELS 3-5 WERE REDEFINED. They used to continue the prompt-abstraction
+  // ladder ("something you drink from", "something you use when you're
+  // thirsty"). They are now the COUNTING levels: 3 collects one group, 4-5
+  // add two groups together (games/game1/quests.ts).
+  //
+  // So the per-object description deliberately STOPS getting harder at 2.
+  // The difficulty above that lives in how many objects the child has to
+  // hold in mind, not in how obliquely each one is named -- a child who
+  // fails a five-object collection described in riddles tells us nothing
+  // about which of the two halves beat them.
+  await test('L3-L5 name each object plainly — the difficulty moved to the collection', () => {
+    const c = crop({ name: 'cup', colour: 'red', function: 'drink from' });
+    for (const level of [3, 4, 5] as Game1Level[]) {
+      assert.equal(targetDescriptionForLevel(level, c), 'your red cup');
+    }
   });
 
-  await test('L4: abstracted function — matches the guide\'s own worked example for a cup', () => {
-    const c = crop({ category: 'drinkware' });
-    assert.equal(targetDescriptionForLevel(4, c), "something you use when you're thirsty");
-  });
-
-  await test('L4 degrades gracefully for an unrecognised category rather than guessing', () => {
-    const c = crop({ category: 'some-totally-unknown-category' });
-    assert.equal(targetDescriptionForLevel(4, c), 'something you use when you need it');
-  });
-
-  await test('all four levels are actually distinguishable from each other for the same crop', () => {
+  await test('the two FETCH levels are still distinguishable from each other', () => {
     const c = crop({});
-    const descriptions = ([1, 2, 3, 4] as Game1Level[]).map((l) => targetDescriptionForLevel(l, c));
-    assert.equal(new Set(descriptions).size, 4, 'all 4 level descriptions must be distinct');
+    assert.notEqual(targetDescriptionForLevel(1, c), targetDescriptionForLevel(2, c));
+  });
+
+  await test('every level returns a usable description, even for an unknown category', () => {
+    const c = crop({ category: 'some-totally-unknown-category' });
+    for (const level of [1, 2, 3, 4, 5] as Game1Level[]) {
+      const d = targetDescriptionForLevel(level, c);
+      assert.ok(d.length > 0, `level ${level} produced an empty description`);
+      assert.doesNotMatch(d, /undefined|null|NaN/, `level ${level} leaked a JS value`);
+    }
   });
 
   section('F.012 — grid size: 2 crops -> 6 crops, clamped to what the room actually has');
@@ -125,13 +135,17 @@ async function main() {
     assert.ok(grid.some((c) => c.id === 'same'), 'the same-category distractor should be preferred and included');
   });
 
-  section('F.012 — search scope: "a different room" wording actually changes at level 4');
+  section('F.012 — search scope widens once, then stays inside this room');
 
-  await test('levels 1-2 stay within "this room" phrasing, levels 3-4 mention a different room', () => {
-    assert.doesNotMatch(searchScopeLabelForLevel(1), /different room/);
-    assert.doesNotMatch(searchScopeLabelForLevel(2), /different room/);
-    assert.match(searchScopeLabelForLevel(3), /different room/);
-    assert.match(searchScopeLabelForLevel(4), /different room/);
+  await test('level 1 alone is narrowed, and no level sends the child to another room', () => {
+    assert.match(searchScopeLabelForLevel(1), /around you/);
+    // No level leaves the room any more. The counting levels ask for
+    // several trips to a shelf, and F.013 caps a session at twelve
+    // minutes -- trips to another room would spend that whole cap on one
+    // round, so the child would never reach the end of a collection.
+    for (const level of [1, 2, 3, 4, 5] as Game1Level[]) {
+      assert.doesNotMatch(searchScopeLabelForLevel(level), /different room/);
+    }
   });
 
   section('F.012 — profile tuning reads ONLY the four response-profile dimensions, never a condition');
