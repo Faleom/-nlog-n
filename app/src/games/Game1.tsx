@@ -29,17 +29,10 @@ import { renderLine, slotValuesFromProfile } from '../engine/slots';
 import { InteractionMachine, type PromptTier } from '../engine/interactionMachine';
 import { startSession } from '../engine/profileStore';
 import { logActivityOutcome } from '../engine/activityLogging';
-import { INTERACTION_CONFIG } from '../config/interaction';
 import { SessionCelebration } from './SessionCelebration';
-import { usualSessionMinutes } from '../engine/dashboardSummary';
 import { getFadingSuggestion, type FadingSuggestion } from '../engine/fading';
 import { getSkillTemplatesForCrop, getSkillTemplatesForObject } from '../engine/skillLookup';
-import {
-  endSessionNow,
-  getSessionNumber,
-  hasCapBeenReached,
-  type SessionEndResult,
-} from '../engine/sessionLifecycle';
+import { endSessionNow, getSessionNumber, type SessionEndResult } from '../engine/sessionLifecycle';
 import { SUPPORT_TIERS, DEFAULT_STARTING_SUPPORT_TIER } from '../config/supportLadder';
 import { GENERIC_FALLBACK_CROPS } from './genericFallbackCrops';
 import { ObjectIcon } from './objectIcons';
@@ -658,6 +651,14 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   // collection would either repeat one object forever or end a trip early.
   const questRef = useRef<Quest | null>(null);
   const broughtIdsRef = useRef<Set<string>>(new Set());
+  /** Every object id ever brought this SESSION, across every round —
+   * unlike broughtIdsRef, this is never reset by startQuest. This is what
+   * "no time limit, ends when everything is found" is measured against:
+   * the session ends the moment this set covers the whole room pool
+   * (`crops`), and every round in between draws its target/quest only
+   * from what's still missing, so the same object is never re-asked for
+   * and the set is guaranteed to eventually cover the pool. */
+  const foundIdsRef = useRef<Set<string>>(new Set());
   /** The crop pool the CURRENT round's quest was built from. Deliberately
    * the pool itself rather than `placed`: on the degraded path (§11) there
    * are no walls at all and the round runs on GENERIC_FALLBACK_CROPS, so
@@ -668,11 +669,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const questIndexRef = useRef<number>(0);
 
   const machineRef = useRef<InteractionMachine>(new InteractionMachine());
-  // Seeded with a static value, not Date.now() -- useRef's initial-value
-  // argument is evaluated on every render even though only the first call
-  // is kept, which is an impure call during render. The real value is set
-  // inside the effect below, once, when the session actually starts.
-  const sessionStartedAtRef = useRef<number>(0);
   const lastObjectNameRef = useRef<string | null>(null);
   const lastTargetIdRef = useRef<string | null>(null);
   // §8.1 lively/short-attention tuning: "movement break every 3 trials".
@@ -680,11 +676,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   // per-session pacing device, not a fact worth remembering across
   // sessions the way the level itself is.
   const trialCountRef = useRef<number>(0);
-
-  // The caregiver's usual sitting length (dashboard), which is where
-  // this session's cap starts. Read once here so the session poller can
-  // depend on the number rather than on the whole profile object.
-  const capFirstMinutes = usualSessionMinutes(profile);
 
   const handleEndSession = useCallback(
     async (reason: 'cap' | 'idle' | 'caregiver' | 'finished') => {
@@ -702,6 +693,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   }, [phase, onChildFacingChange]);
 
   useEffect(() => {
+    foundIdsRef.current = new Set();
     void (async () => {
       const [session, number, savedLevel] = await Promise.all([
         startSession(profile.id, 'find-it'),
@@ -711,7 +703,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       setSessionId(session.id);
       setSessionNumber(number);
       setLevel(savedLevel);
-      sessionStartedAtRef.current = Date.now();
 
       // §6.3 "Bookend: greets at start" — the goodbye half is
       // SessionCelebration's own spoken achievement line (see the
@@ -756,15 +747,14 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       }
       if (tick.endSession) {
         void handleEndSession('idle');
-        return;
       }
-      const elapsed = Math.floor((now - sessionStartedAtRef.current) / 1000);
-      if (hasCapBeenReached(sessionNumber, elapsed, capFirstMinutes)) {
-        void handleEndSession('cap');
-      }
+      // No time-based cap here on purpose: this game now runs until the
+      // room pool is exhausted (see remainingPool/handleSupportTierReport),
+      // not until a clock runs out. tick.endSession above is a different
+      // thing entirely -- a child gone idle/disengaged -- and stays.
     }, 1000);
     return () => clearInterval(interval);
-  }, [sessionId, sessionNumber, phase, handleEndSession, capFirstMinutes]);
+  }, [sessionId, sessionNumber, phase, handleEndSession]);
 
   /**
    * Starts a new trial from the session's existing crop pool. `effectiveLevel`
@@ -888,6 +878,16 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     setCrops(cropsOf(nextPlaced));
   }
 
+  /** What's left to find this session: the room pool minus everything
+   * already brought at least once. Every NEW round draws from this, never
+   * from `crops` directly, so the same object is never asked for twice and
+   * the session is guaranteed to run down to zero rather than looping
+   * forever — this is the "no time limit, ends when everything is found"
+   * mechanism itself, not a detail of it. */
+  function remainingPool(): TaggedCrop[] {
+    return crops.filter((c) => !foundIdsRef.current.has(c.id));
+  }
+
   /**
    * Opens a round at the caregiver-set level.
    *
@@ -930,6 +930,8 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
    * shown to the child.
    */
   function advanceOrFinish(broughtCropId: string) {
+    foundIdsRef.current = new Set(foundIdsRef.current).add(broughtCropId);
+
     const q = questRef.current;
     // §8.1 lively/short-attention tuning: "faster celebration".
     const delay = tuning.fasterCelebration ? 400 : 800;
@@ -1101,12 +1103,25 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     }
 
     trialCountRef.current += 1;
+
+    // No time limit and no fixed round count: the session runs until
+    // every object in the room pool has been brought at least once. This
+    // is the ordinary way the game ends now -- not a clock, not a trial
+    // count -- and it is what puts a completed session, with its support
+    // records, into the log the caregiver dashboard reads. Checked before
+    // the movement break so a finished room never gets sent on a break
+    // it doesn't need.
+    const stillToFind = remainingPool();
+    if (stillToFind.length === 0) {
+      void handleEndSession('finished');
+      return;
+    }
+
     // §8.1 lively/short-attention tuning: "movement break every 3 trials".
     // §7.7's own engine-driven breaks (disengagement-triggered, capped at
     // 3/session via machineRef.current.takeMovementBreak()) are separate
     // and unaffected — this is Game 1 additionally OFFERING one on a fixed
-    // cadence for profiles that benefit from predictable pacing, still
-    // subject to the same session cap.
+    // cadence for profiles that benefit from predictable pacing.
     if (
       tuning.movementBreakEveryNTrials !== null &&
       trialCountRef.current % tuning.movementBreakEveryNTrials === 0 &&
@@ -1121,16 +1136,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       return;
     }
 
-    // The session has a planned length. Reaching it is the ordinary way
-    // this game ends -- not the cap, not a child drifting off -- and it is
-    // what puts a completed session, with its time and its support
-    // records, into the log the caregiver dashboard reads. Checked after
-    // the movement break so a break never swallows the ending.
-    if (trialCountRef.current >= INTERACTION_CONFIG.ROUNDS_PER_SESSION) {
-      void handleEndSession('finished');
-      return;
-    }
-
     // §8.1: "one photo per session, not per trial" — the NEXT round reuses
     // the same crop set rather than re-prompting for a capture. Only the
     // pre-capture 'idle' screen (before crops exist) shows the capture
@@ -1141,8 +1146,9 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // FRESH quest. Reusing the finished one leaves a completed collection
     // on screen -- the tray reading "4 of 4" and the brief still naming
     // last round's groups, while the object actually being asked for came
-    // from somewhere else entirely.
-    startQuest(crops);
+    // from somewhere else entirely. Built from `stillToFind`, not `crops`,
+    // so an object already brought is never asked for again.
+    startQuest(stillToFind);
   }
 
   /** §7.7: "Return: always to a task one level easier than the one that
@@ -1156,7 +1162,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
    * is a fresh, easier task. */
   function handleMovementBreakDone() {
     const easierLevel = Math.max(1, level - 1) as Game1Level;
-    startQuest(crops, easierLevel);
+    startQuest(remainingPool(), easierLevel);
   }
 
   if (phase === 'sessionEnded') {

@@ -126,21 +126,36 @@ async function main() {
     }
   });
 
-  await test('the three round-based games stop at the shared round plan', () => {
-    for (const file of ['Game1.tsx', 'Game3ShadowMatch.tsx']) {
-      const code = codeOnlyLines(read(file));
-      assert.match(code, /INTERACTION_CONFIG\.ROUNDS_PER_SESSION/, file);
-    }
+  await test('the two remaining round-based games stop at the shared round plan', () => {
+    // Game 1 used to be a third here. It deliberately isn't any more --
+    // see the next test -- its ending condition is "the room pool is
+    // exhausted", not a shared trial count, on purpose.
+    const code = codeOnlyLines(read('Game3ShadowMatch.tsx'));
+    assert.match(code, /INTERACTION_CONFIG\.ROUNDS_PER_SESSION/, 'Game3ShadowMatch.tsx');
     // Trace and Colour reaches the same number through its own logic
     // module, which is where its round plan already lived.
     const trace = codeOnlyLines(read('TraceAndColour.tsx'));
     assert.match(trace, /isSessionFinished\(/);
   });
 
-  await test('the round plan is one number, shared, not four copies', async () => {
+  await test('the round plan is one number, shared, not three copies', async () => {
     const { ROUNDS_PER_SESSION } = await import('../src/games/trace/traceLogic');
     assert.equal(ROUNDS_PER_SESSION, INTERACTION_CONFIG.ROUNDS_PER_SESSION);
     assert.equal(INTERACTION_CONFIG.ROUNDS_PER_SESSION, 5);
+  });
+
+  await test('Game 1 has no time or round cap, and ends only once the room pool is used up', () => {
+    const code = codeOnlyLines(read('Game1.tsx'));
+    // No fixed-count or time-cap ending left at all.
+    assert.doesNotMatch(code, /INTERACTION_CONFIG\.ROUNDS_PER_SESSION/, 'Game1.tsx');
+    assert.doesNotMatch(code, /hasCapBeenReached/, 'Game1.tsx');
+    // The actual ending condition: every round draws from what is still
+    // missing, and the session ends the moment nothing is left to find.
+    assert.match(code, /function remainingPool/, 'Game1.tsx');
+    assert.match(code, /stillToFind\.length === 0/, 'Game1.tsx');
+    // The idle/disengagement safety ending (F.009, a different thing --
+    // a child who has drifted off, not a clock) must still be there.
+    assert.match(code, /tick\.endSession/, 'Game1.tsx');
   });
 
   section('session ending — the caregiver plumbing is off the child’s screen');

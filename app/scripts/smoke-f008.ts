@@ -132,16 +132,18 @@ async function main() {
   await test('the between-trials path (handleSupportTierReport) reuses `crops` state, it does not recapture', () => {
     const handlerStart = game1Code.indexOf('async function handleSupportTierReport');
     const handlerSection = game1Code.slice(handlerStart, game1Code.indexOf('if (phase ===', handlerStart));
-    // Either name is fine, and both are the same guarantee: the next
-    // round is opened from the `crops` state this session already has.
-    // startQuest() is what levels 3-5 (games/game1/quests.ts) renamed the
-    // between-rounds call to -- a new counting round needs a FRESH quest,
-    // not the finished one -- and it still takes `crops`, so the thing
-    // this test actually guards against (a recapture between rounds) is
-    // unchanged. The captureRoomAndRecognize assertion below is the other
-    // half of that guarantee.
+    // Any of these names is fine, and all are the same guarantee: the next
+    // round is opened from a pool derived from the `crops` state this
+    // session already has, never a fresh capture. startQuest() is what
+    // levels 3-5 (games/game1/quests.ts) renamed the between-rounds call
+    // to; stillToFind is remainingPool()'s own name for "crops minus what
+    // has already been brought" (see remainingPool's header -- this is the
+    // no-time-limit/ends-when-everything-is-found mechanism, not a fresh
+    // room). The thing this test actually guards against, a recapture
+    // between rounds, is unchanged either way. The captureRoomAndRecognize
+    // assertion below is the other half of that guarantee.
     assert.ok(
-      /startTrialWith\(crops\)|startQuest\(crops\)/.test(handlerSection),
+      /startTrialWith\(crops\)|startQuest\(crops\)|startQuest\(stillToFind\)/.test(handlerSection),
       'the next round must reuse the existing session crop set',
     );
     assert.ok(!/captureRoomAndRecognize/.test(handlerSection), 'must not recapture between trials');
