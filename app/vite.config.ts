@@ -105,13 +105,12 @@ export default defineConfig(({ mode, command }) => {
           start_url: '/',
           display: 'standalone',
           orientation: 'portrait', // §4.3 — phone locks to portrait
-          // Dark-first: these two are what the OS paints for the splash
-          // screen and the status-bar chrome of the installed PWA. Left
-          // white they produce a white flash on every cold launch of a
-          // dark app. Values are --color-bg / --color-surface-sunken
-          // from src/App.css (see src/design/DESIGN-TOKENS.md).
-          background_color: '#0e0c13',
-          theme_color: '#16121d',
+          // PHASE 4: these two are what the OS paints for the splash
+          // screen and the status-bar chrome of the installed PWA.
+          // Values are --color-surface-sunken / --color-bg from
+          // src/App.css (see src/design/DESIGN-TOKENS.md §10).
+          background_color: '#d3e6fa',
+          theme_color: '#eaf4fe',
           icons: [],
         },
         workbox: {

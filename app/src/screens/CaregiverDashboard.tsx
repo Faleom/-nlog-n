@@ -17,21 +17,13 @@
 // The non-diagnostic banner (§7.9) is rendered on every return path,
 // loading included -- not first-run only, no dismiss.
 //
-// Visual system: Toki, the light palette the rest of the app is being
-// moved onto (mockup screen 08). White cards on the shared home shell's
-// blue-tinted ground, #e6f0fa rims, rgba(23,86,140,x) shadows, one blue
-// accent family (#1e93ee / #0b6fbf) and the #21374e / #5c7691 / #7e95ad
-// ink hierarchy. The reserved hues stay off this side, which is also why
-// the track colours are a violet-cool family and nothing here can read as
-// a red/green judgement. The mockup asks for six sections where the
-// caregiver surface guidance suggests three to five cards; that is a
-// knowing deviation, held in check by keeping every card a flat list
-// rather than a dense panel.
-//
-// This screen renders INSIDE App.tsx's <main className="toki-home-main">,
-// so it draws no ground, no wordmark and no tab bar of its own -- the
-// shell already carries all three, plus the "Caregiver Dashboard" title
-// and its one-line subtitle.
+// Visual system: DESIGN-TOKENS §4.2 -- caregiver glass, --glass-bg-strong
+// at --radius-md with the Periwink tint, muted secondary text, and none of
+// the reserved hues (§4.3 keeps Sunburst/Blush/Ember off this side, which
+// is also why the track colours are a violet-cool family and nothing here
+// can read as red/green judgement). The mockup asks for six sections where
+// §4.2 suggests three to five cards; that is a knowing deviation, held in
+// check by keeping every card a flat list rather than a dense panel.
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { getSessionsForChild, updateProfile } from '../engine/profileStore';
@@ -74,16 +66,12 @@ interface CaregiverDashboardProps {
  * session log). */
 const RECENT_GAMES_LIMIT = 3;
 
-/** The exact painted-scene motif each track's own Play-tab node once
- * drew as a grid tile, before the Toki winding-path revamp replaced that
- * grid -- same paths, just cropped small, so a Recently-played row shows
- * the real game art rather than a second,
- * lower-fidelity icon language. Drawn in `currentColor`, which the row
- * sets to the track's own colour so the same legend the day-detail
- * bar/dot use still ties a game to its hue. The plate underneath is the
- * shared Toki icon tint rather than the track colour: on a white card a
- * fully saturated plate fights the row it sits in, and the artwork
- * already tells the games apart on its own. */
+/** The exact painted-scene motif each track's own Play-tab tile already
+ * draws (App.tsx's home-play-grid) -- same paths, just cropped small, so
+ * a Recently-played row shows the real game art rather than a second,
+ * lower-fidelity icon language. Drawn in `currentColor` (set to
+ * --color-ink below) over a plate tinted with the track's own colour,
+ * the same legend the calendar bar/dot already use. */
 const TRACK_THUMBNAIL: Record<TrackId, ReactNode> = {
   'find-it': (
     <svg viewBox="0 0 160 88" preserveAspectRatio="xMidYMid slice" fill="none">
@@ -159,11 +147,7 @@ const TRACK_THUMBNAIL: Record<TrackId, ReactNode> = {
 };
 
 function Banner() {
-  return (
-    <div className="toki-banner">
-      <p>{NON_DIAGNOSTIC_BANNER}</p>
-    </div>
-  );
+  return <p className="dashboard-banner">{NON_DIAGNOSTIC_BANNER}</p>;
 }
 
 /** Whole minutes, or "<1" for a sitting that ended before the first
@@ -257,7 +241,7 @@ function CalendarDayCell({
 }) {
   if (!day.inMonth) {
     return (
-      <span className="toki-cal-cell toki-cal-cell--pad" aria-hidden="true">
+      <span className="dashboard-calendar-cell dashboard-calendar-cell--pad" aria-hidden="true">
         {day.dayOfMonth}
       </span>
     );
@@ -266,7 +250,7 @@ function CalendarDayCell({
     <button
       type="button"
       className={[
-        'toki-cal-cell',
+        'dashboard-calendar-cell',
         day.played ? 'is-played' : '',
         day.isToday ? 'is-today' : '',
         selected ? 'is-selected' : '',
@@ -283,51 +267,47 @@ function CalendarDayCell({
   );
 }
 
-/** A read-only track row for the day-detail panel. Nothing here expands:
- * the day is already the drill-down, so a second layer of disclosure
- * underneath it would be disclosure for its own sake -- which is why this
- * is a plain list row and not a button. */
+/** A read-only track row for the day-detail panel -- same look as
+ * TrackRow's inset button, but nothing here expands: the day is already
+ * the drill-down, so a second layer of disclosure underneath it would be
+ * disclosure for its own sake. */
 function DayTrackRow({ slice, isTopPlayed }: { slice: TrackSlice; isTopPlayed: boolean }) {
   return (
-    <li className="toki-list-row">
-      <span
-        className="toki-ddot"
-        style={{ background: `var(${slice.colorVar})` }}
-        aria-hidden="true"
-      />
-      <span className="toki-list-text">
-        <span className="toki-list-title">
-          {slice.label}
-          {isTopPlayed && <span className="toki-tag">Most played</span>}
+    <li className="dashboard-track-row">
+      <div className="dashboard-track-toggle dashboard-day-detail-row">
+        <span
+          className="dashboard-dot"
+          style={{ background: `var(${slice.colorVar})` }}
+          aria-hidden="true"
+        />
+        <span className="dashboard-track-text">
+          <span className="dashboard-track-name">
+            {slice.label}
+            {isTopPlayed && <span className="dashboard-tag">Most played</span>}
+          </span>
+          {slice.detail && <span className="dashboard-track-detail">{slice.detail}</span>}
         </span>
-        {slice.detail && <span className="toki-list-detail">{slice.detail}</span>}
-      </span>
-      <span className="toki-list-meta">{minutes(slice.seconds)} min</span>
+        <span className="dashboard-figure-value">{minutes(slice.seconds)} min</span>
+      </div>
     </li>
   );
 }
 
-/** Where an activity sits on F.010's five-tier ladder, drawn as the real
- * design-system LadderMeter: five discrete step segments (its own
- * components/feedback/feedback.css, .hw-ladder/.hw-ladder-step), not a
- * continuous filled bar -- a single smooth fill was this file's own first
- * guess at the mockup's `<LadderMeter>` import, which the source .dc.html
- * only ever references by name, never inlines. More steps filled = less
- * help needed, which is the direction the ladder itself runs. One hue at
- * two weights: a second colour here would invite reading the low end as a
- * warning. The tier's NAME is written out beside it in every row, so
- * nothing here is carried by the steps alone. */
+/** Where an activity sits on F.010's five-tier ladder, drawn as five
+ * steps with the tier filled up to. More filled = less help needed, which
+ * is the direction the ladder itself runs. The tier's NAME is written out
+ * beside it in every row, so nothing here is carried by the shape alone. */
 function LadderMeter({ tier, tierName }: { tier: SupportTier; tierName: string }) {
   return (
     <span
-      className="toki-ladder-meter"
+      className="dashboard-ladder"
       role="img"
       aria-label={`${tierName}: step ${tier} of 5 on the support ladder`}
     >
       {[1, 2, 3, 4, 5].map((step) => (
         <span
           key={step}
-          className={step <= tier ? 'toki-ladder-step toki-ladder-step--filled' : 'toki-ladder-step'}
+          className={step <= tier ? 'dashboard-ladder-step is-filled' : 'dashboard-ladder-step'}
         />
       ))}
     </span>
@@ -336,20 +316,15 @@ function LadderMeter({ tier, tierName }: { tier: SupportTier; tierName: string }
 
 function SkillRow({ skill }: { skill: SkillProgressRow }) {
   return (
-    <li className="toki-skill-row">
-      <span
-        className={
-          skill.mastered ? 'toki-status-mark toki-status-mark--complete' : 'toki-status-mark'
-        }
-        aria-hidden="true"
-      >
+    <li className="dashboard-skill-row">
+      <span className={skill.mastered ? 'dashboard-mark is-complete' : 'dashboard-mark'} aria-hidden="true">
         {skill.mastered && <CheckMark />}
       </span>
-      <span className="toki-skill-text">
-        <span className="toki-skill-name">{skill.name}</span>
-        <span className="toki-skill-meter-row">
+      <span className="dashboard-skill-text">
+        <span className="dashboard-skill-name">{skill.name}</span>
+        <span className="dashboard-skill-meta">
           <LadderMeter tier={skill.tier} tierName={skill.tierName} />
-          <span className="toki-skill-detail">
+          <span className="dashboard-skill-context">
             {skill.tierName} · {skill.contextsIndependent} of {skill.contextsSeen}{' '}
             {skill.contextsSeen === 1 ? 'place' : 'places'} alone ·{' '}
             {skill.recordCount} {skill.recordCount === 1 ? 'sitting' : 'sittings'} logged
@@ -412,15 +387,19 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
   const companion = profile.context.companion;
 
   const header = (
-    <header className="toki-dhead">
+    <header className="dashboard-head">
+      <div className="dashboard-head-text">
+        <span className="dashboard-head-label">Activity log</span>
+        <h2 className="dashboard-head-name">{nickname}</h2>
+      </div>
       {companion ? (
         <img
-          className="toki-dhead-avatar"
+          className="dashboard-avatar"
           src={companion.photo}
           alt={`${companion.name}, ${nickname}'s companion`}
         />
       ) : (
-        <span className="toki-dhead-avatar toki-dhead-avatar--empty" aria-hidden="true">
+        <span className="dashboard-avatar dashboard-avatar--empty" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
             <circle cx="12" cy="9" r="4" stroke="currentColor" strokeWidth="1.8" />
             <path
@@ -432,10 +411,6 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
           </svg>
         </span>
       )}
-      <div className="toki-dhead-text">
-        <span className="toki-dhead-label">Activity log</span>
-        <h2 className="toki-dhead-name">{nickname}</h2>
-      </div>
     </header>
   );
 
@@ -444,7 +419,7 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
       <div className="screen dashboard">
         <Banner />
         {header}
-        <p className="toki-dempty">Loading…</p>
+        <p className="dashboard-empty">Loading…</p>
       </div>
     );
   }
@@ -495,26 +470,22 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
       {header}
 
       {/* ---- This week ------------------------------------------------- */}
-      <section className="toki-dcard">
-        <h3 className="toki-dcard-title">This week</h3>
-        <ul className="toki-week-grid">
+      <section className="dashboard-card">
+        <h3 className="dashboard-card-title">This week</h3>
+        <ul className="dashboard-week">
           {week.map((cell) => {
             const isSelected = selectedDayIso === cell.iso;
             return (
-              <li
-                key={cell.iso}
-                className={
-                  cell.isToday ? 'toki-week-day toki-week-day--today' : 'toki-week-day'
-                }
-              >
-                <span className="toki-week-day-label" aria-hidden="true">
+              <li key={cell.iso} className="dashboard-week-cell">
+                <span className="dashboard-week-label" aria-hidden="true">
                   {cell.label}
                 </span>
                 <button
                   type="button"
                   className={[
-                    'toki-week-cell',
-                    cell.played ? 'toki-week-cell--played' : '',
+                    'dashboard-week-box',
+                    cell.played ? 'is-played' : '',
+                    cell.isToday ? 'is-today' : '',
                     isSelected ? 'is-selected' : '',
                   ]
                     .filter(Boolean)
@@ -535,7 +506,7 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
         {daysPracticed > 0 && (
           <button
             type="button"
-            className="toki-dlink"
+            className="dashboard-view-more"
             aria-expanded={showCalendar}
             onClick={() => setShowCalendar((open) => !open)}
           >
@@ -550,27 +521,27 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
           Paging is capped at both ends: never past the current month, and
           never before the month of the very first-ever session. */}
       {showCalendar && (
-        <section className="toki-dcard">
-          <p className="toki-dfigure">
-            <span className="toki-dfigure-value">{daysPracticed}</span>{' '}
+        <section className="dashboard-card">
+          <p className="dashboard-days-practiced">
+            <span className="dashboard-days-practiced-value">{daysPracticed}</span>{' '}
             {daysPracticed === 1 ? 'day' : 'days'} learned
           </p>
-          <div className="toki-cal-head">
+          <div className="dashboard-calendar-head">
             <button
               type="button"
-              className="toki-cal-nav"
+              className="dashboard-calendar-nav"
               disabled={!canGoPrevMonth}
               onClick={() => shiftViewedMonth(-1)}
               aria-label="Previous month"
             >
               <CalendarNavIcon direction="prev" />
             </button>
-            <h3 className="toki-dcard-title toki-cal-month">
+            <h3 className="dashboard-card-title dashboard-calendar-month-label">
               {calendarMonthLabel}
             </h3>
             <button
               type="button"
-              className="toki-cal-nav"
+              className="dashboard-calendar-nav"
               disabled={!canGoNextMonth}
               onClick={() => shiftViewedMonth(1)}
               aria-label="Next month"
@@ -578,9 +549,9 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
               <CalendarNavIcon direction="next" />
             </button>
           </div>
-          <div className="toki-cal-grid">
+          <div className="dashboard-calendar-grid">
             {calendarWeekdayLabels().map((label, i) => (
-              <span key={i} className="toki-cal-weekday" aria-hidden="true">
+              <span key={i} className="dashboard-calendar-weekday" aria-hidden="true">
                 {label}
               </span>
             ))}
@@ -609,12 +580,12 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
           screen use -- no arithmetic, no colour, that treats it as a gap
           (see this file's own header comment). */}
       {selectedDayIso && (
-        <section className="toki-dcard toki-dday">
-          <div className="toki-dday-head">
-            <h3 className="toki-dcard-title">{spokenDate(selectedDayIso)}</h3>
+        <section className="dashboard-card dashboard-day-detail">
+          <div className="dashboard-day-detail-head">
+            <h3 className="dashboard-card-title">{spokenDate(selectedDayIso)}</h3>
             <button
               type="button"
-              className="toki-dday-close"
+              className="dashboard-day-detail-close"
               onClick={() => setSelectedDayIso(null)}
               aria-label="Close this day's summary"
             >
@@ -623,19 +594,19 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
           </div>
 
           {selectedDaySeconds === 0 ? (
-            <p className="toki-dempty">Nothing played this day.</p>
+            <p className="dashboard-empty">Nothing played this day.</p>
           ) : (
             <>
-              <div className="toki-dmetric">
-                <span className="toki-dmetric-label">Played</span>
-                <span className="toki-dmetric-value">
+              <div className="dashboard-metric">
+                <span className="dashboard-metric-label">Played</span>
+                <span className="dashboard-metric-value">
                   {minutes(selectedDaySeconds)}
-                  <span className="toki-dmetric-unit">min</span>
+                  <span className="dashboard-metric-unit">min</span>
                 </span>
               </div>
 
               {selectedDayTopSkill && (
-                <p className="toki-dcaption">
+                <p className="dashboard-caption">
                   Most trained: {selectedDayTopSkill.skillName} ({selectedDayTopSkill.recordCount}
                   {selectedDayTopSkill.recordCount === 1 ? ' rep' : ' reps'} today)
                 </p>
@@ -644,7 +615,7 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
               {selectedDaySlices.length > 0 && (
                 <>
                   <div
-                    className="toki-dbar"
+                    className="dashboard-bar"
                     role="img"
                     aria-label={selectedDaySlices
                       .map((s) => `${s.label}, ${minutes(s.seconds)} minutes, ${s.sharePercent}%`)
@@ -653,7 +624,7 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
                     {selectedDaySlices.map((slice) => (
                       <span
                         key={slice.track}
-                        className="toki-dbar-seg"
+                        className="dashboard-bar-segment"
                         style={{
                           flexGrow: slice.sharePercent,
                           background: `var(${slice.colorVar})`,
@@ -661,7 +632,7 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
                       />
                     ))}
                   </div>
-                  <ul className="toki-dlist">
+                  <ul className="dashboard-list">
                     {selectedDaySlices.map((slice, i) => (
                       <DayTrackRow
                         key={slice.track}
@@ -678,11 +649,11 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
       )}
 
       {/* ---- Usual session length -------------------------------------- */}
-      <section className="toki-dcard">
-        <h3 className="toki-dcard-title" id="dashboard-length-title">
+      <section className="dashboard-card">
+        <h3 className="dashboard-card-title" id="dashboard-length-title">
           Usual session length
         </h3>
-        <p className="toki-dcaption">
+        <p className="dashboard-caption">
           Not a target to reach. It only sets where the next session&rsquo;s timer starts —
           sittings shorten on their own from there, session by session.
         </p>
@@ -711,22 +682,22 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
       </section>
 
       {/* ---- Skills and support ---------------------------------------- */}
-      <section className="toki-dcard">
-        <h3 className="toki-dcard-title">Skills and support</h3>
-        <p className="toki-dcaption">
+      <section className="dashboard-card">
+        <h3 className="dashboard-card-title">Skills and support</h3>
+        <p className="dashboard-caption">
           Where each activity sits on the support ladder right now, from the tier you pick
           after a sitting. Most unaided first.
         </p>
         {skills.length === 0 ? (
-          <p className="toki-dempty">
+          <p className="dashboard-empty">
             Nothing logged yet. Activities appear here once {nickname} has played one.
           </p>
         ) : (
           <>
             {unaided.length > 0 && (
               <>
-                <p className="toki-dgroup-label">On their own</p>
-                <ul className="toki-dlist">
+                <p className="dashboard-group-label">On their own</p>
+                <ul className="dashboard-list">
                   {unaided.map((skill) => (
                     <SkillRow key={skill.id} skill={skill} />
                   ))}
@@ -735,8 +706,8 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
             )}
             {withSupport.length > 0 && (
               <>
-                <p className="toki-dgroup-label">With a hand, for now</p>
-                <ul className="toki-dlist">
+                <p className="dashboard-group-label">With a hand, for now</p>
+                <ul className="dashboard-list">
                   {withSupport.map((skill) => (
                     <SkillRow key={skill.id} skill={skill} />
                   ))}
@@ -748,27 +719,27 @@ export function CaregiverDashboard({ profile, onProfileChange, onPlayTrack }: Ca
       </section>
 
       {/* ---- Recently played ------------------------------------------- */}
-      <section className="toki-dcard">
-        <h3 className="toki-dcard-title">Recently played</h3>
+      <section className="dashboard-card">
+        <h3 className="dashboard-card-title">Recently played</h3>
         {recentGames.length === 0 ? (
-          <p className="toki-dempty">
+          <p className="dashboard-empty">
             Nothing logged yet. Games appear here once {nickname} has played one.
           </p>
         ) : (
-          <ul className="toki-dlist">
+          <ul className="dashboard-list">
             {recentGames.map((game) => (
-              <li key={game.track} className="toki-list-row">
+              <li key={game.track} className="dashboard-recent-row">
                 <span
-                  className="toki-list-icon toki-drecent-icon"
-                  style={{ color: `var(${game.colorVar})` }}
+                  className="dashboard-recent-icon"
+                  style={{ background: `var(${game.colorVar})` }}
                   aria-hidden="true"
                 >
                   {TRACK_THUMBNAIL[game.track]}
                 </span>
-                <span className="toki-list-title">{game.label}</span>
+                <span className="dashboard-recent-name">{game.label}</span>
                 <button
                   type="button"
-                  className="toki-drecent-view"
+                  className="dashboard-recent-view"
                   onClick={() => onPlayTrack(game.track)}
                 >
                   View

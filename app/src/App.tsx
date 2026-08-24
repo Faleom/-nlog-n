@@ -214,25 +214,34 @@ function App() {
   // after :root). The child's chosen favourite colour from QuickPreferences
   // lives on profile.context.quickPreferences.favColour; mirroring it onto
   // <html data-accent="..."> lets every var(--color-primary*) consumer in
-  // the app pick it up with no prop drilling. No profile, or a profile
-  // saved before this field existed, both fall through to 'purple' --
-  // which is also the :root default, so that is a no-op, not a real
-  // override. An unrecognised value (should not happen -- QuickPreferences
-  // only offers the seven COLOURS chips) simply matches no CSS rule and
-  // also falls through to the same default.
+  // the app pick it up with no prop drilling.
+  //
+  // PHASE 4: no favColour (no profile yet, or one saved before this field
+  // existed) now REMOVES the attribute entirely rather than defaulting it
+  // to 'purple'. That default was a safe no-op under the retired palette,
+  // where purple/Periwink WAS the :root base -- 'purple' matched no
+  // override rule and fell through to the same value either way. This
+  // palette's base is blue, and 'purple' is now a real accent block like
+  // any other seven, so defaulting to it would have silently repainted
+  // every screen purple before a child ever had a favourite colour.
+  // Removing the attribute is what actually falls through to :root's own
+  // blue, matching the same unset-is-the-real-default pattern the retired
+  // [data-theme] axis used. An unrecognised value (should not happen --
+  // QuickPreferences only offers the seven COLOURS chips) matches no CSS
+  // rule and also falls through to blue.
   useEffect(() => {
-    document.documentElement.dataset.accent = profile?.context.quickPreferences?.favColour ?? 'purple';
+    const favColour = profile?.context.quickPreferences?.favColour;
+    if (favColour) {
+      document.documentElement.dataset.accent = favColour;
+    } else {
+      delete document.documentElement.dataset.accent;
+    }
   }, [profile]);
 
   // Two-tap confirm for "Log out". Not a modal system -- one boolean and a
   // swapped-in row of buttons, which is all a single destructive-ish action
   // on a local-only app needs.
   const [confirmLogout, setConfirmLogout] = useState(false);
-
-  // The light/dark toggle that used to live in Setup is gone. Toki
-  // replaces both themes screen by screen rather than sitting beside
-  // them, so there is no second theme left to switch to and nothing
-  // writes [data-theme] any more.
 
   useEffect(() => {
     // Both paths now land on the SAME welcome screen; it is the presence or
@@ -582,29 +591,21 @@ function App() {
   const copy = homeCopy[homeTab];
 
   return (
-    <div className="app app--welcome" key={screen.kind}>
-      <div className="toki-home-screen">
-        <div className="toki-home-blobs" aria-hidden="true" />
-        <div className="toki-home-header">
-          <span className="toki-home-wordmark">
-            <span className="toki-home-wordmark-mark" aria-hidden="true">
-              🌱
-            </span>
-            Hello World
-          </span>
-          <span className="toki-home-avatar" aria-hidden="true">
-            👤
-          </span>
-        </div>
-        {/* No ScreenHeader/back button here, deliberately -- this is a root
-            screen with nowhere to go back to. The tab bar says which
-            section is selected and the heading below names it. */}
-        <header className="toki-home-greeting">
-          <h1>{copy.title}</h1>
-          <p>{copy.sub}</p>
-        </header>
+    <div className="app app--tabbed" key={screen.kind}>
+      <AppHeader />
+      {/* No ScreenHeader here, deliberately. It used to render a "MY WORLD ·
+          <tab>" eyebrow, and once "My World" went there was nothing left in
+          it: the eyebrow would have said "DASHBOARD" directly above an <h1>
+          saying "Dashboard", indented ~100px by the back-button spacer while
+          that h1 sat at the content edge -- redundant AND misaligned. This
+          is a root screen with nowhere to go back to; the tab bar says which
+          section is selected and the heading below names it. */}
+      <header className="home-greeting">
+        <h1>{copy.title}</h1>
+        <p>{copy.sub}</p>
+      </header>
 
-      <main className="toki-home-main">
+      <main className="home-main">
         {homeTab === 'play' && (
           <div className="toki-path-container">
             {/* Mockup screen 06's own winding path, unchanged in spirit:
@@ -740,84 +741,56 @@ function App() {
         )}
 
         {homeTab === 'setup' && (
-          <div className="toki-setup-screen">
-            {/* The mockup's own Setup screen shows a third row here, "The
-                room photo". There is no room-photo management anywhere in
-                this app -- Game 1 captures and re-captures the room inside
-                its own flow -- so the row would lead nowhere. Two real
-                rows, matching the two screens that actually exist. */}
-            <div className="toki-setup-section">
-              <span className="toki-setup-label">What we build activities from</span>
-              <div className="toki-setup-list">
+          <div className="screen">
+            <div className="home-section">
+              <p className="home-section-label">What we build activities from</p>
+              <div className="home-edit-grid">
                 <button
-                  type="button"
-                  className="toki-setup-row"
+                  className="home-edit-button"
                   onClick={() => setScreen({ kind: 'responseProfile', returnToHome: true })}
                 >
                   How {profile.nickname ?? 'they'} do best
-                  <span className="toki-setup-row-chevron" aria-hidden="true">
-                    &rsaquo;
-                  </span>
                 </button>
                 <button
-                  type="button"
-                  className="toki-setup-row"
+                  className="home-edit-button"
                   onClick={() => setScreen({ kind: 'quickPreferences', returnToHome: true })}
                 >
                   Favourites
-                  <span className="toki-setup-row-chevron" aria-hidden="true">
-                    &rsaquo;
-                  </span>
                 </button>
               </div>
             </div>
 
-            {/* The mockup also shows an "Appearance" (Light/Dark) and a
-                "Movement" (Normal/Low animation) section. Neither is here
-                on purpose. Toki replaces the dark theme rather than sitting
-                beside it, so there is nothing left to choose between and
-                the toggle is retired; motion reduction is read from the
-                OS via prefers-reduced-motion, so a second, manual copy of
-                that setting would only be able to disagree with it. */}
+            <hr className="home-divider" />
 
             {/* Log out. There is no account and no password in this app, so
                 this clears the "who is active on this device" pointer and
-                nothing else -- the profile itself stays on the device. Still
+                nothing else — the profile itself stays on the device. Still
                 a real state change (onboarding has to be redone to get back
-                in), so it is behind a two-tap confirm and painted in the
-                danger skin so it never reads as another destination. */}
-            <div className="toki-setup-section toki-setup-section--device">
-              <span className="toki-setup-label">This device</span>
+                in), so it is behind a two-tap confirm and painted in
+                --color-danger so it never reads as another destination. */}
+            <div className="home-section">
+              <p className="home-section-label">This device</p>
               {confirmLogout ? (
-                <div className="toki-setup-confirm">
-                  <p className="toki-lede">
+                <div className="home-logout-confirm">
+                  <p className="home-logout-note">
                     Log out of {profile.nickname ?? 'this profile'}? Nothing saved is deleted, but
                     you would set the profile up again to come back.
                   </p>
-                  <div className="toki-footer-row">
-                    <button
-                      type="button"
-                      className="toki-secondary-btn"
-                      onClick={() => setConfirmLogout(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button type="button" className="toki-danger-btn" onClick={logOut}>
+                  <div className="home-logout-actions">
+                    <button className="home-logout-button" onClick={logOut}>
                       Yes, log out
+                    </button>
+                    <button className="home-secondary-button" onClick={() => setConfirmLogout(false)}>
+                      Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <>
-                  <button
-                    type="button"
-                    className="toki-danger-btn"
-                    onClick={() => setConfirmLogout(true)}
-                  >
+                <div className="home-logout-actions">
+                  <button className="home-logout-button" onClick={() => setConfirmLogout(true)}>
                     Log out
                   </button>
-                  <p className="toki-caption">Nothing saved is deleted.</p>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -826,18 +799,10 @@ function App() {
         {homeTab === 'notes' && (
           <div className="screen">
             {/* §2's core rule: switching branches is unconditional, no
-                confirmation, available from anywhere in Branch 1.
-
-                Toki revamp: the Notes tab has no mockup of its own (the
-                source file's own footer says the tab and the worry-to-
-                question branch were not covered), so it is assembled from
-                the vocabulary the revamped screens already share -- the
-                same white card as Dashboard/Setup, and a real CTA, because
-                this is the caregiver's one deliberate door into Branch 2
-                and not a throwaway link. */}
-            <div className="toki-dcard">
-              <p className="toki-dcard-title">Noticed something about how your child is developing?</p>
-              <button className="toki-cta toki-cta--card" onClick={goToBranch2}>
+                confirmation, available from anywhere in Branch 1. */}
+            <div className="home-card">
+              <p>Noticed something about how your child is developing?</p>
+              <button className="button-accent" onClick={goToBranch2}>
                 I've been thinking about my child's development
               </button>
             </div>
@@ -855,34 +820,35 @@ function App() {
         )}
       </main>
 
-        {/* Bottom tab bar. A <nav> with aria-current rather than a
-            role="tablist", because a tablist promises arrow-key traversal we
-            do not implement -- and these read as four places, not four views
-            of one thing. */}
-        <nav className="toki-tab-bar" aria-label="Sections">
-          {HOME_TABS.map((tab) => {
-            const isActive = tab.id === homeTab;
-            return (
-              <button
-                key={tab.id}
-                className={`toki-tab-button${isActive ? ' is-active' : ''}`}
-                aria-current={isActive ? 'page' : undefined}
-                onClick={() => {
-                  // Leaving Setup with the confirm panel half-open and coming
-                  // back to it later would be a stale, alarming state.
-                  setConfirmLogout(false);
-                  setHomeTab(tab.id);
-                }}
-              >
-                <span className="toki-tab-icon" aria-hidden="true">
-                  {tab.icon}
-                </span>
-                <span className="toki-tab-label">{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+      {/* Bottom tab bar. A <nav> with aria-current rather than a
+          role="tablist", because a tablist promises arrow-key traversal we
+          do not implement -- and these read as four places, not four views
+          of one thing. The bar is full-bleed and as short as the 88x88
+          UI-STANDARDS floor allows; each button still clears that floor on
+          its own, which is what sets the bar's height. */}
+      <nav className="tab-bar" aria-label="Sections">
+        {HOME_TABS.map((tab) => {
+          const isActive = tab.id === homeTab;
+          return (
+            <button
+              key={tab.id}
+              className={`tab-bar-button${isActive ? ' is-active' : ''}`}
+              aria-current={isActive ? 'page' : undefined}
+              onClick={() => {
+                // Leaving Setup with the confirm panel half-open and coming
+                // back to it later would be a stale, alarming state.
+                setConfirmLogout(false);
+                setHomeTab(tab.id);
+              }}
+            >
+              <span className="tab-bar-icon" aria-hidden="true">
+                {tab.icon}
+              </span>
+              <span className="tab-bar-label">{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }

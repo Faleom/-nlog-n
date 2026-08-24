@@ -7,18 +7,14 @@ is the font delivery. If a value changes, it changes here first.
 
 Dark is **the default**. It is this app's deliberate identity, chosen for this
 audience, and it is what renders with no `[data-theme]` attribute set at all —
-see `:root` in `src/App.css`.
-
-**Retired with the Toki revamp:** the caregiver-facing light/dark toggle
-described below is gone. Toki is a light system that replaces the dark theme
-screen by screen rather than sitting beside it, so there is no second theme to
-choose. Nothing in the app writes `[data-theme="light"]` any more, which leaves
-the `:root[data-theme='light']` blocks in `src/App.css` and `src/index.css`,
-and `src/engine/themePreference.ts`, unreferenced: §9 below is kept as the
-record of that light palette until the last dark screen is converted and they
-can be removed together. There is still no `prefers-color-scheme` branch
-anywhere. Every section before §9 describes dark, which is still what the
-not-yet-converted screens render.
+see `:root` in `src/App.css`. A caregiver can switch to a genuinely designed
+light theme from the Setup tab; that choice sets `[data-theme="light"]` on
+`<html>` and is read back from `:root[data-theme='light']` in `src/App.css`,
+persisted via `src/engine/themePreference.ts`. There is still no
+`prefers-color-scheme` branch anywhere — the OS setting never silently
+overrides the caregiver's own explicit choice. §9 below documents the light
+palette; every section before it describes dark, which remains the primary,
+most-considered mode.
 
 Three references govern the system: Duolingo (one thing at a time, low cognitive
 load), Apple's liquid glass (translucent, layered, softly refractive), and a
@@ -487,8 +483,8 @@ to solid `--color-surface`. The bloom still works — it is a plain blurred `<im
 | `src/App.css` (rules) | Base `button`, `.app`, `.app-header`, `.child-face`/`.caregiver-face`, `.room-frame*`, print overrides, plus the light-mode ambient-gradient override. |
 | `src/design/fonts.css` | The two `@font-face` sets. Latin subsets only. No CDN. |
 | `src/index.css` | `color-scheme: dark` by default, `light` under `:root[data-theme='light']`. |
-| `src/engine/themePreference.ts` | Read/wrote the caregiver's light/dark choice via the shared `StoragePort`. Unreferenced since the toggle was retired. |
-| `src/App.tsx` | No longer owns any `theme` state and no longer writes `<html data-theme>`; the Setup tab's Appearance toggle is gone. |
+| `src/engine/themePreference.ts` | Reads/writes the caregiver's light/dark choice via the shared `StoragePort`. |
+| `src/App.tsx` | Owns the `theme` state, mirrors it onto `<html data-theme>`, renders the Appearance toggle in the Setup tab. |
 | `vite.config.ts` | `woff2` in workbox `globPatterns`; PWA `theme_color`/`background_color` stay set to the dark ground (the app's default identity) regardless of the caregiver's in-app choice. |
 
 Token **names** were all preserved, so every existing consumer — `Game1.tsx`,
@@ -667,14 +663,7 @@ Nightshade:
 | `--color-info-soft` | `#ECEBF9` | pale periwink wash, was a dark tinted panel |
 | `--track-find-it/-story/-match/-trace` | `#5B52E8` / `#0E7A6F` / `#8A4FD6` / `#3E6FC9` | each ≥4.35:1 on the near-white dashboard card composite |
 
-### 9.6 Wiring and persistence (retired)
-
-Everything in this subsection describes the toggle as it shipped before the
-Toki revamp retired it. None of it is live: `App.tsx` holds no `theme` state,
-writes no `data-theme` attribute and renders no Appearance section, and
-`.home-theme-row`/`.home-theme-option` have been deleted from `App.css`.
-`src/engine/themePreference.ts` and its `'themePreference'` storage key still
-exist but nothing reads or writes them.
+### 9.6 Wiring and persistence
 
 `data-theme="light"` / unset (dark) on `<html>`, set in `App.tsx` from a
 `theme` state variable, never a JS-computed inline style — the same
@@ -708,3 +697,216 @@ holding a child.
   reward/Companion moment, never general chrome — nothing in this phase
   added a new reference to either token.
 - `npx tsc -b`, `npx oxlint`, `npm run smoke`, `npm run build` — all clean.
+
+---
+
+## 10. Phase 4 — the "Toki" repaint, replacing Phases 1 and 3 entirely
+
+**Status: LOCKED, and it fully replaces §1–§9 above.** Phases 1 (dark-first
+liquid glass) and 3 (light theme, toggle) are **retired**, on explicit
+product decision, not superseded by addition. There is no `[data-theme]`
+axis any more. What this section describes is the app's one look. §1–§9
+above are kept as the historical record of what this replaced and why —
+same as this document already does for the Andika/Inter typography split
+in §2 — not because any of it still applies to `App.css` today.
+
+### 10.0 Where this came from, and what changed on the way in
+
+A caregiver sent a Claude Design canvas (`Hello World - Toki palette.dc.html`)
+sketching all 13 non-game screens re-grounded on pale sky-blue paper, white
+flat cards, a bright blue chrome hue and a grass-green primary action —
+explicitly **colour and shape language only** from a Behance case study
+("Toki – English Learning iOS App", NestStrix Studio, London): no
+illustrations, characters or layouts from that unrelated product were
+reused, and it is not a design source for anything below, only a mood
+reference, on the record.
+
+The canvas left three things as open tweaks (`ctaColour`, `playLayout`,
+`childCalm` in its own props): green vs blue for the primary action,
+grid vs a winding path for the play hub, and calm vs bright for the
+child-facing game moment. Confirmed: **green, grid, calm.** The canvas's
+own footer also framed itself as a *light theme alongside a re-pitched
+dark one* ("still open: re-pitching the dark theme against these hues")
+— overridden by explicit, separate product decision: this is the app's
+**only** look now, dark and glass retired outright, not kept as a second
+option.
+
+**The canvas's own reference values were not copied blind.** Before
+writing a single line of `App.css`, every colour pairing that does real
+work — text on the ground, text on cards, non-text UI boundaries, ink on
+every fill, all six activity-track colours — was checked with the same
+WCAG relative-luminance formula §3.5 and §9.7 use, computed with a short
+Python script, not eyeballed. Four genuine failures turned up in the
+canvas's own study values:
+
+| Pairing | Canvas study value | Measured | Fixed to |
+| --- | --- | --- | --- |
+| `--color-border-strong` on bg | `#a9c2da` | **1.65:1** (needs 3:1, non-text) | `#5e8dba` — 3.15:1 on bg, 3.5:1 on surface |
+| CTA gradient top, white text | `#6cc94a` | **2.08:1** (needs 3:1, large bold text) | `#4ea130` — 3.25:1 |
+| CTA gradient bottom, white text | `#4fae34` | **2.82:1** | `#469a2e` — 3.55:1 |
+| 4 of 6 track colours vs white card | story 2.08 / trace 2.42 / block-stack 2.0 / sort-by-rule 2.61 (need 3:1) | all failed | darkened per-hue until each cleared 3.3:1+ (see §10.1) |
+
+This is the same standing rule §7/§9.7 already state for this document:
+measure, don't assume, and say so plainly when a source value doesn't
+hold up. Two things were checked and left alone rather than "fixed" into
+blandness: `--color-companion` (Blush, `#ff6fa5`) measures only 2.6:1
+with white text, but every current consumer uses it as a border/glow
+colour, never a text-bearing fill (confirmed by grep across
+`SessionCelebration.tsx`, `BlockStackMatch.tsx`, `Game3ShadowMatch.tsx`,
+`SortByRule.tsx`, `TraceAndColour.tsx`) — kept at full saturation on
+purpose, flagged here so nobody pairs it with text later without
+re-checking.
+
+### 10.1 The palette
+
+| Token | Hex | Role | Measured |
+| --- | --- | --- | --- |
+| `--color-surface-sunken` | `#d3e6fa` | page behind the device | — |
+| `--color-bg` | `#eaf4fe` | app ground | — |
+| `--color-surface` | `#ffffff` | every card — flat, not glass | — |
+| `--color-ink` | `#21374e` | primary text | 10.96:1 on bg, 12.2:1 on surface |
+| `--color-ink-muted` | `#55708c` | secondary text | 4.62:1 on bg, 5.14:1 on surface |
+| `--color-border` | `#e1edf9` | decorative hairline | — |
+| `--color-border-strong` | `#5e8dba` | functional edge (inputs, focus-adjacent) | 3.15:1 on bg, 3.5:1 on surface |
+| `--color-primary` | `#1e93ee` | chrome/interactive fill (rings, pills, progress) | 3.25:1, non-text/large-graphic use only |
+| `--color-primary-bright` | `#0b6fbf` | chrome TEXT (eyebrows, active tab labels) | 4.67:1 on bg, 5.2:1 on surface |
+| `--color-accent` | `#469a2e` | the ONE primary-CTA hue — gradient bottom, flat fallback | 4.5:1+ white text |
+| `--color-accent-bright` | `#4ea130` | CTA gradient top | 3.25:1 white text, large bold only |
+| `--color-accent-ink` | `#ffffff` | ink on the CTA fill | — |
+| `--color-reward` | `#ffc93c` | Sunburst, unchanged from Phase 1 | 10.72:1 ink on fill |
+| `--color-companion` | `#ff6fa5` | Blush — border/glow only, see §10.0 | 2.6:1 with text, never so used |
+| `--track-find-it` | `#1991ee` | dashboard track | 3.32:1 on white card |
+| `--track-story` | `#249a9a` | | 3.41:1 |
+| `--track-match` | `#a372e9` | | 3.42:1 |
+| `--track-trace` | `#588ee1` | | 3.3:1 |
+| `--track-block-stack` | `#1799bb` | | 3.33:1 |
+| `--track-sort-by-rule` | `#b66cdc` | | 3.4:1 |
+| `--color-danger` | `#c8402f` | | 4.96:1 white ink |
+
+**Two chrome hues, on purpose, not one.** The canvas's own words: *"green
+reads as go and leaves blue free for every piece of chrome... only one
+thing on a screen is ever green."* `--color-primary` (blue) drives
+everything the old system's single interactive hue used to — nav, focus
+rings, links, step bars, radio selection. `--color-accent` (green) exists
+for exactly one thing: `.button-primary`, the CTA. Before this phase the
+two roles were collapsed onto one token; `.button-primary`'s CSS rule was
+repointed from `--color-primary*` to `--color-accent*` specifically so
+this split holds structurally, not just by convention.
+
+### 10.2 Glass — retired, not retuned
+
+Every consumer in the codebase (`App.css`'s own rules, plus every
+`--glass-*`/`backdrop-filter` reference across `src/games` and
+`src/screens`) was confirmed by grep to read these **only** through
+custom properties before this phase touched anything — no component,
+including `Game3ShadowMatch.tsx`, which this phase does not edit, hardcodes
+a glass literal. That is what made this a token-value change rather than a
+per-component rewrite: `--glass-filter: none`, `--glass-bg`/`--glass-bg-strong`
+→ `#ffffff`, `--glass-border` → `var(--color-border)`, `--glass-highlight` →
+a harmless zero rim, `--glass-shadow` → `var(--shadow-md)`, and every card,
+button, header and tab bar in the app flattened with zero edits.
+
+One exception: `.room-frame-mat` hardcoded its own `backdrop-filter: blur(26px)...`
+directly rather than reading `--glass-filter` (documented in §5's own spec
+table as deliberately blurrier than the system default) — the one place
+that needed a direct edit, now a flat white card matching the canvas's
+"Room photo" panel treatment.
+
+**The ambient background blobs are a different mechanism and were kept**,
+recoloured only. `.app::before`/`::after` paint hard-edged radial-gradient
+discs through a plain CSS `filter: blur()` on a pseudo-element — not
+`backdrop-filter`, not glass — and every artboard still shows this kind of
+soft colour bloom behind each screen. Geometry (circle sizes, positions,
+blur radii) is untouched; only the hue family moved from
+Periwink/Ember/Blush to the new chrome blue / teal / lilac, keeping the
+existing subtractive-on-light treatment the retired light theme already
+used (washes sit a little darker/more saturated than the page, not
+brighter — the "emissive" dark-only rule in the old §3.3 doesn't apply to
+a light ground).
+
+### 10.3 Accent-by-favColour — narrowed scope, and a real bug caught live
+
+The four "Interactive" tokens (`--color-primary`, `-bright`, `-ink`,
+`-soft`) are still re-pointed per the child's favourite colour, values
+reused from Phase 3's own light-pitch accent blocks (already verified
+against a light ground; spot-checked against this new bg/surface and
+still clearing 4.5:1+ across all seven hues). **Dropped**: the five-token
+ground-and-border wash the retired system layered on top of the accent
+hue. Retuning six ground washes against a completely different base hue
+family (sky-blue vs. the old violet-plum), each independently
+re-verified, is real separate design work — flagged here as follow-up,
+not shipped unverified.
+
+**Purple now needs its own block.** In the retired system Periwink/purple
+*was* the `:root` default, so `favColour === 'purple'` matched no
+override rule and fell through correctly. This palette's default chrome
+hue is blue, so purple is the seventh ordinary hue now, not a no-op —
+value reused verbatim from the retired system's own light-pitch Periwink
+(`#5b52e8`), independently re-checked (4.94:1 on bg, 5.5:1 on surface).
+
+**A real, live bug this surfaced:** `App.tsx`'s accent-mirroring effect
+defaulted `data-accent` to the string `'purple'` whenever no profile (or
+no saved favColour) existed — harmless under the retired palette, where
+`'purple'` matched no CSS rule and fell through to the identical default
+value either way. Under this palette it silently painted every screen
+purple, for every user, before they had ever chosen a favourite colour,
+because `:root[data-accent='purple']` is now a real, distinct rule.
+Caught by loading the app with a clean profile and reading
+`getComputedStyle(document.documentElement).getPropertyValue('--color-primary')`
+directly rather than trusting a screenshot — it read `#5b52e8` (purple)
+where a fresh profile should read `#1e93ee` (blue). Fixed: the effect now
+**removes** the attribute entirely when there is no favColour, the same
+unset-is-the-real-default pattern `[data-theme]` used to follow, rather
+than writing an explicit fallback value that happens to collide with a
+now-real rule.
+
+### 10.4 What still doesn't match the canvas, on purpose or as known follow-up
+
+- **The Branch 2 "lilac eyebrow."** The canvas's own annotation says
+  Worry-to-Question screens should carry a lilac eyebrow instead of blue,
+  "so a caregiver can tell at a glance they've left the activities side."
+  Confirmed live: it currently renders the same blue as everywhere else.
+  Not a regression — nothing in the shipped app ever had a
+  Branch-2-specific eyebrow hue to begin with, on any palette; this was
+  aspirational in the canvas, not previously implemented. Real, small,
+  separate follow-up.
+- **The favourite-colour picker is still a plain radio list**, not the
+  canvas's bubble-swatch grid (artboard 05). Pre-existing component
+  choice, untouched by this phase — the accent system underneath it
+  (§10.3) is correct regardless of which picker UI sits on top.
+- **Play hub is the grid layout**, per the explicit decision — the
+  winding-path variant (artboard 06) was not built. It also carried its
+  own unresolved product blocker in the canvas's own footer note ("what,
+  if anything, marks a node as done, since the current rules allow
+  nothing score-like in the child's view") that grid sidesteps entirely.
+- **Each game's own distinct play mechanic was not individually
+  restyled.** The canvas states plainly it drew only the shared confirm
+  moment ("only the shared confirm moment is drawn here"). Every game
+  picks up the new palette through the token cascade already described
+  in §10.2 — verified for `BlockStackMatch.tsx` and `SortByRule.tsx` by
+  reading their source (glass-only, no literal colours); not yet
+  click-tested per-game against a live API key, since none is configured
+  in this checkout (see `STATUS.md`'s "The API key" section).
+
+### 10.5 Verification performed in Phase 4
+
+- Every contrast figure in §10.1–§10.3 computed with the same WCAG
+  relative-luminance formula §3.5/§9.7 use — not eyeballed. Four real
+  failures were found in the canvas's own reference values and corrected
+  in place; see the table in §10.0.
+- Confirmed via grep, before any edit: every `--glass-*`/`backdrop-filter`
+  consumer across `src/games` and `src/screens` reads through custom
+  properties only, including `Game3ShadowMatch.tsx` (never edited this
+  phase, per the standing rule in `STATUS.md`) and `BlockStackMatch.tsx`/
+  `SortByRule.tsx` (also never edited).
+- `npx tsc -b`, `npx oxlint`, `npm run smoke`, `npm run build` — all
+  clean.
+- Live-clicked in a real browser, not just built: Welcome, onboarding
+  (age/nickname), the two-doors screen, Branch 2's three-prompts screen,
+  the Play hub grid, Setup (confirmed the removed theme toggle leaves no
+  trace), the caregiver Dashboard, and the favourite-colour picker —
+  including clearing IndexedDB to test the true first-run state, which is
+  what caught the §10.3 accent bug a build/lint/test pass alone would not
+  have. Not yet click-tested: a live game session (needs
+  `ANTHROPIC_API_KEY`, not configured in this checkout), and the
+  Worry-to-Question card/handoff screens beyond the three-prompts step.

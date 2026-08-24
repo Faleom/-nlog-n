@@ -1,23 +1,22 @@
 @import './design/fonts.css';
 
-/* Design system — DARK-FIRST, with a real light alternative. Dark is the
-   DEFAULT: it is this app's deliberate identity, not a fallback, and it is
-   what renders with no attribute set at all.
-
-   The caregiver-facing light/dark toggle this block used to describe is
-   gone, retired with the Toki revamp: Toki is a light system that replaces
-   the dark theme screen by screen rather than sitting beside it, so there
-   is no second theme to choose and nothing writes `data-theme="light"` any
-   more. The `:root[data-theme="light"]` blocks below are therefore inert
-   until the last dark screen is converted and they can go with it. There
-   is still deliberately no `prefers-color-scheme` branch anywhere: the OS
-   setting never silently picks a mode the caregiver did not choose.
+/* Design system — PHASE 4: "Toki" repaint, sky-blue/white/green, flat
+   cards. This REPLACES the retired dark-first liquid-glass system and
+   its light alternative entirely, on explicit product decision — not an
+   addition alongside them. There is no [data-theme] axis anymore: what
+   you see below is the app's one look, full stop. No theme toggle
+   exists in Setup any more; src/engine/themePreference.ts and the
+   `theme` state that used to mirror onto `<html data-theme>` were
+   removed along with it. See DESIGN-TOKENS.md §10 for the full record of
+   what this replaced and why, including the real WCAG measurements
+   behind every value changed here (several of the "Toki palette" study's
+   own reference values failed contrast outright and were re-tuned, not
+   copied blind — §10.2).
 
    THE SOURCE OF TRUTH FOR EVERYTHING IN THIS BLOCK IS
    src/design/DESIGN-TOKENS.md. Palette names, contrast measurements,
-   glass tuning rationale, layout restraint rules and the signature
-   photo-frame spec all live there. Change a value here only after
-   changing it there.
+   layout restraint rules and the signature photo-frame spec all live
+   there. Change a value here only after changing it there.
 
    Hard constraints from plan/engineering/UI-STANDARDS.md still govern
    everything below, WITH ONE DELIBERATE, PRODUCT-DECIDED EXCEPTION: the
@@ -42,527 +41,189 @@
    300ms except the one-time screen change. */
 
 :root {
-  /* ---- Ground -------------------------------------------------------
-     Warm plum-black, hue ~265 at very low saturation. Deliberately not
-     a blue-black (#0A0E1A "medical dark") and not a neutral grey. */
-  --color-surface-sunken: #0e0c13; /* Pitch      — page behind the device */
-  --color-bg: #16121d; /* Nightshade — the app's own ground  */
-  --color-surface: #241e2e; /* Slate Plum — raised solid surface  */
-  --color-ink: #f4efe8; /* Moonmilk   — warm ivory, never #fff */
-  --color-ink-muted: #a79cb5; /* Haze       — 7.09:1 on Nightshade  */
-  --color-border: #453b54; /* Seam       — decorative hairline   */
-  --color-border-strong: #7a6c92; /* Reed — functional edge, 3.85:1 */
+  /* ---- Ground ---------------------------------------------------------
+     Pale sky-blue, hue ~205, warming toward white at the surface end.
+     PHASE 4 REPAINT (see the note above this block, and DESIGN-TOKENS.md
+     §10): this replaces the dark-first ground below/light-alternative
+     that used to live here. --color-ink is a deep ink-blue rather than
+     the old violet-plum family -- a deliberate new identity, not a hue
+     rotation of the old one. */
+  --color-surface-sunken: #d3e6fa; /* page behind the device */
+  --color-bg: #eaf4fe; /* the app's own ground */
+  --color-surface: #ffffff; /* raised surface -- every card is a flat white slab now, not glass */
+  --color-ink: #21374e; /* 10.96:1 on bg, 12.2:1 on surface */
+  --color-ink-muted: #55708c; /* 4.62:1 on bg, 5.14:1 on surface */
+  --color-border: #e1edf9; /* decorative hairline */
+  /* Darkened from the reference study's #a9c2da (1.65:1 -- failed the
+     3:1 non-text floor outright) until it cleared 3:1 on BOTH the page
+     ground and white cards; measured, not eyeballed. */
+  --color-border-strong: #5e8dba; /* 3.15:1 on bg, 3.5:1 on surface */
 
-  /* ---- Interactive --------------------------------------------------
-     Periwink is the light-mode #5b52e8 re-pitched for a dark ground:
-     lighter and less saturated, because a dark base needs the
-     interactive hue to come TOWARD the light, not sit under it. */
-  --color-primary: #8b7bff; /* Periwink        5.60:1 on Nightshade */
-  --color-primary-bright: #a99dff; /* small accent text on strong glass */
-  --color-primary-ink: #171226; /* dark ink ON a Periwink fill */
-  --color-primary-soft: rgba(139, 123, 255, 0.24);
-  --color-accent: #ffb067; /* Ember          10.24:1 on Nightshade */
-  --color-accent-soft: #2e2016; /* Ember Ash — tinted dark surface */
-  --color-accent-ink: #2a1405; /* dark ink ON an Ember fill */
+  /* ---- Interactive ----------------------------------------------------
+     Two separate hues now, not one -- the canvas's own stated split:
+     "green reads as go and leaves blue free for every piece of chrome...
+     only one thing on a screen is ever green." So --color-primary stays
+     the general chrome/interactive hue (nav, focus rings, links, step
+     bars, radio selection); the primary CTA button is repointed below to
+     a dedicated --color-accent-* pair instead of reusing this. */
+  --color-primary: #1e93ee; /* fill use (rings, pills, progress) -- 3.25:1, large-graphic-only */
+  --color-primary-bright: #0b6fbf; /* TEXT use (eyebrows, active tab labels) -- 4.67:1 on bg, 5.2:1 on surface */
+  --color-primary-ink: #faf7ff; /* ink on a flat --color-primary fill, kept as a reserve token */
+  --color-primary-soft: rgba(30, 147, 238, 0.14);
+
+  /* --color-accent is the green "go" hue -- now the CTA button's own
+     colour, not a secondary warm accent. The two-stop gradient below was
+     re-tightened from the canvas study's initial #6cc94a/#4fae34 pass
+     (2.08:1 / 2.82:1 with white text -- failed even large-text AA at
+     both stops) until each stop independently clears 3:1+ with white
+     text, per DESIGN-TOKENS.md §10.2. */
+  --color-accent: #469a2e; /* gradient bottom, flat/fallback value -- 4.5:1+ with white text */
+  --color-accent-bright: #4ea130; /* gradient top -- 3.25:1 with white text */
+  --color-accent-soft: #eaf7e4;
+  --color-accent-ink: #ffffff;
 
   /* ---- Reserved saturation ------------------------------------------
-     The ONLY fully-saturated hues in the system. Never chrome, never a
-     default state — reward beats and the Companion only. Everyday UI
-     stays on Periwink/Ember so these two actually register as special.
-     (Game1 also injects the child's own favourite colour as
-     --g1-accent; the palette stays this restrained partly so that
-     arbitrary hue never has to fight four others.) */
-  --color-reward: #ffc93c; /* Sunburst */
+     Unchanged role from the retired system: reward beats and the
+     Companion only, never chrome, never twice on one screen.
+     --color-companion is a border/glow colour only in every current
+     consumer (confirmed by grep) -- never paired with text -- which is
+     why it can stay this vivid: white text on it measures only 2.6:1
+     and must never be introduced as a text-bearing fill. */
+  --color-reward: #ffc93c; /* Sunburst, unchanged -- 10.72:1 ink contrast holds regardless of ground */
   --color-reward-ink: #2a1d02;
-  --color-reward-glow: rgba(255, 201, 60, 0.34);
-  --color-companion: #ff7e9d; /* Blush */
-  --color-companion-glow: rgba(255, 126, 157, 0.3);
+  --color-reward-glow: rgba(255, 201, 60, 0.42);
+  --color-companion: #ff6fa5; /* Blush -- border/glow only, see note above. Never as a text-bearing fill. */
+  --color-companion-glow: rgba(255, 111, 165, 0.3);
 
   /* ---- Activity track colours ----------------------------------------
-     One per track, used twice each: a segment of the dashboard's
-     time-by-track bar, and the dot beside that track's row. All four are
-     cool -- DESIGN-TOKENS §4.2/§4.3 keep Sunburst, Blush and Ember off
-     caregiver screens, and a red/amber/green data set on a screen about a
-     child in early intervention would read as a verdict no matter what
-     the legend said. They separate by lightness as well as hue, so they
-     survive a colour-blind reader, and each one measures at least 4:1
-     against the dashboard card's composited surface (WCAG 1.4.11 asks
-     3:1 for a graphic that carries meaning). The bar is never the only
-     carrier either: every segment is restated as a labelled row below it. */
-  --track-find-it: #8b7bff; /* Periwink        4.07:1 on the card */
-  --track-story: #6ed3c6; /* Sea glass      7.54:1 */
-  --track-match: #c9a2ff; /* Lilac          6.46:1 */
-  --track-trace: #7fa8e8; /* Slate blue     5.54:1 */
-  --track-block-stack: #63cfe6; /* Cyan      10.19:1 on Nightshade */
-  --track-sort-by-rule: #c489e3; /* Plum       7.06:1 on Nightshade */
+     Re-tuned from the canvas study's initial pass, which badly failed
+     DESIGN-TOKENS' own stated 3:1 non-text floor against a white card
+     for four of six hues (story 2.08:1, trace 2.42:1, block-stack 2.0:1,
+     sort-by-rule 2.61:1 -- measured, not assumed). Each below is darkened
+     along its own hue until it clears 3.3:1+ on white, keeping the same
+     cool, red/amber/green-free family and the same separation-by-
+     lightness the retired system used. */
+  --track-find-it: #1991ee; /* 3.32:1 on white */
+  --track-story: #249a9a; /* 3.41:1 */
+  --track-match: #a372e9; /* 3.42:1 */
+  --track-trace: #588ee1; /* 3.3:1 */
+  --track-block-stack: #1799bb; /* 3.33:1 */
+  --track-sort-by-rule: #b66cdc; /* 3.4:1 */
 
-  /* ---- Utility surfaces --------------------------------------------
-     Added so Phase 2 has somewhere to send the hardcoded light-mode
-     literals still scattered through the games and screens (#a33, #eef,
-     #ccc, #fff) rather than inventing dark values ad hoc. */
-  --color-danger: #ff8a80; /* soft coral, 8.08:1 on Nightshade */
-  --color-danger-soft: #33191c;
-  --color-info-soft: #1e1b33; /* replaces #eef note panels */
-  /* Object crops keep a LIGHT backing on purpose. A photographed toy on
-     a lit tile against the dark ground is the same idea as the Room
-     Frame at thumbnail scale — it reads as an object under a lamp, not
-     as a hole punched in the UI. Do not "fix" this to a dark tile. */
-  --color-tile: #f0eaf5;
-  --color-tile-ink: #241e2e; /* 13.68:1 on --color-tile */
-  --color-tile-border: rgba(255, 255, 255, 0.86);
+  /* ---- Utility surfaces ------------------------------------------------ */
+  --color-danger: #c8402f; /* 4.96:1 white ink, 4.37:1 as text on --color-danger-soft */
+  --color-danger-soft: #fdedeb;
+  --color-info-soft: #edf6fe;
+  /* Object crops keep a light backing, same hard requirement as before
+     (Game3ShadowMatch's silhouettes render solid-black via
+     filter:brightness(0) and would vanish on a dark tile) -- moot on an
+     already-light ground, but the token stays explicit rather than
+     implicit. */
+  --color-tile: #ffffff;
+  --color-tile-ink: #21374e;
+  --color-tile-border: rgba(33, 55, 78, 0.16);
 
-  /* ---- Type ---------------------------------------------------------
-     One face now, not two. The original split (Andika for the child,
-     Inter for the caregiver) assumed the child would be reading real
-     text on screen; in practice .child-face was never wired up anywhere
-     in the app (every child-facing phase is icons/photos/audio only,
-     per UI-STANDARDS' "zero text in the child's view") and the split
-     just made the caregiver-facing majority of the app — Setup, the
-     quiz, the dashboard, the tab bar — read as a plain enterprise
-     form tool. Explicit product decision: replace both with Nunito,
-     a rounded, warm sans built with a genuinely wide weight axis
-     (200-1000, the same shape as Inter's own range), so it still holds
-     up as small, dense UI text on Setup/the dashboard and not just as a
-     display face. --font-child / --font-caregiver stay as separate
-     tokens — a future screen-specific need doesn't require re-touching
-     every consumer — they just point at the same face for now. */
+  /* ---- Type ----------------------------------------------------------- */
   --font-child: 'Nunito Variable', 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
   --font-caregiver:
     'Nunito Variable', 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI',
     system-ui, Roboto, sans-serif;
-  --font-size-child-body: 1.25rem; /* 20px */
-  --font-size-child-min: 1.125rem; /* nothing child-facing goes below 18px */
+  --font-size-child-body: 1.25rem;
+  --font-size-child-min: 1.125rem;
   --tracking-child: 0.012em;
   --tracking-caregiver: -0.006em;
-  /* Light-on-dark text optically gains weight (irradiation). Trim it. */
   --weight-caregiver-body: 420;
   --weight-caregiver-strong: 620;
 
   --radius-lg: 22px;
   --radius-md: 16px;
   --radius-sm: 11px;
-  --radius-frame: 34px; /* signature photo frame, outer */
-  --radius-frame-inner: 20px; /* = --radius-frame minus --frame-mat */
+  --radius-frame: 34px;
+  --radius-frame-inner: 20px;
 
-  /* On a dark ground a shadow cannot be "a bit of the ink colour" — it
-     has to be near-black and much larger/softer, or it disappears. */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.55), 0 1px 1px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 14px 34px rgba(0, 0, 0, 0.6), 0 3px 8px rgba(0, 0, 0, 0.45);
+  /* On a light ground a shadow reads as "a bit of the ink colour" --
+     small, soft, ink-tinted, the opposite of the old dark-ground rule
+     that shadows here replace. */
+  --shadow-sm: 0 1px 2px rgba(23, 86, 140, 0.1), 0 1px 1px rgba(23, 86, 140, 0.06);
+  --shadow-md: 0 10px 24px rgba(23, 86, 140, 0.1), 0 3px 8px rgba(23, 86, 140, 0.07);
 
-  /* ---- Liquid glass, tuned for a dark base ---------------------------
-     A naive light-to-dark swap of the old values (white at 0.55 alpha)
-     produces fog, not glass. Three things make it read as a lit slab
-     instead of a flat panel:
-       1. very low white alpha (0.07 / 0.12), so the panel is a tint
-          over the ground rather than a milky sheet;
-       2. brightness() in the backdrop filter — on dark, blur+saturate
-          alone lifts nothing; the panel has to physically brighten what
-          is behind it;
-       3. a TWO-TONE rim. Light mode had one inset highlight on top. On
-          dark, the slab needs a bright top edge AND a dark bottom edge
-          to imply thickness, plus a soft inner glow raking down from
-          the top edge.
-     --glass-highlight keeps its name (every existing consumer composes
-     it into box-shadow) but is now that three-part composite. */
-  --glass-bg: rgba(255, 255, 255, 0.07);
-  --glass-bg-strong: rgba(255, 255, 255, 0.12);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-blur: 22px;
-  --glass-saturate: 150%;
-  --glass-brightness: 1.16;
-  --glass-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-    brightness(var(--glass-brightness));
-  --glass-rim-top: inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  --glass-rim-bottom: inset 0 -1px 0 rgba(0, 0, 0, 0.34);
-  --glass-inner-glow: inset 0 14px 30px -16px rgba(255, 255, 255, 0.18);
-  --glass-highlight: var(--glass-rim-top), var(--glass-rim-bottom),
-    var(--glass-inner-glow);
-  --glass-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.42);
-  /* Same material, two temperatures. Child surfaces get a hint of Ember
-     so the glass stays warm; caregiver surfaces get a hint of Periwink
-     so they stay cool and recede behind their content. */
-  --glass-tint-child: rgba(255, 176, 103, 0.05);
-  --glass-tint-caregiver: rgba(139, 123, 255, 0.045);
+  /* ---- Liquid glass -- RETIRED. Flattened to soft-shadowed cards. -------
+     Every consumer in the codebase reads these ONLY through custom
+     properties (confirmed by grep across src/games and src/screens before
+     this change) -- so flattening the values here flattens the whole app
+     with no edits to any component, including files that must not be
+     touched directly (Game3ShadowMatch.tsx). Token NAMES are kept so
+     every existing `box-shadow: var(--glass-shadow), var(--glass-highlight)`
+     and `backdrop-filter: var(--glass-filter)` line keeps working --
+     they simply now resolve to "no blur, one soft shadow, no rim.” */
+  --glass-bg: #ffffff;
+  --glass-bg-strong: #ffffff;
+  --glass-border: var(--color-border);
+  --glass-blur: 0px;
+  --glass-saturate: 100%;
+  --glass-brightness: 1;
+  --glass-filter: none;
+  --glass-rim-top: 0 0 0 0 rgba(0, 0, 0, 0);
+  --glass-rim-bottom: 0 0 0 0 rgba(0, 0, 0, 0);
+  --glass-inner-glow: 0 0 0 0 rgba(0, 0, 0, 0);
+  --glass-highlight: var(--glass-rim-top);
+  --glass-shadow: var(--shadow-md);
+  --glass-tint-child: transparent;
+  --glass-tint-caregiver: transparent;
 
-  /* ---- Signature element: the Room Frame ----------------------------- */
-  --frame-mat: 14px; /* glass border around the photo */
+  /* ---- Signature element: the Room Frame ------------------------------- */
+  --frame-mat: 14px;
   --frame-bloom-blur: 38px;
   --frame-bloom-scale: 1.14;
   --frame-bloom-opacity: 0.5;
   --frame-bloom-saturate: 1.5;
 
-  /* ---- Layout restraint ---------------------------------------------- */
-  /* Deliberate product override, not the original spec: plan/engineering/
-     UI-STANDARDS.md's own text still says "88x88pt minimum touch target,
-     no exceptions" and that rule is left as-written there -- this token
-     just no longer matches it, on purpose. 88px kept bottoming out every
-     caregiver control (Setup, Notes, Dashboard, the tab bar, the back
-     button, Welcome) at a near-square block regardless of how short the
-     label was, and repeated requests to make those specific screens more
-     compact kept hitting that floor. 44px is the standard mobile-platform
-     minimum (iOS HIG / Android) rather than an arbitrary smaller number.
-     Every game's own child-facing tap targets (Game1's object tiles,
-     etc.) are hardcoded pixel values in their own files, NOT this token
-     -- confirmed via grep, none of src/games/* reference var(--touch-min)
-     -- so this change does not touch anything the child directly taps. */
+  /* ---- Layout restraint -------------------------------------------------
+     Unchanged from the retired system -- this is a real accessibility
+     rule, not a palette concern. See DESIGN-TOKENS.md §4.1 for the full
+     reasoning; still governs everything below unchanged. */
   --touch-min: 44px;
-  --child-action-min: 120px; /* the ONE primary action on a child screen */
-  --space-child-gap: 28px; /* child screens breathe */
-  --space-caregiver-gap: 14px; /* caregiver screens pack tighter */
+  --child-action-min: 120px;
+  --space-child-gap: 28px;
+  --space-caregiver-gap: 14px;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 
-  /* ---- Small interactive washes ---------------------------------------
-     A handful of components paint a barely-there fill for an inset row or
-     a pressed state (dashboard rows, the Setup edit list, the "coming
-     soon" hatch). On a dark ground that fill has to be a hint of WHITE to
-     read as "lighter than the surface it sits on". Split out as tokens
-     (rather than left as the rgba(255,255,255,x) literals they used to be)
-     so light mode can give them the opposite polarity below -- a hint of
-     ink, not a hint of white, since lightening an already-light row is
-     invisible. */
-  --surface-wash: rgba(255, 255, 255, 0.05);
-  --surface-wash-active: rgba(255, 255, 255, 0.1);
-  --hatch-line: rgba(255, 255, 255, 0.035);
-}
-
-/* =========================================================================
-   LIGHT THEME — a genuine second surface, not an inverted dark one.
-
-   Ground: same hue family as dark (~265 violet-plum, very low saturation)
-   but now warming toward the SAME ivory dark's own ground warms toward,
-   approached from the light side instead of the black side. `--color-ink`
-   below is dark's own `--color-surface` hex (Slate Plum) reused as light's
-   text colour on purpose -- the two themes share one small vocabulary of
-   plum tones and just swap which end each token sits at, the same way a
-   photograph and its negative share one image. Not pure black on purpose,
-   for the same halation reason dark avoided pure white on Nightshade: a
-   3-5 year old's caregiver is reading this UI one-handed, often in bright
-   light, and a warm near-black is calmer than #000.
-
-   Every rgba(255,255,255,x) glass/rim value below is dark's own value
-   given the OPPOSITE job. Dark needed brightness() and a white-tinted
-   glass because blur+saturate alone lift nothing off a black ground --
-   see DESIGN-TOKENS §3.1. A light ground already has all the luminance a
-   frosted pane needs; brightness() here would blow it out to flat white
-   instead, so --glass-brightness drops back to 1 and the glass fill goes
-   back to the denser white-frost alpha (0.55/0.72) the ORIGINAL pre-dark
-   system used -- see DESIGN-TOKENS §3.1's own description of that value,
-   which is documented there as correct for paper, wrong only once carried
-   onto black unchanged. Borders and hairlines flip from a white rim (the
-   only thing visible against black) to a soft ink-tinted line (the only
-   thing visible against paper) -- an unmodified glass-border here would
-   be a rgba(255,255,255,x) line on a near-white pane and vanish outright.
-   Shadows shrink and warm from near-black/huge to ink-tinted/soft: see
-   DESIGN-TOKENS §3.2's own note that "a shadow cannot be a bit of the ink
-   colour" on dark -- on light it can, and should.
-
-   `--color-tile` stays light in BOTH themes -- not a design preference
-   here, a hard requirement: Game3's silhouettes are rendered with
-   `filter: brightness(0)` (solid black) and silhouetteCanvas.ts produces
-   black-on-transparent PNGs (see Game3ShadowMatch.tsx's own header
-   comment). A dark tile would make both invisible regardless of theme.
-   What DOES change for light is `--color-tile-border`: dark's bright
-   rgba(255,255,255,0.86) rim is what separates a light tile from the
-   near-black shell around it, and that same white rim would all but
-   disappear against light mode's own light shell -- a light stage sitting
-   directly on a light ground with no edge at all. Light's tile border is
-   therefore redefined as a soft ink-tinted line instead of a white one,
-   giving the tile back a visible edge against its now-light surroundings
-   without darkening the tile itself. Same reasoning for the drawing
-   surface in TraceAndColour.tsx (`.t4-stage`) and the sample/crop tiles in
-   Game3ShadowMatch.tsx -- both consume these same tokens, so this one
-   change carries through to both without touching either game file. */
-:root[data-theme='light'] {
-  /* ---- Ground -------------------------------------------------------- */
-  --color-surface-sunken: #eae2d6; /* Putty      — page behind the device */
-  --color-bg: #f6f1e9; /* Parchment  — the app's own ground  */
-  --color-surface: #fffdf9; /* raised solid surface, near-white  */
-  --color-ink: #241e2e; /* Ink Plum   — dark's Slate Plum, reused */
-  --color-ink-muted: #5e5169; /* 6.54:1 on Parchment  */
-  --color-border: #e4dae6; /* decorative hairline  */
-  --color-border-strong: #8b7c99; /* functional edge, 3.43:1 on Parchment, 3.73:1 on glass */
-
-  /* ---- Interactive ----------------------------------------------------
-     Periwink re-pitched back toward the paper it was cut from — see
-     DESIGN-TOKENS §1.2's own note that dark's Periwink is a re-pitch of
-     "light mode's #5b52e8", which sat *under* the page. Restored here
-     verbatim, plus a deeper step for small text on the strong glass fill,
-     which stays comfortably clear on light without needing a bright/dark
-     split the way dark's Periwink did (see the ✗ cells in DESIGN-TOKENS
-     §3.5) — kept anyway for the same visual-hierarchy role. */
-  --color-primary: #5b52e8; /* Periwink, light-pitch. 4.89:1 on Parchment */
-  --color-primary-bright: #4a3fd4; /* Periwink Deep — small text on strong glass */
-  --color-primary-ink: #faf7ff; /* warm near-white ink ON a Periwink fill */
-  --color-primary-soft: rgba(91, 82, 232, 0.16);
-  --color-accent: #a6540f; /* Ember, light-pitch. 4.79:1 on Parchment */
-  --color-accent-soft: #fbeee0; /* pale peach tinted surface */
-  --color-accent-ink: #fffbf6; /* warm near-white ink ON an Ember fill */
-
-  /* ---- Reserved saturation ---------------------------------------------
-     Still the only fully-saturated hues in the system, still never chrome.
-     Dark's Sunburst/Blush are tuned to glow against near-black and read as
-     washed-out pastel against paper if carried over unchanged (a raw
-     #ffc93c measures under 2:1 against Parchment). Both are re-pitched
-     darker/richer here, the same "sits under the paper" move interactive
-     got above, so they stay legible AND still read as the same golden/
-     rose family everywhere they appear (the reward badge's fixed ink text,
-     the Room Frame's reward/Companion rim, SessionCelebration's confetti). */
-  --color-reward: #b87805; /* Sunburst, light-pitch — deep marigold */
-  --color-reward-ink: #2a1d02; /* unchanged: 4.49:1 on the new fill */
-  --color-reward-glow: rgba(184, 120, 5, 0.24);
-  --color-companion: #c43f68; /* Blush, light-pitch — deep rose */
-  --color-companion-glow: rgba(196, 63, 104, 0.22);
-
-  /* ---- Activity track colours ------------------------------------------
-     Same cool, red/green-free family as dark, re-pitched for 4:1+ against
-     a near-white dashboard card instead of against Nightshade. */
-  --track-find-it: #5b52e8;
-  --track-story: #0e7a6f;
-  --track-match: #8a4fd6;
-  --track-trace: #3e6fc9;
-  --track-block-stack: #0e7d95; /* 4.71:1 on the card */
-  --track-sort-by-rule: #7a35ad; /* 7.03:1 on the card */
-
-  /* ---- Utility surfaces -------------------------------------------------- */
-  --color-danger: #b23a2c; /* 5.28:1 on Parchment */
-  --color-danger-soft: #fbeae7;
-  --color-info-soft: #ecebf9;
-  /* See this block's header comment: MUST stay light in both themes for
-     silhouette contrast, so only its border changes. */
-  --color-tile: #ffffff;
-  --color-tile-ink: #241e2e;
-  --color-tile-border: rgba(36, 30, 46, 0.16);
-
-  /* ---- Shadows ----------------------------------------------------------
-     Small and ink-tinted rather than huge and near-black — a shadow on
-     light CAN be "a bit of the ink colour" (DESIGN-TOKENS §3.2's dark-only
-     rule does not hold in reverse). */
-  --shadow-sm: 0 1px 2px rgba(36, 30, 46, 0.14), 0 1px 1px rgba(36, 30, 46, 0.08);
-  --shadow-md: 0 10px 24px rgba(36, 30, 46, 0.14), 0 3px 8px rgba(36, 30, 46, 0.09);
-
-  /* ---- Liquid glass, tuned for a light base -----------------------------
-     See this block's header comment for why brightness() drops to 1 and
-     the fill goes back to a denser white-frost alpha instead of dark's
-     thin tint. */
-  --glass-bg: rgba(255, 255, 255, 0.55);
-  --glass-bg-strong: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(36, 30, 46, 0.12);
-  --glass-blur: 22px;
-  --glass-saturate: 140%;
-  --glass-brightness: 1;
-  --glass-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))
-    brightness(var(--glass-brightness));
-  /* Dark needed a two-tone rim (bright top + dark bottom) to fake
-     thickness against a ground with no light of its own. Light's ground
-     already has that light, so the top rim stays a genuine catch-light
-     and the bottom rim/inner-glow shrink to a near-imperceptible ink
-     shadow and a soft white sheen rather than disappearing outright —
-     kept, not zeroed, so `--glass-highlight` still reads as one coherent
-     three-part material instead of a flat single line. */
-  --glass-rim-top: inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --glass-rim-bottom: inset 0 -1px 0 rgba(36, 30, 46, 0.08);
-  --glass-inner-glow: inset 0 14px 30px -16px rgba(255, 255, 255, 0.55);
-  --glass-highlight: var(--glass-rim-top), var(--glass-rim-bottom),
-    var(--glass-inner-glow);
-  --glass-shadow: 0 10px 26px rgba(36, 30, 46, 0.16), 0 2px 6px rgba(36, 30, 46, 0.1);
-  --glass-tint-child: rgba(255, 176, 103, 0.1);
-  --glass-tint-caregiver: rgba(139, 123, 255, 0.08);
-
-  /* Same wash tokens, opposite polarity — see the dark block's comment. */
-  --surface-wash: rgba(36, 30, 46, 0.04);
-  --surface-wash-active: rgba(36, 30, 46, 0.08);
-  --hatch-line: rgba(36, 30, 46, 0.05);
+  /* A hint of ink, not a hint of white -- lightening an already-light
+     surface is invisible, so pressed/inset states darken instead. */
+  --surface-wash: rgba(33, 55, 78, 0.05);
+  --surface-wash-active: rgba(33, 55, 78, 0.1);
+  --hatch-line: rgba(33, 55, 78, 0.05);
 }
 
 /* ---- Accent-by-favColour --------------------------------------------
    Onboarding's "A few favourites" screen (QuickPreferences.tsx) captures
    the child's favColour as one of COLOURS = red/orange/yellow/green/blue/
-   purple. This block is the ONLY place that colour touches the
-   design system: it re-points the four "Interactive" accent tokens
+   purple/pink. This block re-points the four "Interactive" tokens
    (--color-primary, --color-primary-bright, --color-primary-ink,
-   --color-primary-soft) per favColour. Nothing else in :root moves —
-   ground, glass, ink/border and the reserved Sunburst/Blush tokens are
-   untouched by every rule below.
+   --color-primary-soft) per favColour -- interactive-hue only.
 
-   Applied via `document.documentElement.dataset.accent` in App.tsx (see
-   the useEffect there), not read from React props, so any component
-   using var(--color-primary) picks it up for free with no prop drilling.
-   Deliberately an attribute on <html>, kept separate from any future
-   `[data-theme]` attribute a light/dark toggle might add elsewhere —
-   the two are independent axes (which colour vs. which brightness) and
-   should be free to combine as `<html data-theme="light" data-accent="green">`
-   without either rule having to know the other exists.
+   PHASE 4 SCOPE NOTE: the retired system also washed five ground/border
+   tokens per accent hue (mixed 9-20% into the neutral ground). That wash
+   is dropped here, not carried over blind -- retuning six ground washes
+   against this new sky-blue base, each independently re-verified for
+   contrast, is real separate work and is flagged as follow-up rather
+   than shipped unverified. Every value below WAS individually checked
+   (Python WCAG relative-luminance, not eyeballed): all seven clear
+   >=4.5:1 against both --color-bg (#eaf4fe) and --color-surface (#fff).
 
-   'purple' is not listed below: it IS the :root default (Periwink), so
-   favColour === 'purple' and favColour === undefined both resolve to the
-   same values with no override needed — this is also the no-regression
-   fallback for profiles saved before this field existed, and for the
-   Branch 2 / no-profile screens that never set the attribute at all.
-
-   Each hue below was picked, not guessed: same method as every other
-   token in this file (WCAG relative-luminance against Nightshade #16121D,
-   composited --glass-bg #26232D and --glass-bg-strong #322E38), so every
-   colour clears the same bars Periwink does — >=4.5:1 as text on the app
-   ground AND on --glass-bg, with -bright standing in on --glass-bg-strong
-   the same way --color-primary-bright already does for Periwink. None of
-   the seven's hex values equal --color-reward (#FFC93C) or --color-companion
-   (#FF7E9D) — those two stay reserved for genuine reward/Companion beats
-   regardless of which accent is active.
-
-   GROUND WASH. Buttons alone read as "a coloured control sitting in an
-   unrelated app" rather than "this app noticed their favourite colour",
-   so --color-surface-sunken/--color-bg/--color-surface/--color-border(-strong)
-   below also get a wash of the same hue: each is the ORIGINAL neutral
-   plum value linearly mixed with the accent's own colour at a low ratio
-   (9-10% for the three ground surfaces, 16-20% for the two border
-   tokens, which can carry slightly more without reading as "coloured
-   text"). --color-ink and --color-ink-muted are NOT touched — text
-   contrast against the new ground stays >=13:1 / >=6:1 respectively for
-   every hue, both comfortably above the >=4.5:1 floor everything else in
-   this file holds to, and --color-border-strong stays >=3.5:1 against
-   its own new ground (the non-text UI-component floor). --glass-bg and
-   --glass-bg-strong are deliberately left untouched: they are
-   translucent white overlays over whatever backdrop-filter blurs behind
-   them, so they already pick up a whisper of this same wash automatically
-   once --color-bg is tinted, with no extra tokens needed. Reserved hues,
-   track colours and --color-danger are untouched, same as always. */
-:root[data-accent='red'] {
-  --color-primary: #ff4d5b;
-  --color-primary-bright: #ff808a;
-  --color-primary-ink: #261214;
-  --color-primary-soft: rgba(255, 77, 91, 0.24);
-  --color-surface-sunken: #26121a;
-  --color-bg: #2d1823;
-  --color-surface: #382232;
-  --color-border: #6a3f55;
-  --color-border-strong: #8f6789;
-}
-:root[data-accent='orange'] {
-  --color-primary: #e67300;
-  --color-primary-bright: #ff8c1a;
-  --color-primary-ink: #261c12;
-  --color-primary-soft: rgba(230, 115, 0, 0.24);
-  --color-surface-sunken: #241611;
-  --color-bg: #2b1c1a;
-  --color-surface: #35262a;
-  --color-border: #654643;
-  --color-border-strong: #8b6d7b;
-}
-:root[data-accent='yellow'] {
-  --color-primary: #ccbb00;
-  --color-primary-bright: #ffea00;
-  --color-primary-ink: #262412;
-  --color-primary-soft: rgba(204, 187, 0, 0.24);
-  --color-surface-sunken: #211e11;
-  --color-bg: #28231a;
-  --color-surface: #332c2a;
-  --color-border: #605543;
-  --color-border-strong: #87797b;
-}
-:root[data-accent='green'] {
-  --color-primary: #00b23c;
-  --color-primary-bright: #00e64d;
-  --color-primary-ink: #122619;
-  --color-primary-soft: rgba(0, 178, 60, 0.24);
-  --color-surface-sunken: #0d1d17;
-  --color-bg: #142220;
-  --color-surface: #212b2f;
-  --color-border: #37534f;
-  --color-border-strong: #667784;
-}
-:root[data-accent='blue'] {
-  --color-primary: #4d97ff;
-  --color-primary-bright: #80b5ff;
-  --color-primary-ink: #121a26;
-  --color-primary-soft: rgba(77, 151, 255, 0.24);
-  --color-surface-sunken: #141a2b;
-  --color-bg: #1c1f34;
-  --color-surface: #282941;
-  --color-border: #474d76;
-  --color-border-strong: #7373a3;
-}
-
-/* Accent-by-favColour, light-theme pitch. The six blocks above were
-   tuned for contrast against a BLACK ground (Nightshade) and read as
-   near-invisible on Parchment -- e.g. the dark-pitch yellow #ccbb00 drops
-   to 1.75:1 against Parchment, well under the 4.5:1 floor every other
-   token here holds itself to. These compound selectors give each hue a
-   second, darker/more saturated pitch for when data-theme='light' is
-   also set, using the same method as the light theme's own
-   --color-primary (#5b52e8, 4.89:1 on Parchment): same hue angle as the
-   dark-pitch version above, lightness lowered until the fill clears
-   4.5:1 on Parchment AND the light theme's composited glass surfaces,
-   with -bright pushed further for the small-text-on-strong-glass case.
-   A compound [data-theme='light'][data-accent='x'] selector has the same
-   specificity as the plain :root[data-theme='light'] block above, but
-   wins because it is declared later and is more specific in practice
-   (two attributes vs one) -- so light mode never inherits an accent hue
-   tuned for the wrong background.
-
-   The same Ground-wash treatment described in the dark block's comment
-   above applies here too, mixed against the LIGHT theme's own neutral
-   Ground values instead of the dark ones, at the same ratios. --color-ink
-   and --color-ink-muted stay untouched here as well; contrast against the
-   new washed grounds stays >=12:1 / >=5.4:1 for every hue. */
-:root[data-theme='light'][data-accent='red'] {
-  --color-primary: #de0011;
-  --color-primary-bright: #c4000f;
-  --color-primary-ink: #faf7ff;
-  --color-primary-soft: rgba(222, 0, 17, 0.16);
-  --color-surface-sunken: #e9cbc2;
-  --color-bg: #f4d9d3;
-  --color-surface: #fce6e4;
-  --color-border: #e3aebb;
-  --color-border-strong: #986883;
-}
-:root[data-theme='light'][data-accent='orange'] {
-  --color-primary: #ad5700;
-  --color-primary-bright: #964b00;
-  --color-primary-ink: #faf7ff;
-  --color-primary-soft: rgba(173, 87, 0, 0.16);
-  --color-surface-sunken: #e4d4c1;
-  --color-bg: #efe2d2;
-  --color-surface: #f8eee3;
-  --color-border: #d9c0b8;
-  --color-border-strong: #907681;
-}
-:root[data-theme='light'][data-accent='yellow'] {
-  --color-primary: #786e00;
-  --color-primary-bright: #6b6200;
-  --color-primary-ink: #faf7ff;
-  --color-primary-soft: rgba(120, 110, 0, 0.16);
-  --color-surface-sunken: #dfd6c1;
-  --color-bg: #e9e4d2;
-  --color-surface: #f3f0e3;
-  --color-border: #cec4b8;
-  --color-border-strong: #887a81;
-}
-:root[data-theme='light'][data-accent='green'] {
-  --color-primary: #007f2b;
-  --color-primary-bright: #007026;
-  --color-primary-ink: #faf7ff;
-  --color-primary-soft: rgba(0, 127, 43, 0.16);
-  --color-surface-sunken: #d3d8c5;
-  --color-bg: #dde6d6;
-  --color-surface: #e8f2e6;
-  --color-border: #b6c8c1;
-  --color-border-strong: #757c87;
-}
-:root[data-theme='light'][data-accent='blue'] {
-  --color-primary: #0065f2;
-  --color-primary-bright: #0058d4;
-  --color-primary-ink: #faf7ff;
-  --color-primary-soft: rgba(0, 101, 242, 0.16);
-  --color-surface-sunken: #d3d6d9;
-  --color-bg: #dde3ea;
-  --color-surface: #e8eff8;
-  --color-border: #b6c3e8;
-  --color-border-strong: #7578a7;
-}
-/* No light-theme override for 'purple': the light theme's own default
-   --color-primary (#5b52e8) already IS the light pitch of Periwink, so
-   the plain :root[data-theme='light'] block already covers it. */
+   'purple' now needs its own block -- unlike the retired system, where
+   Periwink/purple WAS the :root default, this palette's default
+   interactive hue is blue, so purple is just the seventh hue like any
+   other. Value reused verbatim from the retired system's own light-pitch
+   Periwink (#5b52e8), which already cleared this exact bar. */
+:root[data-accent='red']    { --color-primary: #de0011; --color-primary-bright: #c4000f; --color-primary-ink: #faf7ff; --color-primary-soft: rgba(222, 0, 17, 0.16); }
+:root[data-accent='orange'] { --color-primary: #ad5700; --color-primary-bright: #964b00; --color-primary-ink: #faf7ff; --color-primary-soft: rgba(173, 87, 0, 0.16); }
+:root[data-accent='yellow'] { --color-primary: #786e00; --color-primary-bright: #6b6200; --color-primary-ink: #faf7ff; --color-primary-soft: rgba(120, 110, 0, 0.16); }
+:root[data-accent='green']  { --color-primary: #007f2b; --color-primary-bright: #007026; --color-primary-ink: #faf7ff; --color-primary-soft: rgba(0, 127, 43, 0.16); }
+:root[data-accent='blue']   { --color-primary: #0065f2; --color-primary-bright: #0058d4; --color-primary-ink: #faf7ff; --color-primary-soft: rgba(0, 101, 242, 0.16); }
+:root[data-accent='purple'] { --color-primary: #5b52e8; --color-primary-bright: #4a3fd4; --color-primary-ink: #faf7ff; --color-primary-soft: rgba(91, 82, 232, 0.16); }
+:root[data-accent='pink']   { --color-primary: #d4007b; --color-primary-bright: #bd006e; --color-primary-ink: #faf7ff; --color-primary-soft: rgba(212, 0, 123, 0.16); }
 
 * {
   box-sizing: border-box;
@@ -571,22 +232,14 @@
 html,
 body {
   margin: 0;
-  /* Toki, not the old dark theme: this is the true page backdrop, visible
-     in any gap outside .app's own painted area -- the margin the fixed
-     tab bar leaves at the bottom, or the sides on a wider-than-mobile
-     viewport. Left dark after the Toki revamp otherwise moved everything
-     else to light, it showed as a jarring dark band under the tab bar. */
-  background: var(--toki-bg-bottom, var(--color-surface-sunken));
+  background: var(--color-surface-sunken);
 }
 
 body {
   min-height: 100vh;
   /* dvh tracks the ACTUAL visible viewport as a mobile browser's toolbar
      shows/hides on scroll; plain vh is fixed to the "large" (toolbar-
-     hidden) viewport, which is part of why a fixed-position element
-     anchored near the bottom edge could read as flush against nothing,
-     or briefly clipped, once a real toolbar changed the visible area
-     underneath it. Kept after the vh line, not instead of it, for
+     hidden) viewport. Kept after the vh line, not instead of it, for
      browsers that don't support dvh yet. */
   min-height: 100dvh;
   display: flex;
@@ -660,70 +313,41 @@ body {
   pointer-events: none;
 }
 
-/* Far layer: the big, softest masses. Periwink dominates (it is the
-   interactive hue), Ember warms the top-right, Blush sits low. */
+/* PHASE 4: recoloured from Periwink/Ember/Blush (violet-plum family) to
+   the new palette's chrome blue / teal / lilac, matching the blob hues
+   the canvas actually used across all 13 artboards. Geometry (circle
+   sizes, positions, blur radii) is untouched -- that is what makes the
+   field read as depth, not the colour, and is independent of palette.
+   Subtractive treatment throughout (washes sit a little darker/more
+   saturated than the page, like watercolour on paper) -- this ground is
+   light, so the old dark-only "emissive, must sit brighter than the
+   ground" rule (DESIGN-TOKENS §3.3) does not apply; this is the same
+   subtractive logic the retired light theme already used, just re-hued. */
 .app::before {
   background:
-    radial-gradient(circle 190px at 10% 4%, rgba(139, 123, 255, 0.5) 0 58%, transparent 59%),
-    radial-gradient(circle 150px at 92% 13%, rgba(255, 176, 103, 0.34) 0 56%, transparent 57%),
-    radial-gradient(circle 210px at 82% 41%, rgba(139, 123, 255, 0.26) 0 60%, transparent 61%),
-    radial-gradient(circle 170px at 6% 62%, rgba(255, 126, 157, 0.22) 0 58%, transparent 59%),
-    radial-gradient(circle 230px at 60% 86%, rgba(139, 123, 255, 0.24) 0 60%, transparent 61%),
-    radial-gradient(circle 160px at 4% 96%, rgba(255, 176, 103, 0.2) 0 56%, transparent 57%);
+    radial-gradient(circle 190px at 10% 4%, rgba(30, 147, 238, 0.22) 0 58%, transparent 59%),
+    radial-gradient(circle 150px at 92% 13%, rgba(47, 199, 199, 0.18) 0 56%, transparent 57%),
+    radial-gradient(circle 210px at 82% 41%, rgba(169, 123, 234, 0.14) 0 60%, transparent 61%),
+    radial-gradient(circle 170px at 6% 62%, rgba(30, 147, 238, 0.13) 0 58%, transparent 59%),
+    radial-gradient(circle 230px at 60% 86%, rgba(169, 123, 234, 0.12) 0 60%, transparent 61%),
+    radial-gradient(circle 160px at 4% 96%, rgba(47, 199, 199, 0.11) 0 56%, transparent 57%);
   filter: blur(78px);
-  /* The filter samples outside the box; without this the top and bottom
-     blobs fade out early against the layer's own edge. */
   transform: scale(1.25);
 }
 
-/* Near layer: smaller, tighter, brighter cores sitting inside the far
-   masses. This is the part that stops the field reading as one wash --
-   two different blur radii is what makes it look like depth. */
 .app::after {
   background:
-    radial-gradient(circle 84px at 24% 11%, rgba(169, 157, 255, 0.4) 0 54%, transparent 55%),
-    radial-gradient(circle 70px at 78% 24%, rgba(255, 176, 103, 0.26) 0 52%, transparent 53%),
-    radial-gradient(circle 96px at 12% 34%, rgba(139, 123, 255, 0.2) 0 56%, transparent 57%),
-    radial-gradient(circle 78px at 90% 57%, rgba(255, 126, 157, 0.2) 0 54%, transparent 55%),
-    radial-gradient(circle 88px at 30% 71%, rgba(169, 157, 255, 0.22) 0 56%, transparent 57%),
-    radial-gradient(circle 74px at 86% 92%, rgba(255, 176, 103, 0.18) 0 54%, transparent 55%),
-    /* A single dark mass low-left, so the field has shade as well as
-       light and does not read as uniformly lifted. */
-    radial-gradient(circle 150px at 18% 52%, rgba(14, 12, 19, 0.55) 0 58%, transparent 59%);
+    radial-gradient(circle 84px at 24% 11%, rgba(11, 111, 191, 0.18) 0 54%, transparent 55%),
+    radial-gradient(circle 70px at 78% 24%, rgba(47, 199, 199, 0.14) 0 52%, transparent 53%),
+    radial-gradient(circle 96px at 12% 34%, rgba(30, 147, 238, 0.11) 0 56%, transparent 57%),
+    radial-gradient(circle 78px at 90% 57%, rgba(169, 123, 234, 0.11) 0 54%, transparent 55%),
+    radial-gradient(circle 88px at 30% 71%, rgba(11, 111, 191, 0.12) 0 56%, transparent 57%),
+    radial-gradient(circle 74px at 86% 92%, rgba(47, 199, 199, 0.1) 0 54%, transparent 55%),
+    /* A single warm highlight low-left, so the field has light as well
+       as colour and does not read as uniformly one wash. */
+    radial-gradient(circle 150px at 18% 52%, rgba(255, 253, 249, 0.75) 0 58%, transparent 59%);
   filter: blur(46px);
   transform: scale(1.2);
-}
-
-/* Light mode's version of the same two layers. DESIGN-TOKENS §3.3 called
-   the dark gradient "emissive, not subtractive" specifically because it
-   had to sit BRIGHTER than the ground to read as light pooling in a dark
-   room. On paper the opposite is true and was the original behaviour:
-   the washes sit a little DARKER/more saturated than Parchment, like
-   watercolour pooled on a page, so the same circles, positions, sizes and
-   blur radii are kept unchanged (that geometry is what makes the field
-   read as depth, not the colour) and only the colour treatment flips
-   back to subtractive. The near layer's single dark counter-mass becomes
-   a single warm cream highlight instead, for the same "not uniformly one
-   value" reason dark's version needed a mass of the opposite polarity. */
-:root[data-theme='light'] .app::before {
-  background:
-    radial-gradient(circle 190px at 10% 4%, rgba(91, 82, 232, 0.16) 0 58%, transparent 59%),
-    radial-gradient(circle 150px at 92% 13%, rgba(166, 84, 15, 0.13) 0 56%, transparent 57%),
-    radial-gradient(circle 210px at 82% 41%, rgba(91, 82, 232, 0.1) 0 60%, transparent 61%),
-    radial-gradient(circle 170px at 6% 62%, rgba(196, 63, 104, 0.09) 0 58%, transparent 59%),
-    radial-gradient(circle 230px at 60% 86%, rgba(91, 82, 232, 0.09) 0 60%, transparent 61%),
-    radial-gradient(circle 160px at 4% 96%, rgba(166, 84, 15, 0.08) 0 56%, transparent 57%);
-}
-
-:root[data-theme='light'] .app::after {
-  background:
-    radial-gradient(circle 84px at 24% 11%, rgba(74, 63, 212, 0.14) 0 54%, transparent 55%),
-    radial-gradient(circle 70px at 78% 24%, rgba(166, 84, 15, 0.1) 0 52%, transparent 53%),
-    radial-gradient(circle 96px at 12% 34%, rgba(91, 82, 232, 0.08) 0 56%, transparent 57%),
-    radial-gradient(circle 78px at 90% 57%, rgba(196, 63, 104, 0.08) 0 54%, transparent 55%),
-    radial-gradient(circle 88px at 30% 71%, rgba(74, 63, 212, 0.09) 0 56%, transparent 57%),
-    radial-gradient(circle 74px at 86% 92%, rgba(166, 84, 15, 0.07) 0 54%, transparent 55%),
-    radial-gradient(circle 150px at 18% 52%, rgba(255, 253, 249, 0.7) 0 58%, transparent 59%);
 }
 
 /* Role switches. Phase 2 puts .child-face on a game's child-facing
@@ -906,30 +530,35 @@ textarea::placeholder {
    entry point). Everything else stays the neutral surface button above;
    too many primary buttons on one screen defeats the hierarchy.
 
-   Polarity flip vs light mode: the fill is now LIGHTER than the page and
-   the label is dark. Ink-on-Periwink measures 5.5:1; the old white-on-
-   Periwink would have been 2.88:1 and failed outright. */
+   PHASE 4: repointed from --color-primary (blue, now the chrome-only
+   hue) to --color-accent (green, the "go" hue) -- the canvas's own
+   stated split: "green reads as go and leaves blue free for every piece
+   of chrome... only one thing on a screen is ever green." White text on
+   the gradient measures 3.25:1 at the top stop / 4.5:1+ at the bottom,
+   both re-tuned to clear large-text AA at every point along the
+   gradient, not just on average -- see the --color-accent-* comments
+   in :root. */
 .button-primary {
-  background: linear-gradient(180deg, var(--color-primary-bright), var(--color-primary));
-  border-color: rgba(255, 255, 255, 0.34);
-  color: var(--color-primary-ink);
-  box-shadow: 0 12px 30px rgba(139, 123, 255, 0.3), var(--glass-rim-top);
+  background: linear-gradient(180deg, var(--color-accent-bright), var(--color-accent));
+  border-color: rgba(255, 255, 255, 0.5);
+  color: var(--color-accent-ink);
+  box-shadow: 0 12px 24px rgba(63, 143, 38, 0.3), var(--glass-rim-top);
 }
 
 .button-accent {
-  background: linear-gradient(180deg, rgba(255, 176, 103, 0.22), rgba(255, 176, 103, 0.12));
-  border-color: rgba(255, 176, 103, 0.42);
-  color: var(--color-accent);
+  background: linear-gradient(180deg, var(--color-primary-soft), var(--color-primary-soft));
+  border-color: var(--color-primary);
+  color: var(--color-primary-bright);
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .button-primary {
-    background: var(--color-primary);
+    background: var(--color-accent);
   }
 
   .button-accent {
-    background: var(--color-accent-soft);
-    color: var(--color-accent);
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bright);
   }
 }
 
@@ -1237,6 +866,12 @@ textarea::placeholder {
    World". The box IS the content; the label is the strip fused to its
    bottom edge. Grid items stretch, so two tiles side by side share a height
    and their caption strips line up even when one label wraps. */
+.home-play-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
 /* A vertical list -- one full-width row per item, top to bottom -- not a
    wrapping row of content-sized chips. With four items of very different
    label lengths, the wrap version put three on one row and stranded the
@@ -1378,6 +1013,46 @@ textarea::placeholder {
   text-align: center;
 }
 
+/* F.020's neutral prompt. Reads as a light inline prompt, not a second
+   card: an outlined panel on the app ground with no fill, no blur and no
+   shadow, so it sits visibly below the glass card above it instead of
+   flattening the tab into two equal slabs. Rendered inside .screen's
+   16px column gap, so it needs no margin of its own. */
+.neutral-note-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+}
+
+.neutral-note-prompt p {
+  max-width: 40ch;
+  font-size: 0.9rem;
+  font-weight: var(--weight-caregiver-body);
+  color: var(--color-ink);
+}
+
+/* §10: this prompt "asks nothing, warns nothing", so neither answer may
+   look like the correct one. Both buttons keep the base button's plain
+   glass -- no accent fill on either -- and flex:1 gives them identical
+   widths despite very different label lengths, which is what stops the
+   long "Yes" label from reading as the weighted choice. They wrap to
+   their own rows before either drops under the 88px floor the base
+   button rule sets (never overridden here). */
+.neutral-note-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.neutral-note-prompt-actions button {
+  flex: 1 1 auto;
+  font-size: 0.95rem;
+}
+
 /* Between two elevated panels a full-bleed hard rule reads as a third,
    heavier element. Kept -- the two groups on Setup are genuinely
    unrelated and the gap alone was not enough separation -- but pulled
@@ -1396,6 +1071,50 @@ textarea::placeholder {
   );
 }
 
+
+/* ---- Appearance -------------------------------------------------------
+   Same segmented-pill construction as .dashboard-length-row/-option (the
+   session-length picker), reused rather than invented fresh so a
+   caregiver meets one control language for "pick one of a few options"
+   across both screens. That control keeps the 88px floor on purpose
+   (its own comment explains why -- it is tapped while holding a child);
+   this one is ordinary settings chrome, tapped once during setup, so it
+   stays on the standard --touch-min (44px) floor every other Setup/
+   Dashboard control already uses. */
+.home-theme-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.home-theme-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-min);
+  padding: 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-wash);
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  font-weight: var(--weight-caregiver-strong);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transition: background 140ms var(--ease-out), border-color 140ms var(--ease-out);
+}
+
+.home-theme-option.is-selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+}
+
+.home-theme-option:active {
+  transform: none;
+  background: var(--surface-wash-active);
+}
 
 /* ---- Log out --------------------------------------------------------
    Not a destination, so it must not look like one. Danger coral rim and
@@ -1499,28 +1218,20 @@ textarea::placeholder {
 
 /* ---------------------------------------------------------------------
    CAREGIVER DASHBOARD
-   The one screen in the app that is purely information, re-skinned onto
-   Toki (mockup screen 08). It renders inside App.tsx's
-   <main class="toki-home-main">, so the shell already owns the ground,
-   the wordmark, the "Caregiver Dashboard" title and the tab bar. What is
-   left for this block is the content: white cards on the shell's blue
-   ground, #e6f0fa rims, rgba(23,86,140,x) shadows, one blue accent family
-   (#1e93ee / #0b6fbf) and the #21374e / #5c7691 / #7e95ad ink hierarchy.
+   The one screen in the app that is purely information. DESIGN-TOKENS
+   §4.2: caregiver surfaces are DENSER than child ones, not different in
+   kind -- the same glass, at --glass-bg-strong + --radius-md +
+   --space-caregiver-gap, Periwink tint, muted secondary text.
 
-   Most of the vocabulary is NOT here: the card, banner, tag, list row,
-   week grid, ladder meter and status mark are the shared .toki-*
-   primitives further down this file (see "TOKI REVAMP -- home shell").
-   This block holds only the pieces the dashboard alone needs, plus the
-   handful of dashboard-scoped tweaks to those primitives. Those tweaks
-   are all written as `.dashboard .toki-*` on purpose: the primitives are
-   defined LATER in the file, so a bare class selector here would lose to
-   them on source order.
+   §4.3's leak rule holds: no Sunburst, no Blush, no Ember, no child
+   tokens. That is also why the four track colours below are a violet-cool
+   family rather than the red/amber/green a chart usually reaches for --
+   nothing on a screen about a child in early intervention should be able
+   to read as a red/green verdict on them.
 
-   The leak rule holds: no reserved hues, no child tokens. That is also
-   why the six track colours are a violet-cool family rather than the
-   red/amber/green a chart usually reaches for -- nothing on a screen
-   about a child in early intervention should be able to read as a
-   red/green verdict on them.
+   Six carded groups where §4.2 suggests three to five: a knowing
+   deviation to match the approved mockup, kept in hand by making every
+   card a flat list with one heading, never a nested panel.
 
    NO HOVER STATES ANYWHERE in this block. Every control here is
    touch-first, and a hover style on a tablet fires on tap and then
@@ -1529,257 +1240,334 @@ textarea::placeholder {
    full-width row visibly detaches it from the card it sits in.
    --------------------------------------------------------------------- */
 
-/* Matches .toki-home-main's own 12px rhythm, so the dashboard's cards sit
-   on the same spacing the other three tabs' content does. */
 .dashboard {
-  gap: 12px;
-  padding-bottom: 4px;
+  gap: var(--space-caregiver-gap);
 }
 
-/* ---- Header: whose log this is --------------------------------------
-   Deliberately quiet, and deliberately AFTER the banner in the source.
-   The shell's own greeting already carries the page title at h1 size and
-   names the child in its subtitle, so a second big name here would read
-   as two competing titles. This is an identity strip instead: the
-   Companion at thumbnail size, the child's name at card-title size. */
+/* Permanent, undismissable (§7.9). Pitched as a standing note, not a
+   warning: muted ink, one Periwink rule down the leading edge, and none
+   of the danger palette -- nothing here is wrong, this is simply what
+   the screen is. */
+.dashboard-banner {
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-info-soft);
+  color: var(--color-ink-muted);
+  font-size: 0.78rem;
+}
 
-.toki-dhead {
+/* ---- Header: whose log this is -------------------------------------- */
+
+.dashboard-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
   padding: 2px 4px;
 }
 
-.toki-dhead-text {
+.dashboard-head-text {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
 }
 
-.toki-dhead-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
+.dashboard-head-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #7e95ad;
+  color: var(--color-ink-muted);
 }
 
-.toki-dhead-name {
+.dashboard-head-name {
   margin: 0;
-  font-size: 0.95rem;
-  font-weight: 800;
+  font-size: 1.35rem;
+  font-weight: var(--weight-caregiver-strong);
   line-height: 1.2;
-  color: #21374e;
   overflow-wrap: anywhere;
 }
 
 /* The Companion, at identity size rather than portrait size: this says
    "this is their log", it is not a photo to look at. */
-.toki-dhead-avatar {
+.dashboard-avatar {
   flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 13px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #e1edf9;
-  background: #eaf5ff;
-  box-shadow: 0 4px 12px rgba(23, 86, 140, 0.07);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
 }
 
-.toki-dhead-avatar--empty {
+.dashboard-avatar--empty {
   display: grid;
   place-items: center;
-  color: #1e93ee;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
 }
 
-/* ---- Shared card copy ------------------------------------------------ */
+/* ---- The card ------------------------------------------------------- */
 
-.toki-dcaption {
-  margin: -2px 0 4px;
-  font-size: 0.76rem;
-  line-height: 1.5;
-  color: #5c7691;
+.dashboard-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  /* The caregiver temperature: a Periwink wash laid over the stronger
+     glass fill, as one background shorthand so the tint travels with the
+     fill rather than needing a second element. */
+  background:
+    linear-gradient(var(--glass-tint-caregiver), var(--glass-tint-caregiver)),
+    var(--glass-bg-strong);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
 }
 
-.toki-dempty {
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .dashboard-card {
+    background: var(--color-surface);
+    border-color: var(--color-border-strong);
+  }
+}
+
+.dashboard-card-title {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
+  font-weight: var(--weight-caregiver-strong);
+}
+
+.dashboard-caption {
+  margin: -2px 0 2px;
+  font-size: 0.78rem;
   line-height: 1.5;
-  color: #5c7691;
+  color: var(--color-ink-muted);
 }
 
-/* Two groups, both plain: what is being done alone, and what still has a
-   hand on it. Neither heading is coloured, sized or ordered to make one
-   the good half -- the ladder runs both ways and a tier that moved down
-   is information, not an event. */
-.toki-dgroup-label {
-  margin: 8px 0 0;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: #7e95ad;
+.dashboard-empty {
+  font-size: 0.85rem;
+  color: var(--color-ink-muted);
 }
 
-/* A plain text link, not a filled button -- "View more" opens a whole
-   month grid below it, which is enough visual weight of its own without
-   also drawing a button around three words. It still clears the touch
-   floor: the 44px box is padding above and below the label, so the
-   affordance stays small while the target does not. */
-.toki-dlink {
-  align-self: flex-start;
-  min-width: 0;
-  min-height: var(--touch-min);
-  margin-top: 2px;
-  padding: 0 2px;
-  border: none;
-  border-radius: 12px;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  color: #0b6fbf;
-  font-size: 0.8rem;
-  font-weight: 800;
-  text-align: left;
-}
+/* ---- This week ------------------------------------------------------ */
 
-.toki-dlink:active {
-  transform: none;
-  opacity: 0.65;
-}
-
-/* ---- This week -------------------------------------------------------
-   The grid, the day column, the labels and the played/today treatments
-   are all the shared .toki-week-* primitives. What is dashboard-specific
-   is that every cell is a BUTTON here (tapping a day opens its summary
-   below) rather than the mockup's inert div, so the global button rule
-   has to be unwound: its 44px floor would blow out a 7-column grid and
-   its glass fill would turn a flat square into a little card.
-
-   An unplayed day stays an empty pale square and nothing else: no red,
-   no cross, no dimming, no gap language anywhere near it. Today is
-   called out whether or not anything has been played in it, so the ring
+/* Seven cells, oldest to today. An unplayed day is an EMPTY OUTLINE and
+   nothing else: no red, no cross, no dimming, no gap language anywhere
+   near it. The only cell that is called out is today's, and it is called
+   out whether or not anything has been played in it -- so the accent
    reads as "you are here", never as a verdict on the day. */
+.dashboard-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
-button.toki-week-cell {
+.dashboard-week-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dashboard-week-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* A <button> now (tapping a day opens its summary below), so this resets
+   every size/surface default the global `button` rule would otherwise
+   force onto a small calendar cell -- the 88px touch floor would blow out
+   a 7-column grid, and the glass fill/backdrop-filter would turn a plain
+   outline square into a little card. */
+.dashboard-week-box {
   display: grid;
   place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
   min-width: 0;
   min-height: 0;
   padding: 0;
-  color: #fff;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 9px;
+  background: transparent;
+  color: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
-  transition: none;
 }
 
-/* The tick is redundant with the fill on purpose -- the played/not-played
-   fact is also in every cell's aria-label, so it is never carried by
-   colour alone. An empty day has nothing to draw, so the mark is simply
-   absent rather than drawn in a "missing" state. */
-.dashboard .toki-week-cell:not(.toki-week-cell--played) {
-  color: transparent;
+.dashboard-week-box.is-played {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
 }
 
-.dashboard button.toki-week-cell:active {
-  transform: none;
+/* After .is-played on purpose: on a day that is both, "today" is the
+   thing the eye needs to find first. */
+.dashboard-week-box.is-today {
+  border-color: var(--color-primary-bright);
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
 }
 
 /* Last in source order on purpose: whichever day's summary is open below
    is the thing the eye needs to find first, even on today's own cell. */
-.dashboard .toki-week-cell.is-selected {
-  box-shadow: 0 0 0 3px rgba(11, 111, 191, 0.55);
+.dashboard-week-box.is-selected {
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 2px var(--color-ink-muted);
 }
 
-/* ---- View more / full-history calendar ------------------------------- */
+/* ---- Day detail ------------------------------------------------------ */
 
-/* The one number on this card worth the eye landing on first. Blue and
-   large because it is the answer to "how much has there been", not
-   because it is a total to keep up -- there is nothing here to reset. */
-.toki-dfigure {
+.dashboard-day-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dashboard-day-detail-close {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-wash);
+  color: var(--color-ink-muted);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.dashboard-day-detail-close:active {
+  background: var(--surface-wash-active);
+}
+
+/* The day-detail rows reuse .dashboard-track-toggle's look without being
+   a button themselves -- there is nothing left for them to expand into,
+   the day itself already was the drill-down. */
+.dashboard-day-detail-row {
+  cursor: default;
+}
+
+/* ---- View more / full-history calendar -------------------------------- */
+
+/* A plain text link, not a full button -- "View more" opens a whole
+   month grid below it, which is enough visual weight of its own without
+   also drawing a glass button around three words. */
+.dashboard-view-more {
+  align-self: flex-start;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  color: var(--color-primary-bright);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.dashboard-view-more:active {
+  transform: none;
+  opacity: 0.7;
+}
+
+/* The one number on this card worth the eye landing on first -- same
+   size/weight/colour treatment as .dashboard-metric-value elsewhere on
+   this screen, so "big coloured figure" reads as this app's own way of
+   drawing attention, not a borrowed streak-counter look. */
+.dashboard-days-practiced {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 5px;
-  margin: 0 0 6px;
-  font-size: 0.9rem;
-  color: #5c7691;
+  margin: -2px 0 2px;
+  font-size: 0.95rem;
+  color: var(--color-ink-muted);
 }
 
-.toki-dfigure-value {
+.dashboard-days-practiced-value {
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: var(--weight-caregiver-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  color: #0b6fbf;
+  color: var(--color-primary-bright);
 }
 
-.toki-cal-head {
+.dashboard-calendar-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.toki-cal-month {
+.dashboard-calendar-month-label {
   text-align: center;
-  margin: 0;
 }
 
-.toki-cal-nav {
+.dashboard-calendar-nav {
   display: grid;
   place-items: center;
-  flex: none;
-  width: var(--touch-min);
-  height: var(--touch-min);
-  min-width: var(--touch-min);
-  min-height: var(--touch-min);
+  min-width: 32px;
+  min-height: 32px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border: 1px solid #e6f0fa;
-  border-radius: 14px;
-  background: #f4fafe;
-  color: #0b6fbf;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface-wash);
+  color: var(--color-ink);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
-  transition: none;
 }
 
-.toki-cal-nav:active {
+.dashboard-calendar-nav:active {
   transform: none;
-  background: #eaf5ff;
+  background: var(--surface-wash-active);
 }
 
-.toki-cal-nav:disabled {
-  color: #9fb8cf;
-  opacity: 1;
-}
-
-.toki-cal-grid {
+.dashboard-calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
-  margin-top: 8px;
 }
 
-.toki-cal-weekday {
+.dashboard-calendar-weekday {
   padding-bottom: 2px;
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-align: center;
-  color: #7e95ad;
+  color: var(--color-ink-muted);
 }
 
-/* Same button-unwinding as the week strip's cells, for the same reason:
-   a small grid cell, not a full-sized touch target. Unlike the week
-   strip, the number itself is always visible -- a month view has no
-   separate weekday label per cell to carry that job. */
-.toki-cal-cell {
+/* Same button-reset reasoning as .dashboard-week-box: a small grid cell,
+   not a full-sized touch target, so every size/surface default the
+   global `button` rule would add gets zeroed out here. Unlike the week
+   strip's boxes, the number itself is always visible -- a month view has
+   no separate weekday label per cell to carry that job. */
+.dashboard-calendar-cell {
   display: grid;
   place-items: center;
   width: 100%;
@@ -1788,274 +1576,54 @@ button.toki-week-cell {
   min-height: 0;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 10px;
-  background: #f4fafe;
-  color: #21374e;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-ink);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
-  transition: none;
-}
-
-.toki-cal-cell:active {
-  transform: none;
 }
 
 /* The adjacent month's dates, filling out the grid's leading/trailing
    weeks -- present so every row is a full week, faint so the eye still
    finds the current month's own dates first. Never a button: there is
    nothing to open here (see CalendarDayCell). */
-.toki-cal-cell--pad {
-  background: transparent;
-  color: #9fb8cf;
-  font-weight: 400;
+.dashboard-calendar-cell--pad {
+  color: var(--color-ink-muted);
+  opacity: 0.35;
 }
 
-.toki-cal-cell.is-played {
-  background: linear-gradient(180deg, #69bcff, #1e93ee);
-  border-color: transparent;
-  color: #fff;
-  font-weight: 800;
-}
-
-.toki-cal-cell.is-today {
-  box-shadow: 0 0 0 3px rgba(30, 147, 238, 0.22);
-}
-
-.toki-cal-cell.is-selected {
-  box-shadow: 0 0 0 3px rgba(11, 111, 191, 0.55);
-}
-
-/* ---- Day detail ------------------------------------------------------ */
-
-/* A card like the others; the only difference is that its title shares a
-   row with a close button, so the title's own bottom margin would push
-   the two out of line. */
-.toki-dday .toki-dcard-title {
-  margin-bottom: 0;
-}
-
-.toki-dday-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.toki-dday-close {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: var(--touch-min);
-  height: var(--touch-min);
-  min-width: var(--touch-min);
-  min-height: var(--touch-min);
-  padding: 0;
-  border: 1px solid #e6f0fa;
-  border-radius: 14px;
-  background: #f4fafe;
-  color: #5c7691;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  transition: none;
-}
-
-.toki-dday-close:active {
-  transform: none;
-  background: #eaf5ff;
-}
-
-/* ---- Played figures --------------------------------------------------- */
-
-.toki-dmetric {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.toki-dmetric-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: #7e95ad;
-}
-
-/* Tabular figures: this changes every session, and proportional digits
-   make the number jitter as it does. */
-.toki-dmetric-value {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  font-size: 2rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-  color: #0b6fbf;
-}
-
-.toki-dmetric-unit {
-  font-size: 0.78rem;
+.dashboard-calendar-cell.is-played {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
   font-weight: 700;
-  color: #5c7691;
 }
 
-/* ---- Time by track --------------------------------------------------- */
-
-/* ONE bar, segmented -- not one bar per track. Several bars invite
-   reading them as several progress bars against several targets; one bar
-   can only be read as "this is how the day divided up", which is all it
-   is. */
-.toki-dbar {
-  display: flex;
-  gap: 2px;
-  height: 10px;
-  margin: 8px 0 2px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: #eaf3fb;
+.dashboard-calendar-cell.is-today {
+  border-color: var(--color-primary-bright);
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
 }
 
-.toki-dbar-seg {
-  flex-basis: 0;
-  /* A track with no time that day is not rendered at all (see
-     dashboardSummary.timeByTrackOn), so this floor only ever protects a
-     genuinely tiny slice from disappearing -- it can never manufacture a
-     sliver for a track that was not played. */
-  min-width: 10px;
+.dashboard-calendar-cell.is-selected {
+  border-color: var(--color-ink);
+  box-shadow: 0 0 0 2px var(--color-ink-muted);
 }
 
-/* ---- Lists ------------------------------------------------------------
-   The rows themselves are the shared .toki-list-row / .toki-skill-row
-   primitives: hairline-separated, flush to the card, no inset plate. Only
-   the <ul> reset and the two-line row body live here. */
-
-.toki-dlist {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.toki-ddot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.toki-list-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-/* Inside a stacked row the title is one line of a column, not the row's
-   own flexible child, so it gives its flex-grow back. */
-.dashboard .toki-list-text .toki-list-title {
-  flex: none;
-}
-
-.toki-list-detail {
-  font-size: 0.72rem;
-  line-height: 1.35;
-  color: #7e95ad;
-  overflow-wrap: anywhere;
-}
-
-/* Skill ids arrive kebab-cased and lowercase; capitalising the whole
-   phrase would Title Case A Sentence, so only the first letter moves. */
-.toki-skill-name::first-letter,
-.toki-list-detail::first-letter {
-  text-transform: uppercase;
-}
-
-.dashboard .toki-list-title,
-.dashboard .toki-skill-name {
-  overflow-wrap: anywhere;
-}
-
-.dashboard .toki-list-meta {
-  font-variant-numeric: tabular-nums;
-}
-
-/* ---- Skills and support ----------------------------------------------- */
-
-.toki-skill-text {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-/* The detail line is a whole sentence, so it has to be allowed under the
-   meter on a narrow phone rather than squeezing it. */
-.dashboard .toki-skill-meter-row {
-  flex-wrap: wrap;
-  row-gap: 4px;
-}
-
-/* ---- Recently played --------------------------------------------------
-   Each row names a GAME (not a sitting), so it carries the same painted
-   scene its own Play-tab tile shows (TRACK_THUMBNAIL, a small crop of the
-   exact tile art), drawn in that track's own colour on the shared Toki
-   icon plate, plus a "View" button that is also "play this again". */
-
-.toki-drecent-icon {
-  overflow: hidden;
-}
-
-.toki-drecent-icon svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.toki-drecent-view {
-  flex: none;
-  min-width: 0;
-  min-height: var(--touch-min);
-  padding: 6px 16px;
-  border: 1px solid #cfe3f7;
-  border-radius: 999px;
-  background: #eaf5ff;
-  color: #0b6fbf;
-  font-size: 0.78rem;
-  font-weight: 800;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  transition: none;
-}
-
-.toki-drecent-view:active {
-  transform: none;
-  background: #d7ecff;
-}
-
-/* ---- Usual session length --------------------------------------------- */
+/* ---- Usual session length ------------------------------------------- */
 
 .dashboard-length-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  margin-top: 2px;
 }
 
 /* The one place on this screen that keeps the original 88px floor rather
    than --touch-min's 44px: these three are the only real touch targets on
    a caregiver screen that a caregiver taps while holding a child, and the
-   number inside them wants the room anyway. Kept under its original class
-   name too -- smoke-dashboard.ts asserts this exact rule still carries the
-   88px, and renaming it would have moved the assertion off the live
-   control. */
+   number inside them wants the room anyway. */
 .dashboard-length-option {
   display: flex;
   flex-direction: column;
@@ -2064,10 +1632,10 @@ button.toki-week-cell {
   gap: 2px;
   min-height: 88px;
   padding: 8px;
-  border: 1px solid #e6f0fa;
-  border-radius: 18px;
-  background: #f4fafe;
-  color: #21374e;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--surface-wash);
+  color: var(--color-ink);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
@@ -2075,32 +1643,312 @@ button.toki-week-cell {
 }
 
 .dashboard-length-option.is-selected {
-  border-color: #1e93ee;
-  background: #eaf5ff;
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
 }
 
 .dashboard-length-option:active {
   transform: none;
-  background: #d7ecff;
+  background: var(--surface-wash-active);
 }
 
 .dashboard-length-value {
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: var(--weight-caregiver-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .dashboard-length-unit {
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #7e95ad;
+  color: var(--color-ink-muted);
 }
 
 .dashboard-length-option.is-selected .dashboard-length-unit {
-  color: #0b6fbf;
+  color: var(--color-primary-bright);
+}
+
+/* ---- Played figures --------------------------------------------------- */
+
+.dashboard-metric {
+  gap: 4px;
+}
+
+.dashboard-metric-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+/* Tabular figures: these two sit side by side and change every session,
+   and proportional digits make them jitter against each other. */
+.dashboard-metric-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 2rem;
+  font-weight: var(--weight-caregiver-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.dashboard-metric-unit {
+  font-size: 0.8rem;
+  font-weight: var(--weight-caregiver-body);
+  color: var(--color-ink-muted);
+}
+
+/* ---- Time by track --------------------------------------------------- */
+
+/* ONE bar, segmented -- not one bar per track. Three bars invite reading
+   them as three progress bars against three targets; one bar can only be
+   read as "this is how today divided up", which is all it is. */
+.dashboard-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.dashboard-bar-segment {
+  flex-basis: 0;
+  /* A track with no time today is not rendered at all (see
+     dashboardSummary.timeByTrackOn), so this floor only ever protects a
+     genuinely tiny slice from disappearing -- it can never manufacture a
+     sliver for a track that was not played. */
+  min-width: 10px;
+}
+
+.dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard-track-row {
+  display: flex;
+  flex-direction: column;
+}
+
+/* An inset row ON the card, not a second glass panel -- the card stays
+   the only surface the eye has to parse. */
+.dashboard-track-toggle,
+.dashboard-skill-row,
+.dashboard-recent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-wash);
+}
+
+.dashboard-track-toggle {
+  min-height: var(--touch-min);
+  text-align: left;
+  color: var(--color-ink);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.dashboard-track-toggle:active {
+  transform: none;
+  background: var(--surface-wash-active);
+}
+
+.dashboard-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dashboard-track-text,
+.dashboard-skill-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-track-name,
+.dashboard-skill-name,
+.dashboard-recent-name {
+  font-size: 0.88rem;
+  font-weight: var(--weight-caregiver-strong);
+  overflow-wrap: anywhere;
+}
+
+/* Sits directly in the row (no wrapping .dashboard-recent-text -- there
+   is only ever one line here, unlike the track/skill rows' name+detail
+   pairs), so it needs its own flex sizing to take the row's spare width
+   and push the icon/View button to their fixed slots either side. */
+.dashboard-recent-name {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Skill ids arrive kebab-cased and lowercase; capitalising the whole
+   phrase would Title Case A Sentence, so only the first letter moves. */
+.dashboard-skill-name::first-letter,
+.dashboard-track-detail::first-letter {
+  text-transform: uppercase;
+}
+
+/* A day-detail-only marker on whichever track had the most time that
+   day (see CaregiverDashboard.tsx's DayTrackRow) -- a plain fact from
+   the same sort the bar already uses, not a rank across days. */
+.dashboard-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
+
+.dashboard-track-detail,
+.dashboard-skill-context {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--color-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-figure-value {
+  flex: none;
+  font-size: 0.85rem;
+  font-weight: var(--weight-caregiver-strong);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+
+/* ---- Recently played --------------------------------------------------
+   Each row names a GAME (not a sitting), so it carries the same painted
+   scene its own Play-tab tile shows (TRACK_THUMBNAIL, a small crop of
+   the exact tile art) on a plate tinted with that track's own colour --
+   the same legend the calendar's bar/dot already use elsewhere on this
+   screen -- and a "View" button that is also "play this again". */
+
+.dashboard-recent-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+}
+
+.dashboard-recent-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dashboard-recent-view {
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
+  font-size: 0.78rem;
+  font-weight: 700;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.dashboard-recent-view:active {
+  transform: none;
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+}
+
+/* ---- Skills and support ---------------------------------------------- */
+
+/* Two groups, both plain: what is being done alone, and what still has a
+   hand on it. Neither heading is coloured, sized or ordered to make one
+   the good half -- the ladder runs both ways and a tier that moved down
+   is information, not an event. */
+.dashboard-group-label {
+  margin: 4px 0 -2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.dashboard-skill-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Five steps, filled up to the current tier: more filled means less help
+   needed, the direction the ladder itself runs. One hue at two weights --
+   a second colour here would invite reading the low end as a warning,
+   which is exactly what §10 keeps off this screen. The tier's name is
+   written out beside every meter, so the bars are never the only telling. */
+.dashboard-ladder {
+  display: flex;
+  gap: 3px;
+  flex: none;
+}
+
+.dashboard-ladder-step {
+  width: 13px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+.dashboard-ladder-step.is-filled {
+  background: var(--color-primary-bright);
+}
+
+/* ---- Skills ---------------------------------------------------------- */
+
+/* Filled with a tick, or an empty outline. The state is ALSO written out
+   in the row's context line ("2 of 2 places"), so nothing here is carried
+   by colour alone. */
+.dashboard-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  color: transparent;
+}
+
+.dashboard-mark.is-complete {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-bright);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2120,11 +1968,6 @@ button.toki-week-cell {
 .app--welcome {
   display: flex;
   flex-direction: column;
-  /* Edge-to-edge for the new Toki panel: .app's own 20px padding and dark
-     background/blob pseudo-elements would otherwise show as a dark frame
-     around the light .toki-screen sitting inside it. */
-  padding: 0;
-  background: transparent;
 }
 
 .welcome {
@@ -2214,6 +2057,525 @@ button.toki-week-cell {
   padding: 9px 10px;
 }
 
+/* ---------------------------------------------------------------------
+   HOME TABS
+   Branch 1 home is two places behind one bottom bar. The shell is a flex
+   column so the bar can sit at the foot of a short screen and stick to the
+   viewport edge on a long one.
+   --------------------------------------------------------------------- */
+
+.app--tabbed {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.tab-bar {
+  position: sticky;
+  /* Matches the 20px side gap (.app's own side padding, which this bar
+     respects rather than cancelling -- see below). .app's padding-bottom is
+     40px, not 20px -- deliberately, for normal scrolling content -- so
+     without the negative margin below, the bar sat further from the bottom
+     edge than from either side. bottom:20px covers the "stuck" case
+     (content taller than the viewport); the margin covers the normal-flow
+     case (content fits, which is the common case for this short screen).
+     max() with env(safe-area-inset-bottom): on a phone with a home-
+     indicator gesture bar (index.html declares viewport-fit=cover so this
+     actually reports a real value there), a flat 20px alone put the bar
+     flush against, sometimes under, that system chrome. */
+  bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+  margin-bottom: -20px;
+  z-index: 3;
+  /* A real full-width bar, but deliberately NOT edge-to-edge. It spans the
+     same content column as everything else on the page -- .app's 20px side
+     padding is respected, the negative-margin edge-cancelling trick is
+     gone -- so there is always a visible gap between the bar and the
+     device edge. Still not the old fit-content pill: it fills the column.
+     On height: the bar is as short as it is allowed to be. Each button
+     carries the 88x88 UI-STANDARDS floor and that floor -- not padding --
+     is what sets the bar's height, so the only fat available to cut was the
+     bar's own padding (8px -> 4px), the gap (8px -> 0) and the icon size.
+     All three are cut.
+     On width: four 88px targets need 360px, which the narrowest phones'
+     content column no longer provides now that the bar is inset. The
+     targets do not shrink to fit -- DESIGN-TOKENS 4.1 is explicit that
+     --touch-min never shrinks and that a row too wide for the phone
+     scrolls rather than shrinking. So the bar scrolls horizontally in that
+     case (a few px at 390pt, nothing at all from ~400pt up), with the
+     scrollbar itself hidden. */
+  display: flex;
+  gap: 0;
+  width: auto;
+  margin: 14px 0 0;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-filter);
+  -webkit-backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .tab-bar {
+    background: var(--color-surface);
+  }
+}
+
+.tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* The bar itself is the glass slab; the four buttons inside it are flat
+   until selected, so the bar reads as one control rather than five. Still
+   88x88 each — the base button floor is inherited, never overridden down.
+   That floor is also what the bar's scroll fallback exists for: 4 x 88 +
+   8px of bar padding = 360px of content column, which an inset bar only
+   has from roughly a 400pt viewport up. Below that the bar scrolls; the
+   buttons never shrink. */
+.tab-bar-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1 1 0;
+  min-width: var(--touch-min);
+  min-height: 64px;
+  padding: 6px 2px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--color-ink-muted);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.tab-bar-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Periwink Bright, not Periwink: this label sits on --glass-bg-strong,
+   where plain Periwink measures 4.03:1 and fails. See DESIGN-TOKENS §3.5. */
+.tab-bar-button.is-active {
+  color: var(--color-primary-bright);
+  background: var(--color-primary-soft);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: var(--glass-rim-top);
+}
+
+.tab-bar-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------------------
+   GAME TILES
+   Four boxes, 2x2. Each real tile is a slab of glass with its own scene
+   painted into it: CSS gradient washes for the light and the ground, an
+   inline <svg> in .game-tile-art for the motif. Nothing is fetched — this
+   app precaches its whole shell, and a background-image URL would be the
+   one thing in it that needs a network.
+
+   The palette here is deliberately narrow: Ember for the lamplit room,
+   Periwink for the blocks, Moonmilk for the moon. Sunburst and Blush are
+   NOT used — they mean "reward" and "Companion" everywhere else, and
+   spending them on a menu would blunt both.
+   --------------------------------------------------------------------- */
+
+.game-tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  /* TWO ZONES, ONE CARD. The tile is a flex column of exactly two children:
+     .game-tile-scene (the painted art + its icon, taking most of the height)
+     and .game-tile-title (a solid caption strip fused to the scene's bottom
+     edge). They share this one rounded rect and `overflow: hidden` clips the
+     strip to its bottom corners, so the pair reads as a photo with a caption
+     welded on -- not as two floating boxes with a gap between them, and not
+     as the old translucent plate floating ON the art.
+     The card itself carries no padding any more: each zone owns its own, and
+     that is what lets the caption strip run the full width of the card
+     instead of stopping 12px short of the rim. */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  /* Fills its grid cell -- a uniform box, unlike every other button on this
+     screen. 132px gives the background scene (and the SVG's ~1.8:1 aspect)
+     real room to read as a place rather than a sliver of gradient behind a
+     label. --touch-min alone would be enough tap target but too shallow a
+     box for the art. */
+  width: 100%;
+  min-height: 132px;
+  padding: 0;
+  text-align: center;
+  border-radius: var(--radius-lg);
+}
+
+/* The art zone. Takes every pixel the caption strip does not, and is the
+   positioning context for .game-tile-art -- `isolation: isolate` here is
+   what keeps the art's z-index:-1 painting above the tile's own gradients
+   but below the icon, exactly as it did when the tile itself was the
+   context. The scene, not the card, now carries each tile's painted
+   background (see .game-tile--find/--toy/--shadow below) so the gradients
+   compose inside the art zone and are not half-hidden by the strip. */
+.game-tile-scene {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex: 1 1 auto;
+  min-height: 92px;
+  padding: 12px;
+}
+
+/* Negative z-index inside the ART ZONE's stacking context (.game-tile-scene
+   carries the `isolation: isolate` the tile used to): paints over the zone's
+   painted background layers, under the icon. It is clipped to the art zone,
+   so it never runs behind the caption strip. */
+.game-tile-art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.game-tile-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.game-tile-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+/* The caption strip -- the tile's second zone, not a plate floating on the
+   first. It was a translucent rgba(14,12,19,.74) rectangle sitting over the
+   art with left-aligned text; two problems with that were that its contrast
+   depended on whichever pixels of art happened to be under it, and that it
+   read as a separate box stuck on the tile. Now it is a zone of the card in
+   its own right: Slate Plum (--color-surface), fully opaque, flush to the
+   card's left, right and bottom rims, separated from the art only by a
+   hairline. Opaque means the contrast is a property of the COMPONENT --
+   Moonmilk on Slate Plum is 11.9:1 on every tile and would stay that way
+   over any art added later. No backdrop-filter, so no @supports fallback is
+   needed for it any more either.
+   Centred, per the same request: the text is centred in the strip, and the
+   card's own `text-align: center` covers a label that wraps to two lines. */
+.game-tile-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 8px 10px;
+  text-align: center;
+  border-top: 1px solid var(--glass-border);
+  background: var(--color-surface);
+  font-size: 0.88rem;
+  font-weight: var(--weight-caregiver-strong);
+  line-height: 1.2;
+  color: var(--color-ink);
+}
+
+/* Find It In Your World — a lamplit room. The hard-stopped diagonal is the
+   line where the floor meets the wall; the Ember radial is the lamp pooling
+   in from the top-right corner. */
+.game-tile--find .game-tile-scene {
+  background:
+    radial-gradient(circle 96px at 86% 6%, rgba(255, 176, 103, 0.3), transparent 70%),
+    linear-gradient(
+      163deg,
+      rgba(255, 176, 103, 0.11) 0%,
+      rgba(255, 176, 103, 0.03) 45.5%,
+      rgba(0, 0, 0, 0.24) 46%,
+      rgba(0, 0, 0, 0.34) 100%
+    );
+}
+
+.game-tile--find .game-tile-art {
+  color: var(--color-accent);
+}
+
+/* Toy Story Sequencing — a Periwink wash rising from the floor, as if the
+   block stack were lit from below by the toy box it came out of. */
+.game-tile--toy .game-tile-scene {
+  background:
+    radial-gradient(circle 108px at 24% 104%, rgba(139, 123, 255, 0.32), transparent 72%),
+    linear-gradient(180deg, rgba(139, 123, 255, 0.05), rgba(139, 123, 255, 0.15));
+}
+
+.game-tile--toy .game-tile-art {
+  color: var(--color-primary-bright);
+}
+
+/* Shadow Match — cold moonlight from the top-right, a long soft shadow
+   thrown low and to the left of the object the SVG draws. */
+.game-tile--shadow .game-tile-scene {
+  background:
+    radial-gradient(circle 74px at 80% 8%, rgba(244, 239, 232, 0.2), transparent 72%),
+    radial-gradient(ellipse 96px 22px at 30% 86%, rgba(0, 0, 0, 0.55), transparent 72%),
+    linear-gradient(202deg, rgba(167, 156, 181, 0.16), rgba(14, 12, 19, 0.46));
+}
+
+.game-tile--shadow .game-tile-art {
+  color: var(--color-ink);
+}
+
+/* Trace and Colour — a scatter of warm crayon-tip dots rather than one
+   lamp-pool (that composition already belongs to Find It In Your World),
+   so the two Ember-hued tiles still read as different places at a glance. */
+.game-tile--trace .game-tile-scene {
+  background:
+    radial-gradient(circle 26px at 78% 20%, rgba(255, 176, 103, 0.34), transparent 75%),
+    radial-gradient(circle 20px at 90% 46%, rgba(255, 176, 103, 0.24), transparent 75%),
+    radial-gradient(circle 34px at 68% 78%, rgba(255, 176, 103, 0.2), transparent 75%),
+    linear-gradient(160deg, rgba(255, 176, 103, 0.1), rgba(255, 176, 103, 0.02));
+}
+
+.game-tile--trace .game-tile-art {
+  color: var(--color-accent);
+}
+
+/* Block-stack match — Periwink, the same hue the header comment above
+   already calls out for "the blocks" (Toy Story Sequencing's tile), but
+   composed as two glows rising under two towers instead of Toy Story's
+   single centred rise, so the pair still reads as different places at a
+   glance, the same way the two Ember tiles below it do. */
+.game-tile--blockstack .game-tile-scene {
+  background:
+    radial-gradient(circle 58px at 30% 100%, rgba(139, 123, 255, 0.32), transparent 72%),
+    radial-gradient(circle 58px at 76% 100%, rgba(139, 123, 255, 0.2), transparent 72%),
+    linear-gradient(180deg, rgba(139, 123, 255, 0.04), rgba(139, 123, 255, 0.12));
+}
+
+.game-tile--blockstack .game-tile-art {
+  color: var(--color-primary-bright);
+}
+
+/* Sort by rule — Moonmilk, the same hue Match the Picture's moonlight
+   uses, but scattered as a handful of small shape-glows instead of one
+   corner glow and one long shadow, so the two Moonmilk tiles still read
+   as different places at a glance. */
+.game-tile--sortbyrule .game-tile-scene {
+  background:
+    radial-gradient(circle 28px at 20% 22%, rgba(244, 239, 232, 0.22), transparent 75%),
+    radial-gradient(circle 20px at 58% 14%, rgba(244, 239, 232, 0.16), transparent 75%),
+    radial-gradient(circle 24px at 82% 30%, rgba(244, 239, 232, 0.18), transparent 75%),
+    linear-gradient(190deg, rgba(167, 156, 181, 0.14), rgba(14, 12, 19, 0.4));
+}
+
+.game-tile--sortbyrule .game-tile-art {
+  color: var(--color-ink);
+}
+
+/* The fourth box is a placeholder and must read as one at a glance: hatched
+   fill, dashed rim, no glass shadow, muted ink, centred. It has no onClick,
+   is genuinely `disabled`, and every press/transition affordance the base
+   button rule gives it is switched back off below.
+   It has no art to split against, so it deliberately stays ONE zone rather
+   than growing a caption strip with nothing above it -- a hatched empty
+   card with a centred label reads as "nothing here yet", which is the
+   point. It is still consistent with the new tiles: same card, same radius,
+   same centred label. It does need the padding back that the two-zone card
+   handed to its zones. */
+.game-tile--soon {
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      var(--hatch-line) 0 8px,
+      transparent 8px 16px
+    ),
+    var(--glass-bg);
+  border: 1px dashed var(--color-border);
+  box-shadow: none;
+  transition: none;
+}
+
+/* The base rule dims every :disabled button to 0.5. Stacked on top of the
+   already-muted ink here that would put the label under 4.5:1, so the
+   dimming is done with colour instead and the blanket opacity is undone. */
+.game-tile--soon:disabled {
+  opacity: 1;
+}
+
+.game-tile--soon:active {
+  transform: none;
+  box-shadow: none;
+}
+
+.game-tile-soon-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-ink-muted); /* 7.09:1 on the ground */
+}
+
+/* ---------------------------------------------------------------------
+   SIGNATURE ELEMENT — the Room Frame.
+   A real photograph of the child's own object, matted in a slab of
+   glass, floating on the dark ground, with the photo's OWN colour
+   blooming out behind it to light the room. The bloom is the part that
+   is specific to this product: the app is built on photos of the child's
+   room, so the room is literally what lights the interface.
+
+   Markup Phase 2 should render:
+     <div class="room-frame">
+       <img class="room-frame-bloom" src={photo} alt="" aria-hidden="true" />
+       <div class="room-frame-mat">
+         <img class="room-frame-photo" src={photo} alt="" />
+       </div>
+     </div>
+   Add .room-frame--reward on a reward beat, .room-frame--companion for
+   the Companion. Full spec: src/design/DESIGN-TOKENS.md.
+   --------------------------------------------------------------------- */
+
+.room-frame {
+  position: relative;
+  width: min(72vw, 320px);
+  aspect-ratio: 1 / 1;
+  isolation: isolate;
+}
+
+.room-frame--portrait {
+  aspect-ratio: 4 / 5;
+}
+
+/* The bloom: the same photo, blurred and over-saturated, sitting behind
+   the frame. Not a generic coloured glow — it is the child's object's
+   actual colour spilling onto the dark base. */
+.room-frame-bloom {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-frame);
+  transform: scale(var(--frame-bloom-scale));
+  filter: blur(var(--frame-bloom-blur)) saturate(var(--frame-bloom-saturate));
+  opacity: var(--frame-bloom-opacity);
+  pointer-events: none;
+}
+
+.room-frame-mat {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: var(--frame-mat);
+  border-radius: var(--radius-frame);
+  border: 1px solid var(--glass-border);
+  /* PHASE 4: this one didn't go through --glass-filter -- it hardcoded
+     its own blur, so flattening the token alone didn't reach it. Direct
+     edit: flat white card, matching artboard 07's "Room photo" panel. */
+  background: var(--color-surface);
+  box-shadow: 0 18px 34px rgba(23, 86, 140, 0.16), 0 4px 10px rgba(23, 86, 140, 0.1);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .room-frame-mat {
+    background: var(--color-surface);
+  }
+}
+
+/* The inset shadow + hairline is what makes the photo sit IN the mat
+   rather than on top of it. Without it the photo reads as a sticker. */
+.room-frame-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-frame-inner);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.room-frame--reward .room-frame-mat {
+  border-color: var(--color-reward);
+  box-shadow:
+    0 0 0 3px rgba(255, 201, 60, 0.16),
+    0 0 48px var(--color-reward-glow),
+    0 22px 50px rgba(0, 0, 0, 0.6),
+    var(--glass-highlight);
+}
+
+.room-frame--companion .room-frame-mat {
+  border-color: var(--color-companion);
+  box-shadow:
+    0 0 0 3px rgba(255, 126, 157, 0.14),
+    0 0 44px var(--color-companion-glow),
+    0 22px 50px rgba(0, 0, 0, 0.6),
+    var(--glass-highlight);
+}
+
+/* Game1 already injects the child's favourite colour as --g1-accent.
+   When it is present it wins over Blush for the Companion rim, because
+   "the child's own colour" outranks a system default. */
+.room-frame--companion[style*='--g1-accent'] .room-frame-mat {
+  border-color: var(--g1-accent, var(--color-companion));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-frame-bloom {
+    transition: none;
+  }
+}
+
+/* Printing on a dark theme would empty a cartridge and produce an
+   unreadable card. Everything printable is forced back to ink-on-paper.
+   (Game 2's own "print this schedule" button was removed -- #printable-card
+   is Branch2Card's question-card print/save feature, still in use.) */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-card,
+  #printable-card * {
+    visibility: visible;
+    background: #ffffff !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  #printable-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   PORTED FROM this session's own Toki work, kept per explicit
+   product decision: welcome, the onboarding quiz chain (also
+   reopened from Setup's edit rows), and the Play hub's winding
+   road map. Everything else in this repaint came from the
+   teammate's independent commit above -- these three pieces
+   are additive on top of it, using their own --toki-* prefix
+   so nothing here collides with the classes above. */
 /* ============================================================
    TOKI REVAMP -- screen 1 of many: Welcome.
    New light visual system, replacing the dark-first one one
@@ -2931,434 +3293,6 @@ button.toki-week-cell {
 }
 
 /* ============================================================
-   TOKI REVAMP -- home shell: the header/greeting/tab-bar shared
-   by all four tabs (Play, Dashboard, Setup, Notes), plus a small
-   set of content primitives (card, list row, banner, tag, ladder
-   meter, status mark) the tab-specific screens build on. Mockup
-   screens 08-09 only show Dashboard and Setup; Notes has no
-   mockup of its own (flagged as such in the source file's own
-   footer), so it extends this same vocabulary without a literal
-   reference, same as CompanionCapture did for onboarding. */
-
-.toki-home-screen {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: linear-gradient(180deg, var(--toki-bg-top), var(--toki-bg-bottom));
-}
-
-.toki-home-blobs {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle 200px at 90% 8%, var(--toki-blob-blue), transparent 60%),
-    radial-gradient(circle 220px at 4% 76%, var(--toki-blob-violet), transparent 62%);
-  filter: blur(44px);
-}
-
-.toki-home-header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 22px 0;
-}
-
-.toki-home-wordmark {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 800;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #0b6fbf;
-}
-.toki-home-wordmark-mark {
-  font-size: 1.05rem;
-  line-height: 1;
-}
-
-.toki-home-avatar {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid #e1edf9;
-  box-shadow: 0 4px 12px rgba(23, 86, 140, 0.07);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.toki-home-greeting {
-  position: relative;
-  padding: 16px 22px 0;
-}
-.toki-home-greeting h1 {
-  margin: 0;
-  font-weight: 800;
-  font-size: 1.55rem;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: var(--toki-ink);
-}
-.toki-home-greeting p {
-  margin: 4px 0 0;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--toki-ink-muted);
-}
-
-.toki-home-main {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  /* Bottom padding clears the now-fixed .toki-tab-bar (see its own
-     comment) so the last card is never hidden behind it. */
-  padding: 16px 22px 110px;
-}
-
-/* Fixed, not sticky: sticky only pins once the content ahead of it would
-   otherwise scroll past its box, so on a short tab (little scrollable
-   content) it just sat in normal flow right after that content --
-   visibly floating mid-screen instead of at the bottom, only reaching
-   the true bottom once there was enough content to push it there. Fixed
-   to the viewport is unconditional: same position whether the tab has
-   one card or ten. left/right + max-width + auto margin centers it the
-   same way .app's own max-width:480px column centers on a
-   wider-than-mobile viewport. */
-.toki-tab-bar {
-  position: fixed;
-  left: 16px;
-  right: 16px;
-  /* max(), not a flat 26px: on a phone with a home-indicator gesture bar
-     (env(safe-area-inset-bottom), reported once index.html declares
-     viewport-fit=cover), 26px alone left the bar sitting flush against
-     -- sometimes under -- that system chrome, with no real margin to
-     spare. This keeps at least 26px of breathing room from the safe
-     area on notched phones and falls back to plain 26px from the true
-     viewport edge everywhere else (env() resolves to 0 there). */
-  bottom: max(26px, calc(env(safe-area-inset-bottom, 0px) + 16px));
-  max-width: 448px;
-  margin: 0 auto;
-  z-index: 3;
-  display: flex;
-  gap: 6px;
-  padding: 8px;
-  border-radius: 28px;
-  background: #fff;
-  border: 1px solid #e6f0fa;
-  box-shadow: 0 10px 24px rgba(23, 86, 140, 0.1);
-}
-
-.toki-tab-button {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  min-height: var(--touch-min, 44px);
-  padding: 9px 4px;
-  border: none;
-  border-radius: 20px;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  cursor: pointer;
-}
-.toki-tab-button:active {
-  transform: none;
-}
-.toki-tab-button.is-active {
-  background: #eaf5ff;
-}
-.toki-tab-icon {
-  font-size: 20px;
-  line-height: 1;
-  opacity: 0.55;
-}
-.toki-tab-button.is-active .toki-tab-icon {
-  opacity: 1;
-}
-.toki-tab-label {
-  font-weight: 700;
-  font-size: 0.68rem;
-  color: #7e95ad;
-}
-.toki-tab-button.is-active .toki-tab-label {
-  font-weight: 800;
-  color: #0b6fbf;
-}
-
-/* -- content primitives -- */
-
-.toki-dcard {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 18px;
-  background: #fff;
-  border: 1px solid #e6f0fa;
-  border-radius: 22px;
-  box-shadow: 0 8px 20px rgba(23, 86, 140, 0.07);
-}
-.toki-dcard-title {
-  margin: 0 0 6px;
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: var(--toki-ink);
-}
-
-.toki-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: #edf6fe;
-  border: 1px solid #dbeafb;
-}
-.toki-banner p {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: var(--toki-ink-muted);
-}
-
-.toki-list-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-top: 1px solid #eef5fc;
-}
-.toki-list-row:first-child {
-  border-top: none;
-}
-.toki-list-icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  flex: none;
-  border-radius: 13px;
-  background: #eaf5ff;
-  font-size: 16px;
-  line-height: 1;
-}
-.toki-list-title {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  font-size: 0.86rem;
-  line-height: 1.3;
-  color: #21374e;
-}
-.toki-list-meta {
-  flex: none;
-  font-weight: 700;
-  font-size: 0.8rem;
-  color: #3d5a76;
-}
-
-.toki-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #eaf5ff;
-  color: #0b6fbf;
-  font-weight: 800;
-  font-size: 0.62rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.toki-skill-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  padding: 8px 0;
-  border-top: 1px solid #eef5fc;
-}
-.toki-skill-row:first-child {
-  border-top: none;
-}
-.toki-status-mark {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  flex: none;
-  margin-top: 1px;
-  border-radius: 50%;
-  border: 2px solid #cfe3f7;
-  font-size: 0.7rem;
-  color: #fff;
-}
-.toki-status-mark--complete {
-  background: var(--toki-eyebrow);
-  border-color: var(--toki-eyebrow);
-}
-.toki-skill-name {
-  font-weight: 700;
-  font-size: 0.86rem;
-  line-height: 1.3;
-  color: #21374e;
-}
-.toki-skill-meter-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 5px;
-}
-/* Five discrete steps, not a continuous fill -- matches the design
-   system's own LadderMeter (components/feedback/feedback.css:
-   .hw-ladder/.hw-ladder-step), which the mockup only ever references by
-   name and never inlines. */
-.toki-ladder-meter {
-  display: flex;
-  gap: 3px;
-  flex: none;
-}
-.toki-ladder-step {
-  width: 13px;
-  height: 4px;
-  border-radius: 2px;
-  background: #dbeafb;
-}
-.toki-ladder-step--filled {
-  background: var(--toki-eyebrow);
-}
-.toki-skill-detail {
-  font-size: 0.72rem;
-  color: #7e95ad;
-}
-
-.toki-week-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 7px;
-}
-.toki-week-day {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-.toki-week-day-label {
-  font-weight: 700;
-  font-size: 0.62rem;
-  color: #7e95ad;
-}
-.toki-week-day--today .toki-week-day-label {
-  font-weight: 800;
-  color: #0b6fbf;
-}
-.toki-week-cell {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 12px;
-  background: #eaf3fb;
-  border: 1px solid #dbe9f8;
-}
-.toki-week-cell--played {
-  background: linear-gradient(180deg, #69bcff, #1e93ee);
-  border: none;
-}
-.toki-week-day--today .toki-week-cell {
-  box-shadow: 0 0 0 3px rgba(30, 147, 238, 0.22);
-}
-
-.toki-setup-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.toki-setup-label {
-  font-weight: 800;
-  font-size: 0.65rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #7e95ad;
-  padding: 0 4px;
-}
-.toki-setup-list {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #e6f0fa;
-  border-radius: 22px;
-  overflow: hidden;
-  background: #fff;
-  box-shadow: 0 8px 20px rgba(23, 86, 140, 0.07);
-}
-.toki-setup-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  min-height: 58px;
-  padding: 0 18px;
-  border: none;
-  border-top: 1px solid #eef5fc;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  font-weight: 700;
-  font-size: 0.94rem;
-  color: #21374e;
-  text-align: left;
-  cursor: pointer;
-}
-.toki-setup-row:first-child {
-  border-top: none;
-}
-.toki-setup-row:active {
-  background: rgba(30, 147, 238, 0.06);
-  transform: none;
-}
-.toki-setup-row-chevron {
-  font-weight: 700;
-  font-size: 1.05rem;
-  color: #9fb8cf;
-}
-
-.toki-danger-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: var(--touch-min, 44px);
-  border: 1px solid #e6b3ab;
-  border-radius: 20px;
-  background: #fdedeb;
-  color: #c8402f;
-  font-weight: 700;
-  font-size: 1rem;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  cursor: pointer;
-}
-.toki-danger-btn:active {
-  transform: scale(0.97);
-}
-
-/* ============================================================
    TOKI REVAMP -- Play hub: the winding activity path.
    Mockup screen 06's own caption is explicit about the one real
    product question this raises ("what marks a node as done") and
@@ -3463,484 +3397,3 @@ button.toki-week-cell {
   box-shadow: 0 10px 20px rgba(150, 90, 190, 0.26);
 }
 
-/* ============================================================
-   TOKI REVAMP -- shared CHILD-FACING vocabulary for all six games.
-   Only one screen in the whole mockup shows this side of the app
-   (screen 07, "Game moment"), and it's generic, not per-game -- its
-   own caption: "Calmest screen in the set, on purpose: no chrome,
-   no words, no tab bar, one warm ring as the whole reward." Every
-   game keeps that spirit: zero text, no score/streak/count, and the
-   ONE reserved reward hue is the only accent, never chrome, exactly
-   as this app's design tokens already require. --color-reward is
-   already #ffc93c -- the same hex the mockup uses -- so the ring
-   below reuses that existing token rather than a new one.
-
-   These are primitives (background/border/shadow/radius), not a
-   fixed layout -- each game keeps its own real markup (photo
-   capture, canvas, SVG panorama, drag targets) and applies these
-   classes to it, rather than being forced into one shape. */
-
-.toki-child-stage {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 30px;
-  padding: 0 26px 34px;
-  overflow: hidden;
-}
-/* Calm: one soft blob, dead centre-top, low contrast -- for a profile
-   whose response-profile soundMovement reads 'calm'. */
-.toki-child-stage--calm {
-  background: linear-gradient(180deg, #f7fbfe, #e9f3fb);
-}
-.toki-child-stage--calm::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(circle 240px at 50% 22%, rgba(79, 179, 255, 0.14), transparent 66%);
-  filter: blur(46px);
-}
-/* Bright: three blobs, more saturated -- 'lively', or no profile set yet
-   (the livelier default, same reasoning .toki-onboard-blobs already
-   uses for not-yet-known profiles). */
-.toki-child-stage--bright {
-  background: linear-gradient(180deg, #f7fbfe, #e9f3fb);
-}
-.toki-child-stage--bright::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle 220px at 16% 10%, rgba(79, 179, 255, 0.42), transparent 62%),
-    radial-gradient(circle 200px at 88% 16%, rgba(47, 199, 199, 0.34), transparent 60%),
-    radial-gradient(circle 230px at 78% 90%, rgba(255, 201, 60, 0.3), transparent 62%);
-  filter: blur(42px);
-}
-
-/* A warm white card any game can drop a photo/canvas/SVG into. Plain by
-   default; add .toki-child-card--target for the one reward/target
-   moment a screen actually has (see below). */
-.toki-child-card {
-  position: relative;
-  border-radius: 34px;
-  background: #fff;
-  box-shadow: 0 18px 38px rgba(23, 86, 140, 0.16);
-}
-/* The reward ring: Sunburst, and ONLY Sunburst -- this is the single
-   place in a game's child-facing view a fully saturated reserved hue is
-   allowed to appear (design-tokens' own rule, unchanged by this
-   revamp). Never apply this class to more than one element on screen
-   at once, and never as a permanent/default state -- it marks the one
-   thing that's currently correct/wanted, the same job the dark
-   theme's own g1-crop--highlighted ring already does elsewhere. */
-.toki-child-card--target {
-  border: 3px solid var(--color-reward);
-  box-shadow: 0 0 0 6px rgba(255, 201, 60, 0.22), 0 18px 38px rgba(23, 86, 140, 0.16);
-}
-/* The soft colour bloom sitting behind a card, echoing the Room Frame's
-   own "the photo lights the room behind it" idea in Toki's flatter
-   material. Optional -- most object-icon buttons don't need one, only
-   a single large focal card (a captured photo, a big canvas) does. */
-.toki-child-card-bloom {
-  position: absolute;
-  inset: -14px;
-  z-index: -1;
-  border-radius: 34px;
-  background: linear-gradient(150deg, #bfe4ff, #8fd6cf);
-  filter: blur(34px);
-  transform: scale(1.1);
-  opacity: 0.55;
-}
-
-/* The object-icon grid: plain 3-column by default (matches the mockup),
-   a game with more or fewer real choices sets its own
-   grid-template-columns inline rather than forcing a new class per
-   count. */
-.toki-object-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  width: 100%;
-}
-.toki-object-btn {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 1;
-  padding: 12px;
-  border: 1px solid rgba(33, 55, 78, 0.1);
-  border-radius: 24px;
-  background: #fff;
-  box-shadow: 0 8px 18px rgba(23, 86, 140, 0.08);
-  cursor: pointer;
-}
-.toki-object-btn:active {
-  transform: scale(0.97);
-  box-shadow: none;
-}
-.toki-object-btn--target {
-  border: 3px solid var(--color-reward);
-  background: #fffaeb;
-  box-shadow: 0 0 0 5px rgba(255, 201, 60, 0.2), 0 8px 18px rgba(23, 86, 140, 0.08);
-}
-/* A wrong/dead choice fades rather than disappearing -- same F.007/§7.7
-   "wrong tap is silence, never a distinct sound or a vanished option"
-   rule the dark theme's g1-crop--dead already encodes. */
-.toki-object-btn--dead {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-/* Setup tab's own content column. flex:1 so the "This device" section can
-   sit at the foot of the screen the way the mockup places it, with the
-   list of things activities are built from staying at the top. */
-.toki-setup-screen {
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-height: 0;
-  padding-bottom: 6px;
-}
-.toki-setup-section--device {
-  margin-top: auto;
-}
-
-/* Log out's second tap. The question and the two buttons, in the same
-   shape the onboarding flow's two-button footers use. */
-.toki-setup-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.toki-footer-row .toki-danger-btn {
-  flex: 1;
-}
-
-/* -- Notes tab. No mockup screen covers it: the source file's own footer
-   says the Notes tab and the worry-to-question branch were left for a
-   later pass, so this tab is assembled from the primitives above rather
-   than from a reference, the same way CompanionCapture was. -- */
-
-/* Notes' one CTA sits inside a card rather than in a full-width screen
-   footer, and its label is a whole sentence instead of a one-word verb.
-   Same gradient, same weight, same shadow as .toki-cta everywhere else --
-   only the type scale and the line box change, so a wrapped label breathes
-   instead of colliding with .toki-cta's line-height: 1. */
-.toki-cta--card {
-  margin-top: 6px;
-  padding: 12px 16px;
-  border-radius: 18px;
-  font-size: 1rem;
-  line-height: 1.3;
-  text-align: center;
-}
-
-/* F.020's neutral prompt, on the Notes tab and anywhere else in Branch 1
-   that embeds it. Still reads as an inline prompt rather than a second
-   card: the tinted panel of .toki-banner/.toki-note, no white fill and no
-   shadow, so it sits visibly under the card above instead of flattening
-   the tab into two equal slabs. Rendered inside the screen column's own
-   gap, so it needs no margin of its own. */
-.neutral-note-prompt {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 20px;
-  border: 1px solid #dbeafb;
-  background: #edf6fe;
-}
-
-.neutral-note-prompt p {
-  margin: 0;
-  max-width: 40ch;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  font-weight: var(--weight-caregiver-body);
-  color: var(--toki-ink);
-}
-
-/* §10: this prompt "asks nothing, warns nothing", so neither answer may
-   look like the correct one. Both buttons carry the identical
-   .toki-secondary-btn -- no gradient CTA on either, which is the whole
-   point -- and `flex: 1 1 0` gives them the same width despite very
-   different label lengths, which is what stops the long "Yes" label from
-   reading as the weighted choice. Each keeps the 96px min-width and the
-   44px min-height of the shared class (never overridden down), and they
-   wrap to their own rows before either could be squeezed below it. */
-.neutral-note-prompt-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.neutral-note-prompt-actions .toki-secondary-btn {
-  flex: 1 1 0;
-  font-size: 0.95rem;
-  line-height: 1.25;
-  text-align: center;
-}
-
-/* ---------------------------------------------------------------------
-   HOME TABS
-   Branch 1 home is two places behind one bottom bar. The shell is a flex
-   column so the bar can sit at the foot of a short screen and stick to the
-   viewport edge on a long one.
-   --------------------------------------------------------------------- */
-
-.app--tabbed {
-  display: flex;
-  flex-direction: column;
-}
-
-.home-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.tab-bar {
-  position: sticky;
-  /* Matches the 20px side gap (.app's own side padding, which this bar
-     respects rather than cancelling -- see below). .app's padding-bottom is
-     40px, not 20px -- deliberately, for normal scrolling content -- so
-     without the negative margin below, the bar sat further from the bottom
-     edge than from either side. bottom:20px covers the "stuck" case
-     (content taller than the viewport); the margin covers the normal-flow
-     case (content fits, which is the common case for this short screen). */
-  bottom: 20px;
-  margin-bottom: -20px;
-  z-index: 3;
-  /* A real full-width bar, but deliberately NOT edge-to-edge. It spans the
-     same content column as everything else on the page -- .app's 20px side
-     padding is respected, the negative-margin edge-cancelling trick is
-     gone -- so there is always a visible gap between the bar and the
-     device edge. Still not the old fit-content pill: it fills the column.
-     On height: the bar is as short as it is allowed to be. Each button
-     carries the 88x88 UI-STANDARDS floor and that floor -- not padding --
-     is what sets the bar's height, so the only fat available to cut was the
-     bar's own padding (8px -> 4px), the gap (8px -> 0) and the icon size.
-     All three are cut.
-     On width: four 88px targets need 360px, which the narrowest phones'
-     content column no longer provides now that the bar is inset. The
-     targets do not shrink to fit -- DESIGN-TOKENS 4.1 is explicit that
-     --touch-min never shrinks and that a row too wide for the phone
-     scrolls rather than shrinking. So the bar scrolls horizontally in that
-     case (a few px at 390pt, nothing at all from ~400pt up), with the
-     scrollbar itself hidden. */
-  display: flex;
-  gap: 0;
-  width: auto;
-  margin: 14px 0 0;
-  padding: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-filter);
-  -webkit-backdrop-filter: var(--glass-filter);
-  box-shadow: var(--glass-shadow), var(--glass-highlight);
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .tab-bar {
-    background: var(--color-surface);
-  }
-}
-
-.tab-bar::-webkit-scrollbar {
-  display: none;
-}
-
-/* The bar itself is the glass slab; the four buttons inside it are flat
-   until selected, so the bar reads as one control rather than five. Still
-   88x88 each — the base button floor is inherited, never overridden down.
-   That floor is also what the bar's scroll fallback exists for: 4 x 88 +
-   8px of bar padding = 360px of content column, which an inset bar only
-   has from roughly a 400pt viewport up. Below that the bar scrolls; the
-   buttons never shrink. */
-.tab-bar-button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  flex: 1 1 0;
-  min-width: var(--touch-min);
-  min-height: 64px;
-  padding: 6px 2px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: var(--color-ink-muted);
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.tab-bar-label {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Periwink Bright, not Periwink: this label sits on --glass-bg-strong,
-   where plain Periwink measures 4.03:1 and fails. See DESIGN-TOKENS §3.5. */
-.tab-bar-button.is-active {
-  color: var(--color-primary-bright);
-  background: var(--color-primary-soft);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: var(--glass-rim-top);
-}
-
-.tab-bar-icon {
-  font-size: 1.15rem;
-  line-height: 1;
-}
-/* ---------------------------------------------------------------------
-   SIGNATURE ELEMENT — the Room Frame.
-   A real photograph of the child's own object, matted in a slab of
-   glass, floating on the dark ground, with the photo's OWN colour
-   blooming out behind it to light the room. The bloom is the part that
-   is specific to this product: the app is built on photos of the child's
-   room, so the room is literally what lights the interface.
-
-   Markup Phase 2 should render:
-     <div class="room-frame">
-       <img class="room-frame-bloom" src={photo} alt="" aria-hidden="true" />
-       <div class="room-frame-mat">
-         <img class="room-frame-photo" src={photo} alt="" />
-       </div>
-     </div>
-   Add .room-frame--reward on a reward beat, .room-frame--companion for
-   the Companion. Full spec: src/design/DESIGN-TOKENS.md.
-   --------------------------------------------------------------------- */
-
-.room-frame {
-  position: relative;
-  width: min(72vw, 320px);
-  aspect-ratio: 1 / 1;
-  isolation: isolate;
-}
-
-.room-frame--portrait {
-  aspect-ratio: 4 / 5;
-}
-
-/* The bloom: the same photo, blurred and over-saturated, sitting behind
-   the frame. Not a generic coloured glow — it is the child's object's
-   actual colour spilling onto the dark base. */
-.room-frame-bloom {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: var(--radius-frame);
-  transform: scale(var(--frame-bloom-scale));
-  filter: blur(var(--frame-bloom-blur)) saturate(var(--frame-bloom-saturate));
-  opacity: var(--frame-bloom-opacity);
-  pointer-events: none;
-}
-
-.room-frame-mat {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  padding: var(--frame-mat);
-  border-radius: var(--radius-frame);
-  border: 1px solid var(--glass-border);
-  background: var(--glass-bg-strong);
-  backdrop-filter: blur(26px) saturate(160%) brightness(var(--glass-brightness));
-  -webkit-backdrop-filter: blur(26px) saturate(160%) brightness(var(--glass-brightness));
-  box-shadow:
-    0 22px 50px rgba(0, 0, 0, 0.6),
-    0 4px 10px rgba(0, 0, 0, 0.45),
-    var(--glass-highlight);
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .room-frame-mat {
-    background: var(--color-surface);
-  }
-}
-
-/* The inset shadow + hairline is what makes the photo sit IN the mat
-   rather than on top of it. Without it the photo reads as a sticker. */
-.room-frame-photo {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: var(--radius-frame-inner);
-  box-shadow:
-    0 8px 20px rgba(0, 0, 0, 0.55),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.4);
-}
-
-.room-frame--reward .room-frame-mat {
-  border-color: var(--color-reward);
-  box-shadow:
-    0 0 0 3px rgba(255, 201, 60, 0.16),
-    0 0 48px var(--color-reward-glow),
-    0 22px 50px rgba(0, 0, 0, 0.6),
-    var(--glass-highlight);
-}
-
-.room-frame--companion .room-frame-mat {
-  border-color: var(--color-companion);
-  box-shadow:
-    0 0 0 3px rgba(255, 126, 157, 0.14),
-    0 0 44px var(--color-companion-glow),
-    0 22px 50px rgba(0, 0, 0, 0.6),
-    var(--glass-highlight);
-}
-
-/* Game1 already injects the child's favourite colour as --g1-accent.
-   When it is present it wins over Blush for the Companion rim, because
-   "the child's own colour" outranks a system default. */
-.room-frame--companion[style*='--g1-accent'] .room-frame-mat {
-  border-color: var(--g1-accent, var(--color-companion));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .room-frame-bloom {
-    transition: none;
-  }
-}
-
-/* Printing on a dark theme would empty a cartridge and produce an
-   unreadable card. Everything printable is forced back to ink-on-paper.
-   (Game 2's own "print this schedule" button was removed -- #printable-card
-   is Branch2Card's question-card print/save feature, still in use.) */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #printable-card,
-  #printable-card * {
-    visibility: visible;
-    background: #ffffff !important;
-    color: #111111 !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-  #printable-card {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-}
