@@ -882,10 +882,18 @@ function App() {
         {homeTab === 'notes' && (
           <div className="screen">
             {/* §2's core rule: switching branches is unconditional, no
-                confirmation, available from anywhere in Branch 1. */}
-            <div className="home-card">
-              <p>Noticed something about how your child is developing?</p>
-              <button className="button-accent" onClick={goToBranch2}>
+                confirmation, available from anywhere in Branch 1.
+
+                Toki revamp: the Notes tab has no mockup of its own (the
+                source file's own footer says the tab and the worry-to-
+                question branch were not covered), so it is assembled from
+                the vocabulary the revamped screens already share -- the
+                same white card as Dashboard/Setup, and a real CTA, because
+                this is the caregiver's one deliberate door into Branch 2
+                and not a throwaway link. */}
+            <div className="toki-dcard">
+              <p className="toki-dcard-title">Noticed something about how your child is developing?</p>
+              <button className="toki-cta toki-cta--card" onClick={goToBranch2}>
                 I've been thinking about my child's development
               </button>
             </div>
