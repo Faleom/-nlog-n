@@ -33,11 +33,6 @@ import { INTERACTION_CONFIG } from '../config/interaction';
 import { SessionCelebration } from './SessionCelebration';
 import { usualSessionMinutes } from '../engine/dashboardSummary';
 import { getFadingSuggestion, type FadingSuggestion } from '../engine/fading';
-import {
-  shouldAnnounceChangesInAdvance,
-  shouldReduceAnimation,
-  shouldUseVisualPulseInsteadOfChime,
-} from '../engine/avoidFilter';
 import { getSkillTemplatesForCrop, getSkillTemplatesForObject } from '../engine/skillLookup';
 import {
   childFacingHandoffLine,
@@ -152,18 +147,6 @@ function dedupeCropsByIcon(pool: TaggedCrop[]): TaggedCrop[] {
 function retrievalSkillFor(templates: SkillTemplate[]): SkillTemplate {
   return templates.find((t) => t.skillId.startsWith('find-')) ?? templates[0];
 }
-
-/** F.018 §6.2/§6.4 "Surprises and unannounced changes": short spoken
- * heads-ups, played immediately BEFORE the change they warn about, and
- * only when shouldAnnounceChangesInAdvance() is true for this child.
- * Deliberately plain templates run through the same renderLine() pipeline
- * as every other child-facing line here, so the avoid-list filter still
- * gets the last word on them. speechSynthesis queues utterances, so a
- * heads-up spoken just before the real line is genuinely heard first,
- * with no timer to unwind if the screen changes underneath it. */
-const ANNOUNCE_NEXT_TRIAL_TEMPLATE = "In a moment, we'll look for something new.";
-const ANNOUNCE_LEVEL_CHANGE_TEMPLATE = "In a moment, the game is going to change a little.";
-const ANNOUNCE_MOVEMENT_BREAK_TEMPLATE = "In a moment, we'll stop and move our bodies.";
 
 /** One button rendering a recognised object in the child-facing grid. Zero
  * text (§7.7, §13) — bundled cartoon artwork for the object, on a card
@@ -282,20 +265,15 @@ function CropButton({
   );
 }
 
-/** F.018 §6.2 "Fast animation or flashing" -> lowest animation intensity
- * tier. Every animated escalation/celebration cue still HAPPENS — losing
- * the tier-2 highlight or the tier-3 "only this one is tappable" cue would
+/** OS-level prefers-reduced-motion -> lowest animation intensity tier.
+ * Every animated escalation/celebration cue still HAPPENS — losing the
+ * tier-2 highlight or the tier-3 "only this one is tappable" cue would
  * break errorless learning (§7.7) — it just lands as an instant state
- * change instead of a moving one. Emitted twice from this one definition:
- * once scoped to the caregiver-set avoid-list flag (a class on the screen
- * wrapper), once inside a prefers-reduced-motion query so the OS setting
- * gets the identical treatment, which nothing in this file previously
- * honoured. */
+ * change instead of a moving one. */
 const reducedMotionRules = (scope: string) => `
 ${scope}.g1-crop--highlighted { animation: none; box-shadow: 0 0 0 6px color-mix(in srgb, var(--g1-accent, var(--color-primary)) 55%, transparent); }
 ${scope}.g1-crop--bouncing { animation: none; transform: translateY(-8px); box-shadow: 0 0 0 6px color-mix(in srgb, var(--g1-accent, var(--color-primary)) 55%, transparent); }
 ${scope}.g1-crop--celebrating { animation: none; transform: scale(1.2); }
-${scope}.g1-reward-visual--pulsing { animation: none; }
 `;
 
 /** Local styles for the escalation/celebration animations — plain CSS,
@@ -314,12 +292,6 @@ const GAME1_STYLES = `
 @keyframes g1-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--g1-accent, var(--color-primary)) 55%, transparent); } 50% { box-shadow: 0 0 0 10px transparent; } }
 @keyframes g1-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 @keyframes g1-celebrate { 0% { transform: scale(1); } 100% { transform: scale(1.6); } }
-/* F.018 §6.2: the success moment for a child whose avoid list says "loud
-   or sudden sounds" — the spoken celebration is withheld and this glow
-   carries the "you did it" instead, in the child's own accent colour.
-   Purely visual, and still nothing §7.7/§13 forbids: no text, no reward
-   graphics of any kind, just the object's own frame lighting up. */
-@keyframes g1-reward-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--g1-accent, var(--color-primary)) 70%, transparent); } 100% { box-shadow: 0 0 0 24px transparent; } }
 .g1-crop { transition: opacity 200ms ease; opacity: 1; }
 .g1-crop--dead { opacity: 0.4; }
 .g1-crop--dimmed { opacity: 0.6; }
@@ -338,9 +310,6 @@ const GAME1_STYLES = `
   .g1-grid { flex-wrap: nowrap !important; overflow-x: auto; justify-content: flex-start !important; padding: 0 8px; }
   .g1-crop { flex-shrink: 0; }
 }
-.g1-reward-visual { border-radius: 20px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--g1-accent, var(--color-primary)) 45%, transparent); }
-.g1-reward-visual--pulsing { animation: g1-reward-pulse 900ms ease-out 2; }
-${reducedMotionRules('.g1-reduced-motion ')}
 @media (prefers-reduced-motion: reduce) {
 ${reducedMotionRules('')}
 }
@@ -564,17 +533,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
    * are shown to the caregiver during 'searching' (never to the child). */
   const [activeSkill, setActiveSkill] = useState<SkillTemplate | null>(null);
 
-  // F.018's three non-text exclusions (§6.2/§6.4), read exactly the way
-  // Game 2 already reads isColourAvoided: straight off
-  // profile.context.avoidList, through the engine's own checker functions,
-  // never by inspecting the raw flags here. Derived per render, not state —
-  // they are a pure function of the profile, and a caregiver toggling one
-  // mid-session must take effect on the very next trial.
-  const avoidList = profile.context.avoidList;
-  const reduceAnimation = shouldReduceAnimation(avoidList);
-  const visualPulseInsteadOfChime = shouldUseVisualPulseInsteadOfChime(avoidList);
-  const announceChanges = shouldAnnounceChangesInAdvance(avoidList);
-
   // §8.1 "Profile tuning": derived once from the four response-profile
   // dimensions, never a condition (ARCHITECTURE-RULES.md §5.2). Recomputed
   // only if the profile object itself changes, not per trial.
@@ -653,7 +611,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       // default engine/slots.ts already provides — no branching needed.
       if (hasCompanion(profile)) {
         void adapters.speechOut.say(
-          renderLine('Hi! {companion} is ready to play!', slotValuesFromProfile(profile), profile.context),
+          renderLine('Hi! {companion} is ready to play!', slotValuesFromProfile(profile)),
         );
       }
     })();
@@ -666,16 +624,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // id — acceptable here since App.tsx currently only ever produces a
     // new profile reference on a genuine change, not on every render.
   }, [profile]);
-
-  /** F.018 §6.2/§6.4: says a heads-up line, or does nothing at all when
-   * this child's avoid list doesn't ask for one. Every caller below is a
-   * point where something about the activity is ABOUT to change. */
-  function announceChange(template: string) {
-    if (!announceChanges) return;
-    void adapters.speechOut.say(
-      renderLine(template, slotValuesFromProfile(profile), profile.context),
-    );
-  }
 
   /** §7.9's "focus-stretch trend" — the metric the caregiver dashboard
    * reads (caregiverDashboard.ts's getFocusStretchTrend). Called after
@@ -701,10 +649,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   }
 
   async function handleLevelChange(newLevel: Game1Level) {
-    // §6.2: a difficulty change is exactly the kind of unannounced change
-    // the avoid list is about. Spoken before the new level is stored, so
-    // the warning genuinely precedes the change it warns about.
-    announceChange(ANNOUNCE_LEVEL_CHANGE_TEMPLATE);
     setLevel(newLevel);
     await setGame1Level(profile.id, newLevel);
   }
@@ -786,12 +730,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     const line = renderLine(
       template,
       slotValuesFromProfile(profile, { 'object.name': picked.name }),
-      profile.context,
     );
-    // §6.2: a new target appearing is a change. Queued immediately before
-    // the prompt itself, so the child hears the warning and then the thing
-    // it warned about, in that order, with no silent switch.
-    announceChange(ANNOUNCE_NEXT_TRIAL_TEMPLATE);
     void adapters.speechOut.say(line);
   }
 
@@ -821,9 +760,8 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
         getSkillTemplatesForObject(profile.context.companion?.name ?? 'toy animal', 'toy'),
       ),
     );
-    announceChange(ANNOUNCE_NEXT_TRIAL_TEMPLATE);
     void adapters.speechOut.say(
-      renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile), profile.context),
+      renderLine(COMPANION_HUNT_PROMPT_TEMPLATE, slotValuesFromProfile(profile)),
     );
   }
 
@@ -839,16 +777,9 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     setPhase('celebrating');
     lastObjectNameRef.current = profile.context.companion?.name ?? null;
     recordFocusStretch();
-    // §6.2: the same success moment, without the sudden exclamation, for a
-    // child whose avoid list says loud or sudden sounds. The reward frame's
-    // visual pulse (see the celebrating JSX) carries it instead — this
-    // phase already renders the Companion's own photo, so nothing about
-    // "you did it" is lost.
-    if (!visualPulseInsteadOfChime) {
-      void adapters.speechOut.say(
-        renderLine('{companion}!', slotValuesFromProfile(profile), profile.context),
-      );
-    }
+    void adapters.speechOut.say(
+      renderLine('{companion}!', slotValuesFromProfile(profile)),
+    );
     setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
   }
 
@@ -922,16 +853,8 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       const line = renderLine(
         'Your {object.name}!',
         slotValuesFromProfile(profile, { 'object.name': crop.name }),
-        profile.context,
       );
-      // §6.2 "Loud or sudden sounds": Game 1's one genuinely celebratory
-      // audio moment is withheld and replaced by a purely visual pulse on
-      // the reward frame (see the celebrating JSX). Prompts and heads-ups
-      // still speak — they are the interface (§7.10); this is the sudden,
-      // loud one.
-      if (!visualPulseInsteadOfChime) {
-        void adapters.speechOut.say(line);
-      }
+      void adapters.speechOut.say(line);
       // §8.1 lively/short-attention tuning: "faster celebration".
       setTimeout(() => setPhase('reportingSupport'), tuning.fasterCelebration ? 400 : 800);
       return;
@@ -948,7 +871,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     // buzzer... a wrong tap produces silence plus fade and nothing else."
     if (outcome.tier === 1 && target) {
       const template = buildSearchPromptTemplate(level, target, tuning);
-      const line = renderLine(template, slotValuesFromProfile(profile), profile.context);
+      const line = renderLine(template, slotValuesFromProfile(profile));
       void adapters.speechOut.say(line, { rate: 0.85 });
     }
   }
@@ -1005,12 +928,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       const line = renderLine(
         '{movement} like a {fav_animal}!',
         slotValuesFromProfile(profile),
-        profile.context,
       );
-      // §6.2: a movement break interrupting the run of trials is a change,
-      // and an abrupt one. Spoken before the phase actually flips, so the
-      // heads-up lands while the child is still on the screen they know.
-      announceChange(ANNOUNCE_MOVEMENT_BREAK_TEMPLATE);
       setPhase('movementBreak');
       void adapters.speechOut.say(line);
       return;
@@ -1171,10 +1089,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   const suggestedTierInfo =
     SUPPORT_TIERS.find((t) => t.tier === DEFAULT_STARTING_SUPPORT_TIER) ?? SUPPORT_TIERS[0];
 
-  // F.018 §6.2: one class on the wrapper is what turns every animated cue
-  // inside this screen (the only phases that have any) into an instant
-  // state change — see reducedMotionRules. The cues themselves stay.
-  const screenClassName = reduceAnimation ? 'screen g1-reduced-motion' : 'screen';
   // The object the current trial's F.007 steps are about — the picked crop
   // normally, the child's own Companion during a hunt.
   const skillStepObjectName = companionHuntActive
@@ -1182,7 +1096,7 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
     : (target?.name ?? '');
 
   return (
-    <div className={screenClassName} style={accentStyle}>
+    <div className="screen" style={accentStyle}>
       <style>{GAME1_STYLES}</style>
 
       {phase === 'searching' && (
@@ -1217,7 +1131,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
                     {renderLine(
                       skillStep.promptTemplate,
                       slotValuesFromProfile(profile, { 'object.name': skillStepObjectName }),
-                      profile.context,
                     )}
                   </li>
                 ))}
@@ -1353,11 +1266,6 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
           }}
         >
           <div
-            className={
-              visualPulseInsteadOfChime
-                ? `g1-reward-visual${reduceAnimation ? '' : ' g1-reward-visual--pulsing'}`
-                : undefined
-            }
             style={
               rewardFrameColour(profile)
                 ? {

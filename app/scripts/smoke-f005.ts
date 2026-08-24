@@ -3,13 +3,7 @@
 
 import assert from 'node:assert/strict';
 import { section, summarize, test } from './testHarness';
-import {
-  fillSlots,
-  renderLine,
-  resetAvoidFilter,
-  setAvoidFilter,
-  slotValuesFromContext,
-} from '../src/engine/slots';
+import { fillSlots, renderLine, slotValuesFromContext } from '../src/engine/slots';
 import type { ChildContextProfile } from '../src/types';
 
 async function main() {
@@ -57,35 +51,11 @@ async function main() {
     assert.equal(line, 'Find the today');
   });
 
-  section('F.005 — the avoid-list filter hook runs last');
+  section('F.005 — renderLine fills slots (thin wrapper over fillSlots)');
 
-  await test('renderLine calls the registered filter with the fully-filled text', () => {
-    let filterSawText = '';
-    setAvoidFilter((text) => {
-      filterSawText = text;
-      return text;
-    });
-    const context: ChildContextProfile = { quickPreferences: { favColour: 'red' } };
-    renderLine('Find something {fav_colour}!', slotValuesFromContext(context), context);
-    resetAvoidFilter();
-    assert.equal(
-      filterSawText,
-      'Find something red!',
-      'filter should see fully-substituted text (slots already filled), not the raw template',
-    );
-  });
-
-  await test('renderLine actually applies the registered filter\'s output', () => {
-    setAvoidFilter((text) => text.replace('loud', 'gentle'));
-    const context: ChildContextProfile = {};
-    const line = renderLine('Make a loud sound!', slotValuesFromContext(context), context);
-    resetAvoidFilter();
-    assert.equal(line, 'Make a gentle sound!');
-  });
-
-  await test('with no filter registered (noop default), renderLine still fills slots', () => {
+  await test('renderLine fills slots the same way fillSlots does', () => {
     const context: ChildContextProfile = { quickPreferences: { favColour: 'blue' } };
-    const line = renderLine('Find something {fav_colour}!', slotValuesFromContext(context), context);
+    const line = renderLine('Find something {fav_colour}!', slotValuesFromContext(context));
     assert.equal(line, 'Find something blue!');
   });
 

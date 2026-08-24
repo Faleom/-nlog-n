@@ -20,9 +20,6 @@
 //
 // Everything below is pure. The React file renders it and nothing else.
 
-import { isColourAvoided } from '../../engine/avoidFilter';
-import type { AvoidList } from '../../types';
-
 export type ShapeValue = 'round' | 'square' | 'triangle';
 export type SizeValue = 'big' | 'small';
 export type FillValue = 'solid' | 'hollow';
@@ -83,21 +80,6 @@ export function valueOn(item: SortItem, dimension: SortDimension): SortValue {
   return item.attrs[dimension];
 }
 
-/**
- * Which dimensions can be used at all, given the avoid list.
- *
- * A disliked colour is hard-excluded from generated content (§6.2 Layer 4),
- * so a colour round needs two non-avoided colours to remain. Every other
- * dimension is unaffected -- but the colour HELD CONSTANT in those rounds
- * still has to dodge the avoided one, which `pickConstants` handles.
- */
-export function availableDimensions(avoidList: AvoidList | undefined): readonly SortDimension[] {
-  return SORT_DIMENSIONS.filter((d) => {
-    if (d !== 'colour') return true;
-    return COLOUR_VALUES.filter((c) => !isColourAvoided(c, avoidList)).length >= 2;
-  });
-}
-
 function pick<T>(values: readonly T[], random: () => number): T {
   return values[Math.floor(random() * values.length)];
 }
@@ -111,7 +93,6 @@ function pickPair(values: readonly SortValue[], random: () => number): [SortValu
 
 export interface BuildSortRoundOptions {
   random?: () => number;
-  avoidList?: AvoidList;
   /** Force a dimension. Used by tests and by a caregiver pinning a rule. */
   dimension?: SortDimension;
   itemCount?: number;
@@ -124,30 +105,19 @@ export interface BuildSortRoundOptions {
  */
 export function buildSortRound(options: BuildSortRoundOptions = {}): SortRound {
   const random = options.random ?? Math.random;
-  const avoidList = options.avoidList;
 
-  const usable = availableDimensions(avoidList);
-  const dimension =
-    options.dimension && usable.includes(options.dimension)
-      ? options.dimension
-      : pick(usable, random);
-
-  const dimensionValues =
-    dimension === 'colour'
-      ? COLOUR_VALUES.filter((c) => !isColourAvoided(c, avoidList))
-      : VALUES_BY_DIMENSION[dimension];
-
+  const dimension = options.dimension ?? pick(SORT_DIMENSIONS, random);
+  const dimensionValues = VALUES_BY_DIMENSION[dimension];
   const baskets = pickPair(dimensionValues, random);
 
   // Everything NOT being sorted by is pinned to one value for the whole
   // round. Picked per round rather than hardcoded, so two shape rounds in
   // a row still look different without either becoming ambiguous.
-  const safeColours = COLOUR_VALUES.filter((c) => !isColourAvoided(c, avoidList));
   const constants: SortAttributes = {
     shape: pick(SHAPE_VALUES, random),
     size: pick(SIZE_VALUES, random),
     fill: pick(FILL_VALUES, random),
-    colour: safeColours.length > 0 ? pick(safeColours, random) : COLOUR_VALUES[0],
+    colour: pick(COLOUR_VALUES, random),
   };
 
   const requested = options.itemCount ?? pick(ITEM_COUNTS, random);

@@ -58,8 +58,7 @@ async function main() {
     const before = await getProfile(profileId);
     const lineBefore = renderLine(
       'Find something {fav_colour}!',
-      slotValuesFromProfile(before!),
-      before!.context,
+      slotValuesFromProfile(before!)
     );
     assert.ok(lineBefore.includes('green'));
 
@@ -67,8 +66,7 @@ async function main() {
     const after = await getProfile(profileId);
     const lineAfter = renderLine(
       'Find something {fav_colour}!',
-      slotValuesFromProfile(after!),
-      after!.context,
+      slotValuesFromProfile(after!)
     );
     assert.ok(lineAfter.includes('purple'), 'line did not pick up the new favourite colour');
     assert.ok(!lineAfter.includes('green'), 'line still shows the old favourite colour');
@@ -82,7 +80,7 @@ async function main() {
     for (const [key, value] of Object.entries(values)) {
       assert.equal(typeof value, 'string', `slot ${key} did not default to a string on an empty profile`);
     }
-    const line = renderLine('Find something {fav_colour}!', values, emptyProfile.context);
+    const line = renderLine('Find something {fav_colour}!', values);
     assert.ok(!/\{[a-zA-Z_.]+\}/.test(line), `raw slot leaked with an empty profile: "${line}"`);
   });
 

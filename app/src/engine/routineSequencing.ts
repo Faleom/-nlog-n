@@ -100,7 +100,7 @@ export class SequencingMachine {
 // ---------------------------------------------------------------------------
 
 export function actItOutLine(profile: ChildProfile): string {
-  return renderLine('Do it with the real {companion}!', slotValuesFromProfile(profile), profile.context);
+  return renderLine('Do it with the real {companion}!', slotValuesFromProfile(profile));
 }
 
 /**
@@ -123,6 +123,6 @@ export function formatVisualSchedule(
   renderedLines: string[],
 ): string[] {
   const values = slotValuesFromProfile(profile);
-  const renderedTitle = renderLine(title, values, profile.context);
+  const renderedTitle = renderLine(title, values);
   return [renderedTitle, ...renderedLines];
 }

@@ -34,7 +34,6 @@ import {
   type SortItem,
   type SortValue,
 } from './logic/sortByRule';
-import { shouldReduceAnimation } from '../engine/avoidFilter';
 import { logActivityOutcome } from '../engine/activityLogging';
 import { startSession, endSession } from '../engine/profileStore';
 import { SUPPORT_TIERS } from '../config/supportLadder';
@@ -170,14 +169,11 @@ const STYLES = `
 `;
 
 /** Motion tuning, sourced locally rather than from a shared config module
- * -- this app has none. What exists instead is the pattern Game1/Game2/
- * TraceAndColour already use: a per-file `shouldReduceAnimation(avoidList)`
- * check, plus the hard `@media (prefers-reduced-motion: reduce)` fallback
- * already written into STYLES above. This collapses OS-level
- * prefers-reduced-motion and the child's own avoid-list entry into the
- * two-tier scale the CSS already understands: 'full' animates, 'minimal'
- * still changes what is on screen but nothing travels, squashes or lands
- * with a bounce. */
+ * -- this app has none. What exists instead is the hard
+ * `@media (prefers-reduced-motion: reduce)` fallback already written into
+ * STYLES above, collapsed into the two-tier scale the CSS already
+ * understands: 'full' animates, 'minimal' still changes what is on screen
+ * but nothing travels, squashes or lands with a bounce. */
 interface MotionTuning {
   tier: 'full' | 'minimal';
   durationMs: number;
@@ -262,7 +258,7 @@ export function SortByRule({ profile, onChildFacingChange }: SortByRuleProps) {
   const prefersReduced =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const reduceMotion = prefersReduced || shouldReduceAnimation(profile.context.avoidList);
+  const reduceMotion = prefersReduced;
   const motion = useMemo(() => motionFor(reduceMotion), [reduceMotion]);
 
   useEffect(() => {
@@ -283,9 +279,7 @@ export function SortByRule({ profile, onChildFacingChange }: SortByRuleProps) {
   }, [phase, machine, landedIds]);
 
   function startRound() {
-    // The avoid list is passed in, not consulted afterwards: a disliked
-    // colour must never be OFFERED, not merely filtered on render (§6.2).
-    setMachine(new SortMachine(buildSortRound({ avoidList: profile.context.avoidList })));
+    setMachine(new SortMachine(buildSortRound()));
     setSelectedId(null);
     setArmed(null);
     setLandedIds(new Set());

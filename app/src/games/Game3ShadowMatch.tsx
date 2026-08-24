@@ -828,7 +828,6 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
       renderLine(
         shapeMatch ? 'Which one has this shape?' : 'Which one is the same kind of thing?',
         slotValuesFromProfile(profile),
-        profile.context,
       ),
     );
   }
@@ -865,7 +864,7 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
     if (requiresFetchingTheRealObject(effectiveLevel)) {
       setPhase('searching');
       void adapters.speechOut.say(
-        renderLine('Can you find what {companion} is showing you?', slotValuesFromProfile(profile), profile.context),
+        renderLine('Can you find what {companion} is showing you?', slotValuesFromProfile(profile)),
       );
       return;
     }
@@ -873,7 +872,7 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
     setOptionsForNewTrial(buildShadowMatchOptions(trialPool, picked));
     setPhase('presenting');
     void adapters.speechOut.say(
-      renderLine('Which one matches?', slotValuesFromProfile(profile), profile.context),
+      renderLine('Which one matches?', slotValuesFromProfile(profile)),
     );
   }
 
@@ -897,7 +896,7 @@ export function Game3ShadowMatch({ profile, onChildFacingChange }: Game3ShadowMa
     setPhase('celebrating');
     lastObjectNameRef.current = target?.name ?? null;
     void adapters.speechOut.say(
-      renderLine('Your {object.name}!', slotValuesFromProfile(profile, { 'object.name': target?.name ?? '' }), profile.context),
+      renderLine('Your {object.name}!', slotValuesFromProfile(profile, { 'object.name': target?.name ?? '' })),
     );
     setTimeout(() => setPhase('reportingSupport'), 800);
   }

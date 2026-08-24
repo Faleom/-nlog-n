@@ -71,7 +71,7 @@ export function storyCacheKey(photoHash: string): string {
 // ---------------------------------------------------------------------------
 
 export function renderStorySentence(step: StoryStepTemplate, profile: ChildProfile): string {
-  const rendered = renderLine(step.sentence, slotValuesFromProfile(profile), profile.context);
+  const rendered = renderLine(step.sentence, slotValuesFromProfile(profile));
   // The model writes {companion} assuming it becomes a proper name (which
   // is already capitalized) -- but the slot's own fallback, when no
   // Companion is set, is a lowercase generic phrase ("your friend"), which

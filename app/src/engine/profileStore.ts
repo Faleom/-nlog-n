@@ -92,7 +92,7 @@ export async function clearActiveProfile(): Promise<void> {
 }
 
 /**
- * Patches a profile. Nested objects (responseProfile, context and its four
+ * Patches a profile. Nested objects (responseProfile, context and its
  * sub-layers) are merged field-by-field rather than replaced wholesale, so
  * a caller can set one favourite colour without clobbering everything else
  * already saved. Top-level scalars (ageMonths, nickname) and `declaration`
@@ -123,10 +123,6 @@ export async function updateProfile(
       peopleAndRoutine: {
         ...existing.context.peopleAndRoutine,
         ...patch.context?.peopleAndRoutine,
-      },
-      avoidList: {
-        ...existing.context.avoidList,
-        ...patch.context?.avoidList,
       },
     },
   };
