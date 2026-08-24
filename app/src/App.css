@@ -2,15 +2,16 @@
 
 /* Design system — DARK-FIRST, with a real light alternative. Dark is the
    DEFAULT: it is this app's deliberate identity, not a fallback, and it is
-   what renders with no attribute set at all. A caregiver can switch to a
-   genuinely designed light theme (see the "This device" section of the
-   Setup tab); the choice is written to `data-theme="light"` on
-   `<html>` (unset, not "dark", is what dark itself renders from — see the
-   `:root[data-theme="light"]` block below the dark block) and persisted
-   via the same StoragePort every other caregiver preference already uses
-   (src/engine/themePreference.ts). There is deliberately no
-   `prefers-color-scheme` branch anywhere: the OS setting never silently
-   picks a mode the caregiver did not choose.
+   what renders with no attribute set at all.
+
+   The caregiver-facing light/dark toggle this block used to describe is
+   gone, retired with the Toki revamp: Toki is a light system that replaces
+   the dark theme screen by screen rather than sitting beside it, so there
+   is no second theme to choose and nothing writes `data-theme="light"` any
+   more. The `:root[data-theme="light"]` blocks below are therefore inert
+   until the last dark screen is converted and they can go with it. There
+   is still deliberately no `prefers-color-scheme` branch anywhere: the OS
+   setting never silently picks a mode the caregiver did not choose.
 
    THE SOURCE OF TRUTH FOR EVERYTHING IN THIS BLOCK IS
    src/design/DESIGN-TOKENS.md. Palette names, contrast measurements,
@@ -1449,50 +1450,6 @@ textarea::placeholder {
   );
 }
 
-
-/* ---- Appearance -------------------------------------------------------
-   Same segmented-pill construction as .dashboard-length-row/-option (the
-   session-length picker), reused rather than invented fresh so a
-   caregiver meets one control language for "pick one of a few options"
-   across both screens. That control keeps the 88px floor on purpose
-   (its own comment explains why -- it is tapped while holding a child);
-   this one is ordinary settings chrome, tapped once during setup, so it
-   stays on the standard --touch-min (44px) floor every other Setup/
-   Dashboard control already uses. */
-.home-theme-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.home-theme-option {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--touch-min);
-  padding: 8px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
-  background: var(--surface-wash);
-  color: var(--color-ink);
-  font-size: 0.95rem;
-  font-weight: var(--weight-caregiver-strong);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  transition: background 140ms var(--ease-out), border-color 140ms var(--ease-out);
-}
-
-.home-theme-option.is-selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-bright);
-}
-
-.home-theme-option:active {
-  transform: none;
-  background: var(--surface-wash-active);
-}
 
 /* ---- Log out --------------------------------------------------------
    Not a destination, so it must not look like one. Danger coral rim and
@@ -3584,6 +3541,33 @@ textarea::placeholder {
 }
 .toki-danger-btn:active {
   transform: scale(0.97);
+}
+
+/* Setup tab's own content column. flex:1 so the "This device" section can
+   sit at the foot of the screen the way the mockup places it, with the
+   list of things activities are built from staying at the top. */
+.toki-setup-screen {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  padding-bottom: 6px;
+}
+.toki-setup-section--device {
+  margin-top: auto;
+}
+
+/* Log out's second tap. The question and the two buttons, in the same
+   shape the onboarding flow's two-button footers use. */
+.toki-setup-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.toki-footer-row .toki-danger-btn {
+  flex: 1;
 }
 
 /* ---------------------------------------------------------------------

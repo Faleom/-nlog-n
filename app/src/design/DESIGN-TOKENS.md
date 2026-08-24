@@ -7,14 +7,18 @@ is the font delivery. If a value changes, it changes here first.
 
 Dark is **the default**. It is this app's deliberate identity, chosen for this
 audience, and it is what renders with no `[data-theme]` attribute set at all —
-see `:root` in `src/App.css`. A caregiver can switch to a genuinely designed
-light theme from the Setup tab; that choice sets `[data-theme="light"]` on
-`<html>` and is read back from `:root[data-theme='light']` in `src/App.css`,
-persisted via `src/engine/themePreference.ts`. There is still no
-`prefers-color-scheme` branch anywhere — the OS setting never silently
-overrides the caregiver's own explicit choice. §9 below documents the light
-palette; every section before it describes dark, which remains the primary,
-most-considered mode.
+see `:root` in `src/App.css`.
+
+**Retired with the Toki revamp:** the caregiver-facing light/dark toggle
+described below is gone. Toki is a light system that replaces the dark theme
+screen by screen rather than sitting beside it, so there is no second theme to
+choose. Nothing in the app writes `[data-theme="light"]` any more, which leaves
+the `:root[data-theme='light']` blocks in `src/App.css` and `src/index.css`,
+and `src/engine/themePreference.ts`, unreferenced: §9 below is kept as the
+record of that light palette until the last dark screen is converted and they
+can be removed together. There is still no `prefers-color-scheme` branch
+anywhere. Every section before §9 describes dark, which is still what the
+not-yet-converted screens render.
 
 Three references govern the system: Duolingo (one thing at a time, low cognitive
 load), Apple's liquid glass (translucent, layered, softly refractive), and a
@@ -483,8 +487,8 @@ to solid `--color-surface`. The bloom still works — it is a plain blurred `<im
 | `src/App.css` (rules) | Base `button`, `.app`, `.app-header`, `.child-face`/`.caregiver-face`, `.room-frame*`, print overrides, plus the light-mode ambient-gradient override. |
 | `src/design/fonts.css` | The two `@font-face` sets. Latin subsets only. No CDN. |
 | `src/index.css` | `color-scheme: dark` by default, `light` under `:root[data-theme='light']`. |
-| `src/engine/themePreference.ts` | Reads/writes the caregiver's light/dark choice via the shared `StoragePort`. |
-| `src/App.tsx` | Owns the `theme` state, mirrors it onto `<html data-theme>`, renders the Appearance toggle in the Setup tab. |
+| `src/engine/themePreference.ts` | Read/wrote the caregiver's light/dark choice via the shared `StoragePort`. Unreferenced since the toggle was retired. |
+| `src/App.tsx` | No longer owns any `theme` state and no longer writes `<html data-theme>`; the Setup tab's Appearance toggle is gone. |
 | `vite.config.ts` | `woff2` in workbox `globPatterns`; PWA `theme_color`/`background_color` stay set to the dark ground (the app's default identity) regardless of the caregiver's in-app choice. |
 
 Token **names** were all preserved, so every existing consumer — `Game1.tsx`,
@@ -663,7 +667,14 @@ Nightshade:
 | `--color-info-soft` | `#ECEBF9` | pale periwink wash, was a dark tinted panel |
 | `--track-find-it/-story/-match/-trace` | `#5B52E8` / `#0E7A6F` / `#8A4FD6` / `#3E6FC9` | each ≥4.35:1 on the near-white dashboard card composite |
 
-### 9.6 Wiring and persistence
+### 9.6 Wiring and persistence (retired)
+
+Everything in this subsection describes the toggle as it shipped before the
+Toki revamp retired it. None of it is live: `App.tsx` holds no `theme` state,
+writes no `data-theme` attribute and renders no Appearance section, and
+`.home-theme-row`/`.home-theme-option` have been deleted from `App.css`.
+`src/engine/themePreference.ts` and its `'themePreference'` storage key still
+exist but nothing reads or writes them.
 
 `data-theme="light"` / unset (dark) on `<html>`, set in `App.tsx` from a
 `theme` state variable, never a JS-computed inline style — the same
