@@ -35,7 +35,6 @@ import { usualSessionMinutes } from '../engine/dashboardSummary';
 import { getFadingSuggestion, type FadingSuggestion } from '../engine/fading';
 import { getSkillTemplatesForCrop, getSkillTemplatesForObject } from '../engine/skillLookup';
 import {
-  childFacingHandoffLine,
   endSessionNow,
   getSessionNumber,
   hasCapBeenReached,
@@ -693,9 +692,8 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       setPhase('sessionEnded');
       const result = await endSessionNow(sessionId, reason, lastObjectNameRef.current);
       setSessionEndResult(result);
-      void adapters.speechOut.say(childFacingHandoffLine(profile, result.handoffObjectName));
     },
-    [sessionId, profile],
+    [sessionId],
   );
 
   useEffect(() => {
@@ -715,8 +713,9 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       setLevel(savedLevel);
       sessionStartedAtRef.current = Date.now();
 
-      // §6.3 "Bookend: greets at start" — the goodbye half already exists
-      // (childFacingHandoffLine, called from handleEndSession). With no
+      // §6.3 "Bookend: greets at start" — the goodbye half is
+      // SessionCelebration's own spoken achievement line (see the
+      // 'sessionEnded' render below), not a Game-1-specific line. With no
       // Companion set this renders through the same neutral 'your friend'
       // default engine/slots.ts already provides — no branching needed.
       if (hasCompanion(profile)) {
@@ -1095,9 +1094,8 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
       // §8.1: the Companion hunt is reserved for the session's FINAL
       // trial (see startCompanionHuntTrial's header for why that's
       // caregiver-triggered rather than app-guessed) — logging its
-      // outcome is what actually ends the session, delivering the
-      // Companion's goodbye bookend (childFacingHandoffLine, already
-      // Companion-framed) immediately after.
+      // outcome is what actually ends the session, delivering
+      // SessionCelebration's spoken achievement line immediately after.
       void handleEndSession('caregiver');
       return;
     }
@@ -1162,19 +1160,18 @@ export function Game1({ profile, onChildFacingChange }: Game1Props) {
   }
 
   if (phase === 'sessionEnded') {
-    // Game 1 keeps childFacingHandoffLine: unlike the other three games,
-    // its targets ARE real objects in the child's own room, so sending
-    // them off to go and find one with their grown-up names something
-    // that is actually there. The caregiver recap that used to sit behind
-    // a button here is gone -- the room map, the session figures and the
-    // support tiers all live on the dashboard now, where a caregiver can
-    // read them without a child waiting on the screen.
+    // No handoff line: it used to say "go find your X with your grown-up"
+    // (childFacingHandoffLine), reasoned at the time to be meaningful here
+    // specifically because Game 1's targets are real objects in the room,
+    // unlike the other three games. In practice a session that ends with
+    // no object yet found (or no Companion set) fell back to a generic
+    // "your favourite thing" line that read exactly as oddly as the other
+    // games' version did -- so Game 1 now matches them: straight to the
+    // caregiver recap, no exceptions. The room map, session figures and
+    // support tiers all live on the dashboard, where a caregiver can read
+    // them without a child waiting on the screen.
     return sessionEndResult ? (
-      <SessionCelebration
-        session={sessionEndResult.session}
-        track="find-it"
-        handoffLine={childFacingHandoffLine(profile, sessionEndResult.handoffObjectName)}
-      />
+      <SessionCelebration session={sessionEndResult.session} track="find-it" />
     ) : (
       <div className="screen" />
     );
