@@ -449,7 +449,7 @@ export function CaregiverDashboard({ profile, onProfileChange }: CaregiverDashbo
         <section className="dashboard-card">
           <p className="dashboard-days-practiced">
             <span className="dashboard-days-practiced-value">{daysPracticed}</span>{' '}
-            {daysPracticed === 1 ? 'day' : 'days'} played so far
+            {daysPracticed === 1 ? 'day' : 'days'} learned
           </p>
           <div className="dashboard-calendar-head">
             <button
