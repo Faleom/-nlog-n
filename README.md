@@ -10,12 +10,6 @@ screening or diagnosing.
 
 The app lives in [`app/`](app/) | Vite + React + TypeScript, a mobile-web PWA.
 
-## Try it now
-
-**[helloworld-alpha-tawny.vercel.app](https://helloworld-alpha-tawny.vercel.app)**
-
-No setup needed, open the link on your phone or browser and the app runs fully, including camera and AI features.
-
 ## Running it locally
 
 Local setup requires an Anthropic API key, which is not included in the repository. We recommend using the Vercel link above instead.
